@@ -19,18 +19,24 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\D3D12Utils.cpp" />
+    <ClCompile Include="src\Resource\D3D12MemoryAllocator.cpp" />
     <ClCompile Include="src\D3D12HelloTriangle.cpp" />
     <ClCompile Include="src\DXSample.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\Win32Application.cpp" />
+    <ClCompile Include="src\Resource\D3D12Resource.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\D3D12Utils.h" />
+    <ClInclude Include="src\Resource\D3D12MemoryAllocator.h" />
     <ClInclude Include="src\D3D12HelloTriangle.h" />
     <ClInclude Include="src\DXSample.h" />
     <ClInclude Include="inc\d3dx12.h" />
     <ClInclude Include="src\DXSamplerHelper.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\Win32Application.h" />
+    <ClInclude Include="src\Resource\D3D12Resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.hlsl">
@@ -100,6 +106,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -116,6 +123,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -132,6 +140,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -148,6 +157,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
