@@ -19,41 +19,37 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Resource\D3D12Buffer.cpp" />
-    <ClCompile Include="src\D3D12Utils.cpp" />
-    <ClCompile Include="src\Resource\D3D12MemoryAllocator.cpp" />
-    <ClCompile Include="src\D3D12HelloTriangle.cpp" />
-    <ClCompile Include="src\DXSample.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\Win32Application.cpp" />
+    <ClCompile Include="src\D3D12HelloTriangle.cpp" />
+    <ClCompile Include="src\D3D12Utils.cpp" />
+    <ClCompile Include="src\DXSample.cpp" />
+    <ClCompile Include="src\Resource\D3D12Buffer.cpp" />
+    <ClCompile Include="src\Resource\D3D12MemoryAllocator.cpp" />
     <ClCompile Include="src\Resource\D3D12Resource.cpp" />
+    <ClCompile Include="src\Win32Application.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Resource\D3D12Buffer.h" />
-    <ClInclude Include="src\D3D12Utils.h" />
-    <ClInclude Include="src\Resource\D3D12MemoryAllocator.h" />
     <ClInclude Include="src\D3D12HelloTriangle.h" />
+    <ClInclude Include="src\D3D12Utils.h" />
+    <ClInclude Include="src\d3dx12.h" />
     <ClInclude Include="src\DXSample.h" />
-    <ClInclude Include="inc\d3dx12.h" />
     <ClInclude Include="src\DXSamplerHelper.h" />
+    <ClInclude Include="src\Resource\D3D12Buffer.h" />
+    <ClInclude Include="src\Resource\D3D12MemoryAllocator.h" />
+    <ClInclude Include="src\Resource\D3D12Resource.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\Win32Application.h" />
-    <ClInclude Include="src\Resource\D3D12Resource.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.hlsl">
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
-      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{e267b6e8-67b3-439a-a7a7-5092050d1f84}</ProjectGuid>
-    <RootNamespace>DirectX12Lib</RootNamespace>
+    <ProjectGuid>{a1c3e2b2-05e6-40c4-9a1c-ecddccc952a6}</ProjectGuid>
+    <RootNamespace>DX12Lab</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -105,9 +101,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -122,9 +118,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -139,9 +135,9 @@
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
@@ -156,9 +152,9 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <LanguageStandard>stdcpp17</LanguageStandard>
+      <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>

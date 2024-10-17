@@ -269,7 +269,7 @@ void D3D12HelloTriangle::LoadAssets()
 		m_vertexBufferView.BufferLocation = vertexBufferRef->ResourceLocation.GPUVirtualAddress;
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
-		
+
 
 	}
 
