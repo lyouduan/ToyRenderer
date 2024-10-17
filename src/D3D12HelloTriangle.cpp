@@ -1,4 +1,6 @@
 #include "D3D12HelloTriangle.h"
+#include "D3D12MemoryAllocator.h"
+#include "D3D12Buffer.h"
 
 D3D12HelloTriangle::D3D12HelloTriangle(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
@@ -218,27 +220,42 @@ void D3D12HelloTriangle::LoadAssets()
 			{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
 			{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}} 
 		};
+		/*
+		{
+			const uint32_t vertexBufferSize = sizeof(triangleVerties);
+
+			auto upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
+
+			ThrowIfFailed(m_device->CreateCommittedResource(
+				&upload,
+				D3D12_HEAP_FLAG_NONE,
+				&buffer,
+				D3D12_RESOURCE_STATE_GENERIC_READ,
+				nullptr,
+				IID_PPV_ARGS(&m_vertexBuffer)));
+
+			UINT8* pVertexDataBegin;
+			CD3DX12_RANGE readRange(0, 0);
+			ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
+			memcpy(pVertexDataBegin, triangleVerties, sizeof(triangleVerties));
+			m_vertexBuffer->Unmap(0, nullptr);
+
+			
+		}
+		*/
+
+		// use memory Allocator
+		TD3D12RHI::InitialzeAllocator(m_device.Get());
 
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
+		TD3D12ResourceLocation defaultResourceLocation;
+		auto uploadResourceLocation = TD3D12RHI::CreateAndInitDefaultBuffer(&triangleVerties, vertexBufferSize, sizeof(FLOAT), defaultResourceLocation);
 
-		auto upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-		auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-		ThrowIfFailed(m_device->CreateCommittedResource(
-			&upload,
-			D3D12_HEAP_FLAG_NONE,
-			&buffer,
-			D3D12_RESOURCE_STATE_GENERIC_READ,
-			nullptr,
-			IID_PPV_ARGS(&m_vertexBuffer)));
-
-		UINT8* pVertexDataBegin;
-		CD3DX12_RANGE readRange(0, 0);
-		ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-		memcpy(pVertexDataBegin, triangleVerties, sizeof(triangleVerties));
-		m_vertexBuffer->Unmap(0, nullptr);
 
 		// initialize the vertex buffer view
-		m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
+		m_vertexBufferView.BufferLocation = uploadResourceLocation.GPUVirtualAddress;
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
 	}
@@ -276,7 +293,7 @@ void D3D12HelloTriangle::PopulateCommandList()
 	// indicate that back buffer will be used as a render target
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_renderTragetrs[m_frameIndex].Get(),
-		D3D12_RESOURCE_STATE_GENERIC_READ,
+		D3D12_RESOURCE_STATE_COMMON,
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &barrier);
 

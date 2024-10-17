@@ -1,3 +1,5 @@
+#pragma once
+
 #include "DXSamplerHelper.h"
 
 // 向前声明

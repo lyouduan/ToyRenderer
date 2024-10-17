@@ -36,6 +36,9 @@
     <ClCompile Include="src\D3D12Utils.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Resource\D3D12Buffer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="inc\d3dx12.h">
@@ -63,6 +66,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\D3D12Utils.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Resource\D3D12Buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

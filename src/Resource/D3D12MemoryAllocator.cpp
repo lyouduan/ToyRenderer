@@ -56,7 +56,7 @@ bool TD3D12BuddyAllocator::AllocResource(uint32_t Size, uint32_t Alignment, TD3D
 		ResourceLocation.BlockData.ActualUsedSize = Size;
 		ResourceLocation.Allocator = this;
 
-		if (InitData.AllocationStrategy == EAllocationStrategy::ManualSubAlloction)
+		if (InitData.AllocationStrategy == EAllocationStrategy::ManualSubAllocation)
 		{
 			ResourceLocation.UnderlyingResource = BackingResource;
 			ResourceLocation.OffsetFromBaseOfResource = AlignedOffsetFromResourceBase;
@@ -87,7 +87,7 @@ void TD3D12BuddyAllocator::Deallocate(TD3D12ResourceLocation& ResourceLocation)
 	DeferredDeletionQueue.push_back(ResourceLocation.BlockData);
 }
 
-void TD3D12BuddyAllocator::CleanUpAllocation()
+void TD3D12BuddyAllocator::CleanUpAllocations()
 {
 	for (int32_t i = 0; i < DeferredDeletionQueue.size(); i++)
 	{
@@ -290,4 +290,147 @@ void TD3D12BuddyAllocator::DeallocateBlock(uint32_t Offset, uint32_t Order)
 		// add the block to free list
 		FreeBlocks[Order].insert(Offset);
 	}
+}
+
+TD3D12MultiBuddyAllocator::TD3D12MultiBuddyAllocator(ID3D12Device* InDevice, const TD3D12BuddyAllocator::TAllocatorInitData& InInitData)
+	:Device(InDevice), InitData(InInitData)
+{
+
+}
+
+TD3D12MultiBuddyAllocator::~TD3D12MultiBuddyAllocator()
+{
+
+}
+
+bool TD3D12MultiBuddyAllocator::AllocResource(uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
+{
+	for (auto& Allocator : Allocators) // Try to use existing allocators 
+	{
+		if (Allocator->AllocResource(Size, Alignment, ResourceLocation))
+		{
+			return true;
+		}
+	}
+
+	// Create new allocator
+	auto Allocator = std::make_shared<TD3D12BuddyAllocator>(Device, InitData);
+	Allocators.push_back(Allocator);
+
+	bool Result = Allocator->AllocResource(Size, Alignment, ResourceLocation);
+	assert(Result);
+
+	return true;
+}
+
+void TD3D12MultiBuddyAllocator::CleanUpAllocations()
+{
+	for (auto& Allocator : Allocators)
+	{
+		Allocator->CleanUpAllocations();
+	}
+}
+
+TD3D12UploadBufferAllocator::TD3D12UploadBufferAllocator(ID3D12Device* InDevice)
+{
+	TD3D12BuddyAllocator::TAllocatorInitData InitData;
+	InitData.AllocationStrategy = TD3D12BuddyAllocator::EAllocationStrategy::ManualSubAllocation;
+	InitData.HeapType = D3D12_HEAP_TYPE_UPLOAD;
+	InitData.ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
+
+	Allocator = std::make_unique<TD3D12MultiBuddyAllocator>(InDevice, InitData);
+
+	D3DDevice = InDevice;
+}
+
+void* TD3D12UploadBufferAllocator::AllocUploadResource(uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
+{
+	Allocator->AllocResource(Size, Alignment, ResourceLocation);
+
+	return ResourceLocation.MappedAddress;
+}
+
+void TD3D12UploadBufferAllocator::CleanUpAllocations()
+{
+	Allocator->CleanUpAllocations();
+}
+
+
+
+TD3D12DefaultBufferAllocator::TD3D12DefaultBufferAllocator(ID3D12Device* InDevice)
+{
+	{
+		TD3D12BuddyAllocator::TAllocatorInitData InitData;
+		InitData.AllocationStrategy = TD3D12BuddyAllocator::EAllocationStrategy::ManualSubAllocation;
+		InitData.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		InitData.ResourceFlags = D3D12_RESOURCE_FLAG_NONE;
+
+		Allocator = std::make_unique<TD3D12MultiBuddyAllocator>(InDevice, InitData);
+	}
+
+	{
+		TD3D12BuddyAllocator::TAllocatorInitData InitData;
+		InitData.AllocationStrategy = TD3D12BuddyAllocator::EAllocationStrategy::ManualSubAllocation;
+		InitData.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+		InitData.ResourceFlags = D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS;
+
+		UavAllocator = std::make_unique<TD3D12MultiBuddyAllocator>(InDevice, InitData);
+	}
+
+	D3DDevice = InDevice;
+}
+
+void TD3D12DefaultBufferAllocator::AllocDefaultResource(const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
+{
+	if (ResourceDesc.Flags == D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS)
+	{
+		UavAllocator->AllocResource((uint32_t)ResourceDesc.Width, Alignment, ResourceLocation);
+	}
+	else
+	{
+		Allocator->AllocResource((uint32_t)ResourceDesc.Width, Alignment, ResourceLocation);
+	}
+}
+
+void TD3D12DefaultBufferAllocator::CleanUpAllocations()
+{
+	Allocator->CleanUpAllocations();
+}
+
+
+
+TD3D3TextureResourceAllocator::TD3D3TextureResourceAllocator(ID3D12Device* InDevice)
+{
+	TD3D12BuddyAllocator::TAllocatorInitData InitData;
+	InitData.AllocationStrategy = TD3D12BuddyAllocator::EAllocationStrategy::PlacedResource;
+	InitData.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	InitData.HeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_NON_RT_DS_TEXTURES;
+
+	Allocator = std::make_unique<TD3D12MultiBuddyAllocator>(InDevice, InitData);
+
+	D3DDevice = InDevice;
+}
+
+void TD3D3TextureResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, TD3D12ResourceLocation& ResourceLocation)
+{
+	const D3D12_RESOURCE_ALLOCATION_INFO Info = D3DDevice->GetResourceAllocationInfo(0, 1, &ResourceDesc);
+
+	Allocator->AllocResource((uint32_t)Info.SizeInBytes, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
+
+	// Create placed resource
+	{
+		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
+		ID3D12Heap* BackingHeap = ResourceLocation.Allocator->GetBackingHeap();
+		uint64_t HeapOffset = ResourceLocation.OffsetFromBaseOfHeap;
+		D3DDevice->CreatePlacedResource(BackingHeap, HeapOffset, &ResourceDesc, ResourceState, nullptr, IID_PPV_ARGS(&Resource));
+
+		TD3D12Resource* NewResource = new TD3D12Resource(Resource);
+		ResourceLocation.UnderlyingResource = NewResource;
+		ResourceLocation.BlockData.PlacedResource = NewResource;  // Will delete Resource when ResourceLocation was destroyed
+	}
+}
+
+void TD3D3TextureResourceAllocator::CleanUpAllocations()
+{
+	Allocator->CleanUpAllocations();
 }

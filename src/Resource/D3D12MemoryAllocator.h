@@ -1,8 +1,15 @@
+#pragma once
+
 #include "D3D12Resource.h"
 #include <vector>
 #include <set>
+#include <memory>
 
 #define DEFAULT_POOL_SIZE (512 * 1024 * 512)
+
+#define DEFAULT_RESOURCE_ALIGNMENT 4
+#define UPLOAD_RESOURCE_ALIGNMENT 256
+
 
 class TD3D12BuddyAllocator
 {
@@ -11,7 +18,7 @@ public:
 	enum class EAllocationStrategy
 	{
 		PlacedResource, // 申请大块堆资源分配
-		ManualSubAlloction // 每次申请一块堆资源
+		ManualSubAllocation // 每次申请一块堆资源
 	};
 
 	
@@ -36,7 +43,7 @@ public:
 
 	void Deallocate(TD3D12ResourceLocation& ResourceLocation);
 
-	void CleanUpAllocation();
+	void CleanUpAllocations();
 
 	ID3D12Heap* GetBackingHeap() { return BackingHeap; }
 
@@ -100,4 +107,70 @@ private:
 	TD3D12Resource* BackingResource = nullptr; // for createCommittedResource
 
 	ID3D12Heap* BackingHeap = nullptr; // for createHeap
+};
+
+class TD3D12MultiBuddyAllocator
+{
+public:
+	TD3D12MultiBuddyAllocator(ID3D12Device* InDevice, const TD3D12BuddyAllocator::TAllocatorInitData& InInitData);
+
+	~TD3D12MultiBuddyAllocator();
+
+	bool AllocResource(uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
+
+	void CleanUpAllocations();
+
+private:
+	std::vector<std::shared_ptr<TD3D12BuddyAllocator>> Allocators;
+
+	ID3D12Device* Device;
+
+	TD3D12BuddyAllocator::TAllocatorInitData InitData;
+};
+
+class TD3D12UploadBufferAllocator
+{
+public:
+	TD3D12UploadBufferAllocator(ID3D12Device* InDevice);
+
+	void* AllocUploadResource(uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
+
+	void CleanUpAllocations();
+
+private:
+	std::unique_ptr<TD3D12MultiBuddyAllocator> Allocator = nullptr;
+
+	ID3D12Device* D3DDevice = nullptr;
+};
+
+class TD3D12DefaultBufferAllocator
+{
+public:
+	TD3D12DefaultBufferAllocator(ID3D12Device* InDevice);
+
+	void AllocDefaultResource(const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
+
+	void CleanUpAllocations();
+
+private:
+	std::unique_ptr<TD3D12MultiBuddyAllocator> Allocator = nullptr;
+
+	std::unique_ptr<TD3D12MultiBuddyAllocator> UavAllocator = nullptr;
+
+	ID3D12Device* D3DDevice = nullptr;
+};
+
+class TD3D3TextureResourceAllocator
+{
+public:
+	TD3D3TextureResourceAllocator(ID3D12Device* InDevice);
+
+	void AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, TD3D12ResourceLocation& ResourceLocation);
+
+	void CleanUpAllocations();
+
+private:
+	std::unique_ptr<TD3D12MultiBuddyAllocator> Allocator = nullptr;
+
+	ID3D12Device* D3DDevice = nullptr;
 };

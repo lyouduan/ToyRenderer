@@ -10,7 +10,7 @@
 #include <dxgi1_6.h>
 #include <D3Dcompiler.h>
 #include <DirectXMath.h>
-#include "../inc/d3dx12.h"
+#include "d3dx12.h"
 
 #include <string>
 #include <wrl.h>
