@@ -220,6 +220,12 @@ void D3D12HelloTriangle::LoadAssets()
 			{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
 			{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}} 
 		};
+
+		// Note: using upload heaps to transfer static data like vert buffers is not
+		// recommended. Every time the GPU needs it, the upload heap will be marshalled 
+		// over. Please read up on Default Heap usage. An upload heap is used here for 
+		// code simplicity and because there are very few verts to actually transfer.
+
 		/*
 		{
 			const uint32_t vertexBufferSize = sizeof(triangleVerties);
@@ -246,18 +252,25 @@ void D3D12HelloTriangle::LoadAssets()
 		*/
 
 		// use memory Allocator
+		ThrowIfFailed(m_commandAllocator->Reset());
+		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+
 		TD3D12RHI::InitialzeAllocator(m_device.Get());
 
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
-		TD3D12ResourceLocation defaultResourceLocation;
-		auto uploadResourceLocation = TD3D12RHI::CreateAndInitDefaultBuffer(&triangleVerties, vertexBufferSize, sizeof(FLOAT), defaultResourceLocation);
+		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize, m_commandList.Get());
 
+		// execute the command list for copy vertex to default buffer
+		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
 
 		// initialize the vertex buffer view
 		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-		m_vertexBufferView.BufferLocation = uploadResourceLocation.GPUVirtualAddress;
+		m_vertexBufferView.BufferLocation = vertexBufferRef->ResourceLocation.GPUVirtualAddress;
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
+		
+
 	}
 
 	// create synchronization objects and waith until asset have been uploaded to the GPU
