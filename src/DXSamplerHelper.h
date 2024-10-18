@@ -52,3 +52,14 @@ inline void GetAssetsPath(_Out_writes_(pathSize) wchar_t* path, uint32_t pathSiz
         *(lastSlash + 1) = L'\0';
     }
 }
+
+template<UINT TNameLength>
+inline void SetDebugName(_In_ ID3D12DeviceChild* resource, _In_z_ const wchar_t(&name)[TNameLength]) noexcept
+{
+#if !defined(NO_D3D12_DEBUG_NAME) && (defined(_DEBUG) || defined(PROFILE))
+    resource->SetName(name);
+#else
+    UNREFERENCED_PARAMETER(resource);
+    UNREFERENCED_PARAMETER(name);
+#endif
+}
