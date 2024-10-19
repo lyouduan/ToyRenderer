@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -19,6 +19,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Resource\D3D12RHI.cpp" />
+    <ClCompile Include="src\Resource\D3D12DescriptorCache.cpp" />
+    <ClCompile Include="src\Resource\D3D12HeapSlotAllocator.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="src\D3D12HelloTriangle.cpp" />
     <ClCompile Include="src\D3D12Utils.cpp" />
@@ -29,6 +32,9 @@
     <ClCompile Include="src\Win32Application.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Resource\D3D12RHI.h" />
+    <ClInclude Include="src\Resource\D3D12DescriptorCache.h" />
+    <ClInclude Include="src\Resource\D3D12HeapSlotAllocator.h" />
     <ClInclude Include="src\D3D12HelloTriangle.h" />
     <ClInclude Include="src\D3D12Utils.h" />
     <ClInclude Include="src\d3dx12.h" />

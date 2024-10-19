@@ -15,7 +15,7 @@ public:
 		uint32_t HeapIndex;
 		D3D12_CPU_DESCRIPTOR_HANDLE Handle;
 	};
-
+		
 private:
 	struct FreeRange
 	{

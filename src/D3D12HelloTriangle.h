@@ -35,6 +35,8 @@ private:
 	ComPtr<ID3D12GraphicsCommandList> m_commandList;
 	uint32_t m_rtvDescriptorSize;
 
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RtvDescriptors;
+
 	// app resource
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;

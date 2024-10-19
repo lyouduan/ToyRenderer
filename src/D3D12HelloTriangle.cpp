@@ -1,6 +1,7 @@
 #include "D3D12HelloTriangle.h"
 #include "D3D12MemoryAllocator.h"
 #include "D3D12Buffer.h"
+#include "D3D12RHI.h"
 
 D3D12HelloTriangle::D3D12HelloTriangle(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
@@ -13,6 +14,7 @@ D3D12HelloTriangle::D3D12HelloTriangle(uint32_t width, uint32_t height, std::wst
 
 void D3D12HelloTriangle::OnInit()
 {
+
 	LoadPipeline();
 	LoadAssets();
 }
@@ -83,6 +85,9 @@ void D3D12HelloTriangle::LoadPipeline()
 			IID_PPV_ARGS(&m_device)));
 	}
 
+	// using device to initialize allocator
+	TD3D12RHI::InitialzeAllocator(m_device.Get());
+
 	// describe and create the command queue
 	D3D12_COMMAND_QUEUE_DESC queueDesc = {};
 	queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
@@ -132,14 +137,21 @@ void D3D12HelloTriangle::LoadPipeline()
 	
 	// create frame resources
 	{
+		auto HeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+
+
 		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 		// create a rtv for each frame
 		for(uint32_t n = 0; n < FrameCount; ++n)
 		{
+			auto HeapSlot = HeapSlotAllocator->AllocateHeapSlot();
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTragetrs[n])));
-			m_device->CreateRenderTargetView(m_renderTragetrs[n].Get(), nullptr, rtvHandle);
-			rtvHandle.Offset(1, m_rtvDescriptorSize);
+			m_device->CreateRenderTargetView(m_renderTragetrs[n].Get(), nullptr, HeapSlot.Handle);
+			//rtvHandle.Offset(1, m_rtvDescriptorSize);
+			RtvDescriptors.push_back(HeapSlot.Handle);
 		}
+
+		
 	}
 
 	// create the command allocator
@@ -255,8 +267,6 @@ void D3D12HelloTriangle::LoadAssets()
 		ThrowIfFailed(m_commandAllocator->Reset());
 		ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
 
-		TD3D12RHI::InitialzeAllocator(m_device.Get());
-
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
 		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize, m_commandList.Get());
 
@@ -269,7 +279,6 @@ void D3D12HelloTriangle::LoadAssets()
 		m_vertexBufferView.BufferLocation = vertexBufferRef->ResourceLocation.GPUVirtualAddress;
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
-
 
 	}
 
@@ -310,7 +319,11 @@ void D3D12HelloTriangle::PopulateCommandList()
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &barrier);
 
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart(), m_frameIndex, m_rtvDescriptorSize);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
+	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
+	TD3D12RHI::DescriptorCache->AppendRtvDescriptors(RtvDescriptors, GpuHandle, CpuHandle);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(CpuHandle, m_frameIndex, m_rtvDescriptorSize);
+
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
 
 	// Record commands

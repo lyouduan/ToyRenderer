@@ -9,6 +9,10 @@ TD3D12HeapSlotAllocator::TD3D12HeapSlotAllocator(ID3D12Device* InDevice, D3D12_D
 
 }
 
+TD3D12HeapSlotAllocator::~TD3D12HeapSlotAllocator()
+{
+}
+
 TD3D12HeapSlotAllocator::HeapSlot TD3D12HeapSlotAllocator::AllocateHeapSlot()
 {
 	// find the entry with free list
