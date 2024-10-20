@@ -19,6 +19,12 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Resource\ColorBuffer.cpp" />
+    <ClCompile Include="src\Resource\DepthBuffer.cpp" />
+    <ClCompile Include="src\Resource\PixelBuffer.cpp" />
+    <ClCompile Include="src\Resource\GpuBuffer.cpp" />
+    <ClCompile Include="src\Resource\GpuResource.cpp" />
+    <ClCompile Include="src\Resource\D3D12Texture.cpp" />
     <ClCompile Include="src\Resource\D3D12RHI.cpp" />
     <ClCompile Include="src\Resource\D3D12DescriptorCache.cpp" />
     <ClCompile Include="src\Resource\D3D12HeapSlotAllocator.cpp" />
@@ -30,8 +36,15 @@
     <ClCompile Include="src\Resource\D3D12MemoryAllocator.cpp" />
     <ClCompile Include="src\Resource\D3D12Resource.cpp" />
     <ClCompile Include="src\Win32Application.cpp" />
+    <ClCompile Include="src\Resource\UploadBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Resource\ColorBuffer.h" />
+    <ClInclude Include="src\Resource\DepthBuffer.h" />
+    <ClInclude Include="src\Resource\PixelBuffer.h" />
+    <ClInclude Include="src\Resource\GpuBuffer.h" />
+    <ClInclude Include="src\Resource\GpuResource.h" />
+    <ClInclude Include="src\Resource\D3D12Texture.h" />
     <ClInclude Include="src\Resource\D3D12RHI.h" />
     <ClInclude Include="src\Resource\D3D12DescriptorCache.h" />
     <ClInclude Include="src\Resource\D3D12HeapSlotAllocator.h" />
@@ -45,6 +58,7 @@
     <ClInclude Include="src\Resource\D3D12Resource.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\Win32Application.h" />
+    <ClInclude Include="src\Resource\UploadBuffer.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.hlsl">

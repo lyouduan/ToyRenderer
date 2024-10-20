@@ -122,36 +122,54 @@ void D3D12HelloTriangle::LoadPipeline()
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 	// create descriptor heaps
-	{
-		// describe and create a render target view descriptor heap
-		D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-		rtvHeapDesc.NumDescriptors = FrameCount;
-		rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-		rtvHeapDesc.NodeMask = 0;
-		rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	//{
+	//	// describe and create a render target view descriptor heap
+	//	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
+	//	rtvHeapDesc.NumDescriptors = FrameCount;
+	//	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+	//	rtvHeapDesc.NodeMask = 0;
+	//	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+	//
+	//	ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+	//
+	//	m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
+	//}
 
-		ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
+	//auto HeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
-		m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	}
-	
 	// create frame resources
 	{
-		auto HeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 
-		CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
+		//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 		// create a rtv for each frame
 		for(uint32_t n = 0; n < FrameCount; ++n)
 		{
-			auto HeapSlot = HeapSlotAllocator->AllocateHeapSlot();
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTragetrs[n])));
-			m_device->CreateRenderTargetView(m_renderTragetrs[n].Get(), nullptr, HeapSlot.Handle);
+			//auto HeapSlot = HeapSlotAllocator->AllocateHeapSlot();
+			
+			ComPtr<ID3D12Resource> m_renderTragetr;
+			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTragetr)));
+			//m_device->CreateRenderTargetView(m_renderTragetrs[n].Get(), nullptr, HeapSlot.Handle);
 			//rtvHandle.Offset(1, m_rtvDescriptorSize);
-			RtvDescriptors.push_back(HeapSlot.Handle);
+			m_renderBuffer[n].CreateFromSwapChain(m_device.Get(), L"SwapChain Buffer", m_renderTragetr.Detach());
+			
+			RtvDescriptors.push_back(m_renderBuffer[n].GetRTV());
 		}
+	}
 
-		
+	// create the dsv
+	{
+
+		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
+		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;  // 深度/模板缓冲区格式
+		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;  // 2D 纹理
+		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
+
+		auto DsvHeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
+		auto dsvHeap = DsvHeapSlotAllocator->AllocateHeapSlot();
+		m_device->CreateDepthStencilView(m_Depth.Get(), &dsvDesc, dsvHeap.Handle);
+
+		DsvDescriptors.push_back(dsvHeap.Handle);
 	}
 
 	// create the command allocator
@@ -314,7 +332,7 @@ void D3D12HelloTriangle::PopulateCommandList()
 
 	// indicate that back buffer will be used as a render target
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_renderTragetrs[m_frameIndex].Get(),
+		m_renderBuffer[m_frameIndex].GetResource(),
 		D3D12_RESOURCE_STATE_COMMON,
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &barrier);
@@ -322,19 +340,22 @@ void D3D12HelloTriangle::PopulateCommandList()
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
 	TD3D12RHI::DescriptorCache->AppendRtvDescriptors(RtvDescriptors, GpuHandle, CpuHandle);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(CpuHandle, m_frameIndex, m_rtvDescriptorSize);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(CpuHandle, m_frameIndex, TD3D12RHI::DescriptorCache->GetRtvDescriptorSize());
 
 	m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
 
 	// Record commands
 	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+
+	//m_commandList->ClearDepthStencilView(DsvDescriptors[0], D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+
 	m_commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
 	m_commandList->DrawInstanced(3, 1, 0, 0);
 
 	// indicate that the back buffer will now be used to present
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderBuffer[m_frameIndex].GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	m_commandList->ResourceBarrier(1, &barrier);
 
 	ThrowIfFailed(m_commandList->Close());

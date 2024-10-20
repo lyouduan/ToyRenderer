@@ -20,6 +20,9 @@ public:
 
 	void Reset();
 
+	UINT GetRtvDescriptorSize() { return RtvDescriptorSize; }
+	UINT GetCbvSrvUavDescriptorSize() { return CbvSrvUavDescriptorSize; }
+
 private:
 	void CreateCacheCbvSrvUavDescriptorHeap();
 

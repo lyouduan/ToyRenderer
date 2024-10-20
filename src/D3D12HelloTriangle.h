@@ -1,6 +1,6 @@
 #pragma once
 #include "DXSample.h"
-
+#include "ColorBuffer.h"
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -27,6 +27,10 @@ private:
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12Device> m_device;
 	ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
+	ColorBuffer m_renderBuffer[FrameCount];
+
+
+	ComPtr<ID3D12Resource> m_Depth;
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -36,6 +40,7 @@ private:
 	uint32_t m_rtvDescriptorSize;
 
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RtvDescriptors;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
 
 	// app resource
 	ComPtr<ID3D12Resource> m_vertexBuffer;
