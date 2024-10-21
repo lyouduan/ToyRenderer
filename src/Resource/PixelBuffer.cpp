@@ -14,6 +14,7 @@ D3D12_RESOURCE_DESC PixelBuffer::DescribeTex2D(uint32_t width, uint32_t height, 
     Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
     Desc.Flags = (D3D12_RESOURCE_FLAGS)Flags;
     Desc.Format = format;
+    Desc.Height = (UINT)height;
     Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
     Desc.MipLevels = (UINT16)NumMips;
     Desc.SampleDesc.Count = 1;

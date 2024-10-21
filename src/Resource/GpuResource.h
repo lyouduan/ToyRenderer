@@ -44,6 +44,7 @@ public:
 
 	uint32_t GetVersionID() const { return m_VersionID; }
 
+	D3D12_RESOURCE_STATES GetCurrentState() { return m_UsageState; }
 protected:
 	// resource
 	Microsoft::WRL::ComPtr<ID3D12Resource> m_pResource;

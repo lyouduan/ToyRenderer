@@ -28,7 +28,7 @@ namespace TD3D12RHI
 
 	TD3D12VertexBufferRef CreateVertexBuffer(const void* Contents, uint32_t Size, ID3D12GraphicsCommandList* cmdlist);
 
-	TD3D12IndexBufferRef CreateIndexBuffer(const void* Contents, uint32_t Size);
+	TD3D12IndexBufferRef CreateIndexBuffer(const void* Contents, uint32_t Size, ID3D12GraphicsCommandList* cmdlist);
 
 	void CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation);
 

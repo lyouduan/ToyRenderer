@@ -21,6 +21,19 @@ void D3D12HelloTriangle::OnInit()
 
 void D3D12HelloTriangle::OnUpdate()
 {
+	float angle = static_cast<float>(1 * 90.0);
+	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
+	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+
+	// Update the view matrix.
+	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
+	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
+	m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+
+	// Update the projection matrix.
+	float aspectRatio = GetWidth() / static_cast<float>(GetHeight());
+	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
 }
 
 void D3D12HelloTriangle::OnRender()
@@ -36,7 +49,7 @@ void D3D12HelloTriangle::OnRender()
 	ThrowIfFailed(m_swapChain->Present(1, 0));
 
 	WaitForPreviousFrame();
-}
+} 
 
 void D3D12HelloTriangle::OnDestroy()
 {
@@ -160,16 +173,7 @@ void D3D12HelloTriangle::LoadPipeline()
 	// create the dsv
 	{
 
-		D3D12_DEPTH_STENCIL_VIEW_DESC dsvDesc = {};
-		dsvDesc.Format = DXGI_FORMAT_D24_UNORM_S8_UINT;  // 深度/模板缓冲区格式
-		dsvDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;  // 2D 纹理
-		dsvDesc.Flags = D3D12_DSV_FLAG_NONE;
-
-		auto DsvHeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_DSV);
-		auto dsvHeap = DsvHeapSlotAllocator->AllocateHeapSlot();
-		m_device->CreateDepthStencilView(m_Depth.Get(), &dsvDesc, dsvHeap.Handle);
-
-		DsvDescriptors.push_back(dsvHeap.Handle);
+		m_depthBuffer.Create(m_device.Get(), L"Depth buffer", m_width, m_height, DXGI_FORMAT_D32_FLOAT);
 	}
 
 	// create the command allocator
@@ -181,13 +185,17 @@ void D3D12HelloTriangle::LoadAssets()
 {
 	// create an empty root signature
 	{
-		CD3DX12_ROOT_SIGNATURE_DESC rootSignatureDesc;
-		rootSignatureDesc.Init(0, nullptr, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		// A single 32-bit constant root parameter that is used by the vertex shader.
+		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+
+		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
+		rootSignatureDescription.Init_1_1(1, rootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
 
-		ThrowIfFailed(D3D12SerializeRootSignature(&rootSignatureDesc, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
+		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDescription, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
 		ThrowIfFailed(m_device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
@@ -245,12 +253,25 @@ void D3D12HelloTriangle::LoadAssets()
 	{
 		// define  the geometry for a triangle
 		Vertex triangleVerties[] =
-		{
-			{{0.0f, 0.25f * m_aspectRatio, 0.0f}, {1.0f, 0.0f, 0.0f, 1.0f}},
-			{{0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 1.0f, 0.0f, 1.0f}},
-			{{-0.25f, -0.25f * m_aspectRatio, 0.0f}, {0.0f, 0.0f, 1.0f, 1.0f}} 
+		{   { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
+			{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
+			{ XMFLOAT3(1.0f,  1.0f, -1.0f),  XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
+			{ XMFLOAT3(1.0f, -1.0f, -1.0f),  XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
+			{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
+			{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
+			{ XMFLOAT3(1.0f,  1.0f,  1.0f),  XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
+			{ XMFLOAT3(1.0f, -1.0f,  1.0f),  XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
 		};
 
+		int16_t indices[36] =
+		{
+			0, 1, 2, 0, 2, 3,
+			4, 6, 5, 4, 7, 6,
+			4, 5, 1, 4, 1, 0,
+			3, 2, 6, 3, 6, 7,
+			1, 5, 6, 1, 6, 2,
+			4, 0, 3, 4, 3, 7
+		};
 		// Note: using upload heaps to transfer static data like vert buffers is not
 		// recommended. Every time the GPU needs it, the upload heap will be marshalled 
 		// over. Please read up on Default Heap usage. An upload heap is used here for 
@@ -288,9 +309,14 @@ void D3D12HelloTriangle::LoadAssets()
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
 		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize, m_commandList.Get());
 
+		// use memory Allocator
+		const uint32_t indexBufferSize = sizeof(indices);
+		auto indexBufferRef = TD3D12RHI::CreateIndexBuffer(&indices, indexBufferSize, m_commandList.Get());
+
 		// execute the command list for copy vertex to default buffer
-		ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-		m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
+		m_commandList->Close();
+		ID3D12CommandList* ppCommandLists1[] = { m_commandList.Get() };
+		m_commandQueue->ExecuteCommandLists(1, ppCommandLists1);
 
 		// initialize the vertex buffer view
 		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
@@ -298,6 +324,9 @@ void D3D12HelloTriangle::LoadAssets()
 		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
 		m_vertexBufferView.SizeInBytes = vertexBufferSize;
 
+		m_indexBufferView.BufferLocation = indexBufferRef->ResourceLocation.GPUVirtualAddress;
+		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
+		m_indexBufferView.SizeInBytes = indexBufferSize;
 	}
 
 	// create synchronization objects and waith until asset have been uploaded to the GPU
@@ -337,26 +366,48 @@ void D3D12HelloTriangle::PopulateCommandList()
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	m_commandList->ResourceBarrier(1, &barrier);
 
+	// indicate that back buffer will be used as a render target
+	auto barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_depthBuffer.GetResource(),
+		m_depthBuffer.GetCurrentState(),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	m_commandList->ResourceBarrier(1, &barrier2);
+
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
 	TD3D12RHI::DescriptorCache->AppendRtvDescriptors(RtvDescriptors, GpuHandle, CpuHandle);
 	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(CpuHandle, m_frameIndex, TD3D12RHI::DescriptorCache->GetRtvDescriptorSize());
 
-	m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
+	CD3DX12_CPU_DESCRIPTOR_HANDLE dsvhandle(m_depthBuffer.GetDSV());
+
+	m_commandList->OMSetRenderTargets(1, &rtvHandle, TRUE, &dsvhandle);
 
 	// Record commands
 	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
 	m_commandList->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
 
-	//m_commandList->ClearDepthStencilView(DsvDescriptors[0], D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+	m_commandList->ClearDepthStencilView(dsvhandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+
+	// Update the MVP matrix
+	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
+	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+	m_commandList->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
 	m_commandList->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	m_commandList->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	m_commandList->DrawInstanced(3, 1, 0, 0);
+	m_commandList->IASetIndexBuffer(&m_indexBufferView);
+	m_commandList->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
 	// indicate that the back buffer will now be used to present
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderBuffer[m_frameIndex].GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	m_commandList->ResourceBarrier(1, &barrier);
+
+	// indicate that back buffer will be used as a render target
+	barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
+		m_depthBuffer.GetResource(),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		m_depthBuffer.GetCurrentState());
+	m_commandList->ResourceBarrier(1, &barrier2);
 
 	ThrowIfFailed(m_commandList->Close());
 }

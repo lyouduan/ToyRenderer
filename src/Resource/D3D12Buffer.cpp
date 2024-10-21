@@ -11,9 +11,13 @@ TD3D12VertexBufferRef TD3D12RHI::CreateVertexBuffer(const void* Contents, uint32
     return VertexBufferRef;
 }
 
-TD3D12IndexBufferRef TD3D12RHI::CreateIndexBuffer(const void* Contents, uint32_t Size)
+TD3D12IndexBufferRef TD3D12RHI::CreateIndexBuffer(const void* Contents, uint32_t Size, ID3D12GraphicsCommandList* cmdlist)
 {
-    return TD3D12IndexBufferRef();
+    TD3D12IndexBufferRef IndexBufferRef = std::make_shared<TD3D12IndexBuffer>();
+
+    CreateAndInitDefaultBuffer(Contents, Size, DEFAULT_RESOURCE_ALIGNMENT, IndexBufferRef->ResourceLocation, cmdlist);
+
+    return IndexBufferRef;
 }
 
 void TD3D12RHI::CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation)
@@ -41,11 +45,9 @@ void TD3D12RHI::CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, 
     TD3D12Resource* UploadBuffer = uploadResourceLocation.UnderlyingResource;
 
     auto barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(DefaultBuffer->D3DResource.Get(), DefaultBuffer->CurrentState, D3D12_RESOURCE_STATE_COPY_DEST);
-    DefaultBuffer->CurrentState = D3D12_RESOURCE_STATE_COPY_DEST;
 
     cmdlist->ResourceBarrier(1, &barrier1);
 
     cmdlist->CopyBufferRegion(DefaultBuffer->D3DResource.Get(), ResourceLocation.OffsetFromBaseOfResource, UploadBuffer->D3DResource.Get(), uploadResourceLocation.OffsetFromBaseOfResource, Size);
 
-    cmdlist->Close();
 }

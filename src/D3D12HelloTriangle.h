@@ -1,6 +1,8 @@
 #pragma once
 #include "DXSample.h"
 #include "ColorBuffer.h"
+#include "DepthBuffer.h"
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -26,11 +28,12 @@ private:
 	CD3DX12_RECT m_scissorRect;
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12Device> m_device;
-	ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
+	//ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
+	//ComPtr<ID3D12Resource> m_Depth;
+
 	ColorBuffer m_renderBuffer[FrameCount];
+	DepthBuffer m_depthBuffer;
 
-
-	ComPtr<ID3D12Resource> m_Depth;
 	ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 	ComPtr<ID3D12CommandQueue> m_commandQueue;
 	ComPtr<ID3D12RootSignature> m_rootSignature;
@@ -45,12 +48,16 @@ private:
 	// app resource
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-
+	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 	// synchronization objects
 	uint32_t m_frameIndex;
 	HANDLE m_fenceEvent;
 	ComPtr<ID3D12Fence> m_fence;
 	uint64_t m_fenceValue;
+
+	DirectX::XMMATRIX m_ModelMatrix;
+	DirectX::XMMATRIX m_ViewMatrix;
+	DirectX::XMMATRIX m_ProjectionMatrix;
 
 	void LoadPipeline();
 	void LoadAssets();
