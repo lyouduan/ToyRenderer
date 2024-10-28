@@ -145,6 +145,7 @@ void ByteAddressBuffer::CreateDerivedViews()
     m_Device->CreateUnorderedAccessView(m_pResource.Get(), nullptr, &UAVDesc, m_UAV);
 }
 
+
 void StructuredBuffer::CreateDerivedViews()
 {
     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};

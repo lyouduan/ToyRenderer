@@ -19,6 +19,8 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BuddyAllocator.cpp" />
+    <ClCompile Include="src\Shader\Shader.cpp" />
     <ClCompile Include="src\Resource\ColorBuffer.cpp" />
     <ClCompile Include="src\Resource\DepthBuffer.cpp" />
     <ClCompile Include="src\Resource\PixelBuffer.cpp" />
@@ -39,6 +41,8 @@
     <ClCompile Include="src\Resource\UploadBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BuddyAllocator.h" />
+    <ClInclude Include="src\Shader\Shader.h" />
     <ClInclude Include="src\Resource\ColorBuffer.h" />
     <ClInclude Include="src\Resource\DepthBuffer.h" />
     <ClInclude Include="src\Resource\PixelBuffer.h" />
@@ -124,7 +128,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;./src/Shader/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -141,7 +145,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;./src/Shader/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -158,7 +162,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;./src/Shader/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -175,7 +179,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/Resource/;./src/Shader/;</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
