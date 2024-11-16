@@ -3,6 +3,8 @@
 #include "D3D12Buffer.h"
 #include "D3D12RHI.h"
 
+using namespace TD3D12RHI;
+
 D3D12HelloTriangle::D3D12HelloTriangle(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
 	m_frameIndex(0),
@@ -42,9 +44,7 @@ void D3D12HelloTriangle::OnRender()
 	PopulateCommandList();
 
 	// execute the command list
-	//ID3D12CommandList* ppCommandLists[] = { m_commandList.Get() };
-	//m_commandQueue->ExecuteCommandLists(1, ppCommandLists);
-	m_commandContext->ExecuteCommandLists();
+	g_CommandContext.ExecuteCommandLists();
 
 	// present the frame
 	ThrowIfFailed(m_swapChain->Present(1, 0));
@@ -97,21 +97,8 @@ void D3D12HelloTriangle::LoadPipeline()
 			IID_PPV_ARGS(&m_device)));
 	}
 	TD3D12RHI::g_Device = m_device.Detach();
-
-	// using device to initialize allocator
-	TD3D12RHI::InitialzeAllocator();
-	m_commandContext = std::make_unique<TD3D12CommandContext>(TD3D12RHI::g_Device);
-
-
-	{
-		// describe and create the command queue
-		//D3D12_COMMAND_QUEUE_DESC queueDesc = {};
-		//queueDesc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
-		//queueDesc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
-		//
-		//ThrowIfFailed(m_device->CreateCommandQueue(&queueDesc, IID_PPV_ARGS(&m_commandQueue)));
-	}
-	
+	// using device to initialize
+	TD3D12RHI::Initialze();
 
 	// describe and create the swap chain
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
@@ -125,7 +112,7 @@ void D3D12HelloTriangle::LoadPipeline()
 
 	ComPtr<IDXGISwapChain1> swapChain;
 	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		m_commandContext->GetCommandQueue(),
+		g_CommandContext.GetCommandQueue(),
 		Win32Application::GetHwnd(),
 		&swapChainDesc,
 		nullptr,
@@ -139,26 +126,10 @@ void D3D12HelloTriangle::LoadPipeline()
 	ThrowIfFailed(swapChain.As(&m_swapChain));
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
-	// create descriptor heaps
-	//{
-	//	// describe and create a render target view descriptor heap
-	//	D3D12_DESCRIPTOR_HEAP_DESC rtvHeapDesc = {};
-	//	rtvHeapDesc.NumDescriptors = FrameCount;
-	//	rtvHeapDesc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
-	//	rtvHeapDesc.NodeMask = 0;
-	//	rtvHeapDesc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-	//
-	//	ThrowIfFailed(m_device->CreateDescriptorHeap(&rtvHeapDesc, IID_PPV_ARGS(&m_rtvHeap)));
-	//
-	//	m_rtvDescriptorSize = m_device->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
-	//}
-
 	auto HeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// create frame resources
 	{
-
-
 		//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
 		// create a rtv for each frame
 		for(uint32_t n = 0; n < FrameCount; ++n)
@@ -177,9 +148,6 @@ void D3D12HelloTriangle::LoadPipeline()
 
 		//m_depthBuffer.Create(m_device.Get(), L"Depth buffer", m_width, m_height,// DXGI_FORMAT_D32_FLOAT);
 	}
-
-	// create the command allocator
-	//ThrowIfFailed(m_device->CreateCommandAllocator(D3D12_COMMAND_LIST_TYPE_DIRECT, IID_PPV_ARGS(&m_commandAllocator)));
 }
 
 // load the sample assets
@@ -218,7 +186,6 @@ void D3D12HelloTriangle::LoadAssets()
 
 
 		// define  the vertex input layout
-
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -243,15 +210,6 @@ void D3D12HelloTriangle::LoadAssets()
 
 		ThrowIfFailed(TD3D12RHI::g_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
-
-	// create the command list
-	{
-		//ThrowIfFailed(m_device->CreateCommandList(0, D3D12_COMMAND_LIST_TYPE_DIRECT, m_commandAllocator.Get(), m_pipelineState.Get(), IID_PPV_ARGS(&m_commandList)));
-		// command lists are create in the recording state, but there is nothing to record yet. 
-		// The main loop excepts it to be closed, so close it now
-		//ThrowIfFailed(m_commandList->Close());
-	}
-	
 
 	// create the vertex buffer
 	{
@@ -306,25 +264,12 @@ void D3D12HelloTriangle::LoadAssets()
 		}
 		*/
 
-		// use memory Allocator
-		//ThrowIfFailed(m_commandAllocator->Reset());
-		//ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
-		m_commandContext->ResetCommandAllocator();
-		m_commandContext->ResetCommandList();
-
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
-		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize, m_commandContext->GetCommandList());
+		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize);
 
 		// use memory Allocator
 		const uint32_t indexBufferSize = sizeof(indices);
-		auto indexBufferRef = TD3D12RHI::CreateIndexBuffer(&indices, indexBufferSize, m_commandContext->GetCommandList());
-
-		// execute the command list for copy vertex to default buffer
-		//m_commandList->Close();
-		//ID3D12CommandList* ppCommandLists1[] = { m_commandList.Get() };
-		//m_commandQueue->ExecuteCommandLists(1, ppCommandLists1);
-		m_commandContext->ExecuteCommandLists();
-		
+		auto indexBufferRef = TD3D12RHI::CreateIndexBuffer(&indices, indexBufferSize);
 
 		// initialize the vertex buffer view
 		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
@@ -337,23 +282,7 @@ void D3D12HelloTriangle::LoadAssets()
 		m_indexBufferView.SizeInBytes = indexBufferSize;
 	}
 
-	// create synchronization objects and waith until asset have been uploaded to the GPU
-	//{
-	//	ThrowIfFailed(TD3D12RHI::g_Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&m_fence)));
-	//	m_fenceValue = 1;
-	//
-	//	// create an event handle to use for frame synchronization
-	//	m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	//	if (m_fenceEvent == nullptr)
-	//	{
-	//		ThrowIfFailed(HRESULT_FROM_WIN32(GetLastError()));
-	//	}
-	//
-	//	// wait for the command list to execute
-	//	WaitForPreviousFrame();
-	//}
-
-	m_commandContext->FlushCommandQueue();
+	g_CommandContext.FlushCommandQueue();
 }
 
 void D3D12HelloTriangle::PopulateCommandList()
@@ -361,20 +290,20 @@ void D3D12HelloTriangle::PopulateCommandList()
 	//
 	//ThrowIfFailed(m_commandAllocator->Reset());
 	//ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
-	m_commandContext->ResetCommandAllocator();
-	m_commandContext->ResetCommandList();
+	g_CommandContext.ResetCommandAllocator();
+	g_CommandContext.ResetCommandList();
 
 	// set necessary state
-	m_commandContext->GetCommandList()->SetGraphicsRootSignature(m_rootSignature.Get());
-	m_commandContext->GetCommandList()->RSSetViewports(1, &m_viewport);
-	m_commandContext->GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(m_rootSignature.Get());
+	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
+	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
 	// indicate that back buffer will be used as a render target
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		m_renderTragetrs[m_frameIndex].Get(),
 		D3D12_RESOURCE_STATE_COMMON,
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
-	m_commandContext->GetCommandList()->ResourceBarrier(1, &barrier);
+	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
 	// indicate that back buffer will be used as a render target
 	//auto barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
@@ -390,28 +319,29 @@ void D3D12HelloTriangle::PopulateCommandList()
 
 	//CD3DX12_CPU_DESCRIPTOR_HANDLE dsvhandle(m_depthBuffer.GetDSV());
 
-	m_commandContext->GetCommandList()->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
+	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
 
 	// Record commands
 	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
-	m_commandContext->GetCommandList()->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
-	m_commandContext->GetCommandList()->SetPipelineState(m_pipelineState.Get());
+	g_CommandContext.GetCommandList()->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
 	//m_commandList->ClearDepthStencilView(dsvhandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
 	// Update the MVP matrix
 	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
 	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
-	m_commandContext->GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+	g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
-	m_commandContext->GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	m_commandContext->GetCommandList()->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	m_commandContext->GetCommandList()->IASetIndexBuffer(&m_indexBufferView);
-	m_commandContext->GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
+	g_CommandContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &m_vertexBufferView);
+	g_CommandContext.GetCommandList()->IASetIndexBuffer(&m_indexBufferView);
+	g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
 	// indicate that the back buffer will now be used to present
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	m_commandContext->GetCommandList()->ResourceBarrier(1, &barrier);
+	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
+	g_CommandContext.FlushCommandQueue();
 	// indicate that back buffer will be used as a render target
 	//barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
 	//	m_depthBuffer.GetResource(),
@@ -419,7 +349,7 @@ void D3D12HelloTriangle::PopulateCommandList()
 	//	m_depthBuffer.GetCurrentState());
 	//m_commandList->ResourceBarrier(1, &barrier2);
 	
-	//ThrowIfFailed(m_commandContext->GetCommandList()->Close());
+	//ThrowIfFailed(g_CommandContext.GetCommandList()->Close());
 }
 
 void D3D12HelloTriangle::WaitForPreviousFrame()
@@ -435,6 +365,6 @@ void D3D12HelloTriangle::WaitForPreviousFrame()
 	//	ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
 	//	WaitForSingleObject(m_fenceEvent, INFINITE);
 	//}
-	m_commandContext->FlushCommandQueue();
+	g_CommandContext.FlushCommandQueue();
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }

@@ -27,7 +27,7 @@
     <ClCompile Include="src\TResource\GpuResource.cpp" />
     <ClCompile Include="src\Graphic\Shader\Shader.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12Texture.cpp" />
-    <ClCompile Include="src\Graphic\Resource\D3D12RHI.cpp" />
+    <ClCompile Include="src\Graphic\D3D12RHI.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12DescriptorCache.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12HeapSlotAllocator.cpp" />
     <ClCompile Include="main.cpp" />
@@ -50,7 +50,7 @@
     <ClInclude Include="src\TResource\GpuResource.h" />
     <ClInclude Include="src\Graphic\Shader\Shader.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12Texture.h" />
-    <ClInclude Include="src\Graphic\Resource\D3D12RHI.h" />
+    <ClInclude Include="src\Graphic\D3D12RHI.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12DescriptorCache.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12HeapSlotAllocator.h" />
     <ClInclude Include="src\D3D12HelloTriangle.h" />

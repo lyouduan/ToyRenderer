@@ -1,12 +1,9 @@
 #include "D3D12CommandContext.h"
 #include "DXSamplerHelper.h"
+#include "D3D12RHI.h"
 
-TD3D12CommandContext::TD3D12CommandContext(ID3D12Device* InDevice) 
-	: Device(InDevice)
+TD3D12CommandContext::TD3D12CommandContext() 
 {
-	CreateCommandContext();
-
-	DescriptorCache = std::make_unique<TD3D12DescriptorCache>(Device);
 }
 
 TD3D12CommandContext::~TD3D12CommandContext()
@@ -14,8 +11,10 @@ TD3D12CommandContext::~TD3D12CommandContext()
 	DestroyCommandContext();
 }
 
-void TD3D12CommandContext::CreateCommandContext()
+void TD3D12CommandContext::CreateCommandContext(ID3D12Device* Device)
 {
+	DescriptorCache = std::make_unique<TD3D12DescriptorCache>(Device);
+
 	// Create Fence
 	ThrowIfFailed(Device->CreateFence(0, D3D12_FENCE_FLAG_NONE, IID_PPV_ARGS(&Fence)));
 

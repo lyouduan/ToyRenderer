@@ -5,13 +5,14 @@
 #include "D3D12Buffer.h"
 #include "D3D12HeapSlotAllocator.h"
 #include "D3D12DescriptorCache.h"
+#include "D3D12CommandContext.h"
 
 #include <memory>
 
 namespace TD3D12RHI
 {
 	extern ID3D12Device* g_Device;
-
+	extern TD3D12CommandContext g_CommandContext;
 	// memory allocator
 	extern std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator;
 	extern std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator;
@@ -26,15 +27,17 @@ namespace TD3D12RHI
 	// cache descriptor for GPU
 	extern std::unique_ptr<TD3D12DescriptorCache> DescriptorCache;
 
+	void Initialze();
+
 	void InitialzeAllocator();
 
-	TD3D12VertexBufferRef CreateVertexBuffer(const void* Contents, uint32_t Size, ID3D12GraphicsCommandList* cmdlist);
+	TD3D12VertexBufferRef CreateVertexBuffer(const void* Contents, uint32_t Size);
 
-	TD3D12IndexBufferRef CreateIndexBuffer(const void* Contents, uint32_t Size, ID3D12GraphicsCommandList* cmdlist);
+	TD3D12IndexBufferRef CreateIndexBuffer(const void* Contents, uint32_t Size);
 
 	void CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation);
 
-	void CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation, ID3D12GraphicsCommandList* cmdlist);
+	void CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
 
 	TD3D12HeapSlotAllocator* GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE HeapType);
 }

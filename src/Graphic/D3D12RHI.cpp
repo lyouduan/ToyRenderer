@@ -4,7 +4,7 @@
 namespace TD3D12RHI
 {
     ID3D12Device* g_Device = nullptr;
-
+    TD3D12CommandContext g_CommandContext;
     // memory allocator
     std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator = nullptr;
     std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator = nullptr;
@@ -16,6 +16,14 @@ namespace TD3D12RHI
 
     // cache descriptor handle
     std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
+
+    void Initialze()
+    {
+        // initialize CommandContext
+        g_CommandContext.CreateCommandContext(g_Device);
+
+        InitialzeAllocator();
+    }
 
     void InitialzeAllocator()
     {

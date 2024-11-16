@@ -5,11 +5,11 @@
 class TD3D12CommandContext
 {
 public:
-	TD3D12CommandContext(ID3D12Device* InDevice);
+	TD3D12CommandContext();
 
 	~TD3D12CommandContext();
 
-	void CreateCommandContext();
+	void CreateCommandContext(ID3D12Device* InDevice);
 
 	void DestroyCommandContext();
 
@@ -30,8 +30,6 @@ public:
 	void EndFrame();
 
 private:
-
-	ID3D12Device* Device = nullptr;
 	
 	Microsoft::WRL::ComPtr<ID3D12CommandQueue> CommandQueue = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandListAlloc = nullptr;

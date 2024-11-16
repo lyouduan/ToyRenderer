@@ -45,7 +45,7 @@
     <ClCompile Include="src\Graphic\Resource\D3D12HeapSlotAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Graphic\Resource\D3D12RHI.cpp">
+    <ClCompile Include="src\Graphic\D3D12RHI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Graphic\Resource\D3D12Texture.cpp">
@@ -116,7 +116,7 @@
     <ClInclude Include="src\Graphic\Resource\D3D12HeapSlotAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Graphic\Resource\D3D12RHI.h">
+    <ClInclude Include="src\Graphic\D3D12RHI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Graphic\Resource\D3D12Texture.h">

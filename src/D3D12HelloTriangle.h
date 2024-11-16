@@ -33,8 +33,6 @@ private:
 	//ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 	//ComPtr<ID3D12CommandQueue> m_commandQueue;
 	//ComPtr<ID3D12GraphicsCommandList> m_commandList;
-	
-	std::unique_ptr<TD3D12CommandContext> m_commandContext = nullptr;
 
 	ComPtr<ID3D12RootSignature> m_rootSignature;
 	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
