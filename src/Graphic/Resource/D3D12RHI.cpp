@@ -3,6 +3,8 @@
 
 namespace TD3D12RHI
 {
+    ID3D12Device* g_Device = nullptr;
+
     // memory allocator
     std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator = nullptr;
     std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator = nullptr;
@@ -15,16 +17,16 @@ namespace TD3D12RHI
     // cache descriptor handle
     std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
 
-    void InitialzeAllocator(ID3D12Device* Device)
+    void InitialzeAllocator()
     {
-        UploadBufferAllocator = std::make_unique<TD3D12UploadBufferAllocator>(Device);
-        DefaultBufferAllocator = std::make_unique<TD3D12DefaultBufferAllocator>(Device);
+        UploadBufferAllocator = std::make_unique<TD3D12UploadBufferAllocator>(g_Device);
+        DefaultBufferAllocator = std::make_unique<TD3D12DefaultBufferAllocator>(g_Device);
 
-        RTVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
-        DSVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
-        SRVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128);
+        RTVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
+        DSVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);
+        SRVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128);
 
-        DescriptorCache = std::make_unique<TD3D12DescriptorCache>(Device);
+        DescriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
     }
 }
 

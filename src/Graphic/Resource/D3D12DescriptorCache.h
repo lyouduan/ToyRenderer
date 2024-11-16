@@ -8,20 +8,31 @@ public:
 
 	~TD3D12DescriptorCache();
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetCacherCbvSrvUavDescriptorHeap() {
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetCacheCbvSrvUavDescriptorHeap()
+	{
 		return CacheCbvSrvUavDescriptorHeap;
 	}
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE AppendCbvSrvUavDescriptors(const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& SrcDescriptors);
+	uint32_t GetCbvSrvUavDescriptorSize() const
+	{
+		return CbvSrvUavDescriptorSize;
+	}
 
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetCacheRtvDescriptorHeap() { return CacheRtvDescriptorHeap; }
+	CD3DX12_GPU_DESCRIPTOR_HANDLE AppendCbvSrvUavDescriptors(const std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>& SrvDescriptors);
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetCacheRtvDescriptorHeap()
+	{
+		return CacheRtvDescriptorHeap;
+	}
+
+	uint32_t GetRtvDescriptorSize() const
+	{
+		return RtvDescriptorSize;
+	}
 
 	void AppendRtvDescriptors(const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& RtvDescriptors, CD3DX12_GPU_DESCRIPTOR_HANDLE& OutGpuHandle, CD3DX12_CPU_DESCRIPTOR_HANDLE& OutCpuHandle);
 
 	void Reset();
-
-	UINT GetRtvDescriptorSize() { return RtvDescriptorSize; }
-	UINT GetCbvSrvUavDescriptorSize() { return CbvSrvUavDescriptorSize; }
 
 private:
 	void CreateCacheCbvSrvUavDescriptorHeap();
@@ -32,11 +43,10 @@ private:
 
 	void ResetCacheRtvDescriptorHeap();
 
+	// for CBV SRV UAV Descriptor Heap
 private:
-
 	ID3D12Device* D3DDevice = nullptr;
-
-	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CacheCbvSrvUavDescriptorHeap = nullptr;
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CacheCbvSrvUavDescriptorHeap;
 
 	UINT CbvSrvUavDescriptorSize;
 
@@ -44,8 +54,8 @@ private:
 
 	uint32_t CbvSrvUavDescriptorOffset = 0;
 
+	// for RTV Descriptor Heap
 private:
-
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> CacheRtvDescriptorHeap = nullptr;
 
 	UINT RtvDescriptorSize;
@@ -54,4 +64,3 @@ private:
 
 	uint32_t RtvDescriptorOffset = 0;
 };
-

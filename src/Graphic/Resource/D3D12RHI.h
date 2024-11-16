@@ -10,6 +10,8 @@
 
 namespace TD3D12RHI
 {
+	extern ID3D12Device* g_Device;
+
 	// memory allocator
 	extern std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator;
 	extern std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator;
@@ -24,7 +26,7 @@ namespace TD3D12RHI
 	// cache descriptor for GPU
 	extern std::unique_ptr<TD3D12DescriptorCache> DescriptorCache;
 
-	void InitialzeAllocator(ID3D12Device* Device);
+	void InitialzeAllocator();
 
 	TD3D12VertexBufferRef CreateVertexBuffer(const void* Contents, uint32_t Size, ID3D12GraphicsCommandList* cmdlist);
 

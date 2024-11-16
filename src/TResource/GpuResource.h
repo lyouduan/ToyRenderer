@@ -1,10 +1,9 @@
 #pragma once
-#include "stdafx.h"
 
 #define D3D12_GPU_VIRTUAL_ADDRESS_NULL      ((D3D12_GPU_VIRTUAL_ADDRESS)0)
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
-// shader-visible 
+#include "DXSamplerHelper.h"
 class GpuResource
 {
 public:
@@ -16,14 +15,14 @@ public:
 	}
 
 	GpuResource(ID3D12Resource* pResource, D3D12_RESOURCE_STATES CurrentState) :
-		m_GpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL),
 		m_pResource(pResource),
-		m_UsageState(CurrentState),
+		m_GpuVirtualAddress(D3D12_GPU_VIRTUAL_ADDRESS_NULL),
+		m_UsageState(D3D12_RESOURCE_STATE_COMMON),
 		m_TransitioningState((D3D12_RESOURCE_STATES)-1)
 	{
 	}
 
-	~GpuResource() { }
+	~GpuResource() { Destroy(); }
 
 	virtual void Destroy()
 	{
@@ -44,15 +43,11 @@ public:
 
 	uint32_t GetVersionID() const { return m_VersionID; }
 
-	D3D12_RESOURCE_STATES GetCurrentState() { return m_UsageState; }
 protected:
-	// resource
-	Microsoft::WRL::ComPtr<ID3D12Resource> m_pResource;
 
+	Microsoft::WRL::ComPtr<ID3D12Resource> m_pResource;
 	D3D12_RESOURCE_STATES m_UsageState;
 	D3D12_RESOURCE_STATES m_TransitioningState;
-
-	// binding to view for shader
 	D3D12_GPU_VIRTUAL_ADDRESS m_GpuVirtualAddress;
 
 	// used to identify when a resource changes so descriptors can be copied etc.

@@ -15,13 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Resource\D3D12Buffer.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12Buffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\D3D12MemoryAllocator.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12MemoryAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\D3D12Resource.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12Resource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\D3D12HelloTriangle.cpp">
@@ -39,51 +39,54 @@
     <ClCompile Include="main.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\D3D12DescriptorCache.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12DescriptorCache.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\D3D12HeapSlotAllocator.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12HeapSlotAllocator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\D3D12RHI.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12RHI.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\D3D12Texture.cpp">
+    <ClCompile Include="src\Graphic\Resource\D3D12Texture.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\GpuResource.cpp">
+    <ClCompile Include="src\Graphic\Shader\Shader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\GpuBuffer.cpp">
+    <ClCompile Include="src\TResource\GpuResource.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\UploadBuffer.cpp">
+    <ClCompile Include="src\TResource\GpuBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\PixelBuffer.cpp">
+    <ClCompile Include="src\TResource\UploadBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\ColorBuffer.cpp">
+    <ClCompile Include="src\TResource\PixelBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Resource\DepthBuffer.cpp">
+    <ClCompile Include="src\TResource\ColorBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Shader\Shader.cpp">
+    <ClCompile Include="src\TResource\DepthBuffer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="BuddyAllocator.cpp">
+    <ClCompile Include="src\TResource\BuddyAllocator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Graphic\D3D12CommandContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Resource\D3D12Buffer.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\D3D12MemoryAllocator.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12MemoryAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\D3D12Resource.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12Resource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\D3D12HelloTriangle.h">
@@ -107,40 +110,43 @@
     <ClInclude Include="src\Win32Application.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\D3D12DescriptorCache.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12DescriptorCache.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\D3D12HeapSlotAllocator.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12HeapSlotAllocator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\D3D12RHI.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12RHI.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\D3D12Texture.h">
+    <ClInclude Include="src\Graphic\Resource\D3D12Texture.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\GpuResource.h">
+    <ClInclude Include="src\Graphic\Shader\Shader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\GpuBuffer.h">
+    <ClInclude Include="src\TResource\GpuResource.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\UploadBuffer.h">
+    <ClInclude Include="src\TResource\GpuBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\PixelBuffer.h">
+    <ClInclude Include="src\TResource\UploadBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\ColorBuffer.h">
+    <ClInclude Include="src\TResource\PixelBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Resource\DepthBuffer.h">
+    <ClInclude Include="src\TResource\ColorBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Shader\Shader.h">
+    <ClInclude Include="src\TResource\DepthBuffer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="BuddyAllocator.h">
+    <ClInclude Include="src\TResource\BuddyAllocator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Graphic\D3D12CommandContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

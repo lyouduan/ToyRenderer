@@ -13,6 +13,7 @@ public:
 	TD3D12Resource* GetResource() { return ResourceLocation.UnderlyingResource; }
 
 public:
+	// 显存分配Allocation
 	TD3D12ResourceLocation ResourceLocation;
 };
 
