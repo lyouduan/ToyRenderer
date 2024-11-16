@@ -13,7 +13,7 @@ TD3D12DescriptorCache::~TD3D12DescriptorCache()
 {
 }
 
-CD3DX12_GPU_DESCRIPTOR_HANDLE TD3D12DescriptorCache::AppendCbvSrvUavDescriptors(const std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>& SrvDescriptors)
+CD3DX12_GPU_DESCRIPTOR_HANDLE TD3D12DescriptorCache::AppendCbvSrvUavDescriptors(const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& SrvDescriptors)
 {
 	// Append to heap
 	
@@ -22,7 +22,8 @@ CD3DX12_GPU_DESCRIPTOR_HANDLE TD3D12DescriptorCache::AppendCbvSrvUavDescriptors(
 	assert(CbvSrvUavDescriptorOffset + SlotsNeeded < MaxCbvSrvUavDescriptorCount);
 
 	// 计算当前空闲堆的句柄
-	auto CpuDesciptorHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(CacheCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), CbvSrvUavDescriptorOffset, CbvSrvUavDescriptorSize);
+	auto CpuDescriptorHandle = CD3DX12_CPU_DESCRIPTOR_HANDLE(CacheCbvSrvUavDescriptorHeap->GetCPUDescriptorHandleForHeapStart(), CbvSrvUavDescriptorOffset, CbvSrvUavDescriptorSize);
+	D3DDevice->CopyDescriptors(1, &CpuDescriptorHandle, &SlotsNeeded, SlotsNeeded, SrvDescriptors.data(), nullptr, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	// Get GpuDescriptorHandle
 	auto GpuDescriptorHandle = CD3DX12_GPU_DESCRIPTOR_HANDLE(CacheCbvSrvUavDescriptorHeap->GetGPUDescriptorHandleForHeapStart(), CbvSrvUavDescriptorOffset, CbvSrvUavDescriptorSize);

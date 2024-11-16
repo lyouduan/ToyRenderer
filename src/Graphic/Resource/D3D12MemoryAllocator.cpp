@@ -402,11 +402,11 @@ TD3D12TextureResourceAllocator::TD3D12TextureResourceAllocator(ID3D12Device* InD
 	D3DDevice = InDevice;
 }
 
-void TD3D12TextureResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, TD3D12ResourceLocation& ResourceLocation)
+void TD3D12TextureResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
 {
 	const D3D12_RESOURCE_ALLOCATION_INFO Info = D3DDevice->GetResourceAllocationInfo(0, 1, &ResourceDesc);
 
-	Allocator->AllocResource((uint32_t)Info.SizeInBytes, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
+	Allocator->AllocResource((uint32_t)Info.SizeInBytes, Alignment, ResourceLocation);
 
 	// create placed resource
 	{

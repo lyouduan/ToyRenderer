@@ -19,6 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Graphic\Resource\DDSTextureLoader.cpp" />
     <ClCompile Include="src\TResource\BuddyAllocator.cpp" />
     <ClCompile Include="src\TResource\DepthBuffer.cpp" />
     <ClCompile Include="src\TResource\ColorBuffer.cpp" />
@@ -42,6 +43,8 @@
     <ClCompile Include="src\Graphic\D3D12CommandContext.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Graphic\Resource\dds.h" />
+    <ClInclude Include="src\Graphic\Resource\DDSTextureLoader.h" />
     <ClInclude Include="src\TResource\BuddyAllocator.h" />
     <ClInclude Include="src\TResource\DepthBuffer.h" />
     <ClInclude Include="src\TResource\ColorBuffer.h" />
@@ -70,6 +73,9 @@
     <None Include="shaders\shader.hlsl">
       <FileType>Document</FileType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\WoodCrate01.dds" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>

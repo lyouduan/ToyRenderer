@@ -15,6 +15,20 @@ TD3D12Resource::TD3D12Resource(Microsoft::WRL::ComPtr<ID3D12Resource> InD3DResou
 	}
 }
 
+TD3D12Resource::TD3D12Resource(ID3D12Resource* InD3DResource, D3D12_RESOURCE_STATES InitState)
+	: D3DResource(InD3DResource), CurrentState(InitState)
+{
+	// Resource is buffer
+	if (InD3DResource->GetDesc().Dimension == D3D12_RESOURCE_DIMENSION_BUFFER)
+	{
+		GPUVirtualAddress = InD3DResource->GetGPUVirtualAddress();
+	}
+	else
+	{
+		// return NULL if non-buffer resource
+	}
+}
+
 void TD3D12Resource::Map()
 {
 	ThrowIfFailed(D3DResource->Map(0, nullptr, &MappedBaseAddress));

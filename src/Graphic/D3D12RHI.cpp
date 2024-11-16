@@ -8,7 +8,7 @@ namespace TD3D12RHI
     // memory allocator
     std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator = nullptr;
     std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator = nullptr;
-
+    std::unique_ptr<TD3D12TextureResourceAllocator> TextureResourceAllocator = nullptr;
     // heapSlot allocator
     std::unique_ptr<TD3D12HeapSlotAllocator> RTVHeapSlotAllocator = nullptr;
     std::unique_ptr<TD3D12HeapSlotAllocator> DSVHeapSlotAllocator = nullptr;
@@ -29,6 +29,7 @@ namespace TD3D12RHI
     {
         UploadBufferAllocator = std::make_unique<TD3D12UploadBufferAllocator>(g_Device);
         DefaultBufferAllocator = std::make_unique<TD3D12DefaultBufferAllocator>(g_Device);
+        TextureResourceAllocator = std::make_unique<TD3D12TextureResourceAllocator>(g_Device);
 
         RTVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 128);
         DSVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 128);

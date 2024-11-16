@@ -78,6 +78,9 @@
     <ClCompile Include="src\Graphic\D3D12CommandContext.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Graphic\Resource\DDSTextureLoader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -149,8 +152,17 @@
     <ClInclude Include="src\Graphic\D3D12CommandContext.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Graphic\Resource\DDSTextureLoader.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Graphic\Resource\dds.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\shader.hlsl" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="textures\WoodCrate01.dds" />
   </ItemGroup>
 </Project>

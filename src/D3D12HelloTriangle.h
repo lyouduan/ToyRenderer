@@ -19,7 +19,7 @@ private:
 
 	struct Vertex {
 		XMFLOAT3 position;
-		XMFLOAT4 color;
+		XMFLOAT2 tex;
 	};
 
 	// pipleline objects
@@ -41,11 +41,16 @@ private:
 
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RtvDescriptors;
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRV;
+
+	std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
 
 	// app resource
 	ComPtr<ID3D12Resource> m_vertexBuffer;
 	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+
+
 	// synchronization objects
 	uint32_t m_frameIndex;
 	HANDLE m_fenceEvent;

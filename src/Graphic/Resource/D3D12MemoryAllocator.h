@@ -160,7 +160,7 @@ class TD3D12TextureResourceAllocator
 public:
 	TD3D12TextureResourceAllocator(ID3D12Device* InDevice);
 
-	void AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, TD3D12ResourceLocation& ResourceLocation);
+	void AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
 
 	void CleanUpAllocations();
 

@@ -16,6 +16,7 @@ namespace TD3D12RHI
 	// memory allocator
 	extern std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator;
 	extern std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator;
+	extern std::unique_ptr<TD3D12TextureResourceAllocator> TextureResourceAllocator;
 
 	// heapSlot allocator
 	extern std::unique_ptr<TD3D12HeapSlotAllocator> RTVHeapSlotAllocator;
@@ -38,6 +39,8 @@ namespace TD3D12RHI
 	void CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation);
 
 	void CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
+
+	void InitializeTexture(TD3D12Resource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
 
 	TD3D12HeapSlotAllocator* GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE HeapType);
 }

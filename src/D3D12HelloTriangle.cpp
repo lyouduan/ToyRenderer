@@ -2,6 +2,7 @@
 #include "D3D12MemoryAllocator.h"
 #include "D3D12Buffer.h"
 #include "D3D12RHI.h"
+#include "D3D12Texture.h"
 
 using namespace TD3D12RHI;
 
@@ -100,6 +101,8 @@ void D3D12HelloTriangle::LoadPipeline()
 	// using device to initialize
 	TD3D12RHI::Initialze();
 
+	descriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
+
 	// describe and create the swap chain
 	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
 	swapChainDesc.BufferCount = FrameCount;
@@ -156,11 +159,31 @@ void D3D12HelloTriangle::LoadAssets()
 	// create an empty root signature
 	{
 		// A single 32-bit constant root parameter that is used by the vertex shader.
-		CD3DX12_ROOT_PARAMETER1 rootParameters[1];
+		CD3DX12_DESCRIPTOR_RANGE1 srvRange;
+		srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
+
+		CD3DX12_ROOT_PARAMETER1 rootParameters[2];
 		rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
+		rootParameters[1].InitAsDescriptorTable(1, &srvRange);
+
+		// sampler
+		D3D12_STATIC_SAMPLER_DESC sampler = {};
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.MipLODBias = 0;
+		sampler.MaxAnisotropy = 0;
+		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
+		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
+		sampler.MinLOD = 0.0f;
+		sampler.MaxLOD = D3D12_FLOAT32_MAX;
+		sampler.ShaderRegister = 0;
+		sampler.RegisterSpace = 0;
+		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
 
 		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-		rootSignatureDescription.Init_1_1(1, rootParameters, 0, nullptr, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
+		rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
 
 		ComPtr<ID3DBlob> signature;
 		ComPtr<ID3DBlob> error;
@@ -189,7 +212,7 @@ void D3D12HelloTriangle::LoadAssets()
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
 			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"COLOR", 0, DXGI_FORMAT_R32G32B32A32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 		};
 
 		// describe and create the graphics pipeline state object (PSO)
@@ -215,14 +238,14 @@ void D3D12HelloTriangle::LoadAssets()
 	{
 		// define  the geometry for a triangle
 		Vertex triangleVerties[] =
-		{   { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT4(0.0f, 0.0f, 0.0f, 1.0f) }, // 0
-			{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT4(0.0f, 1.0f, 0.0f, 1.0f) }, // 1
-			{ XMFLOAT3(1.0f,  1.0f, -1.0f),  XMFLOAT4(1.0f, 1.0f, 0.0f, 1.0f) }, // 2
-			{ XMFLOAT3(1.0f, -1.0f, -1.0f),  XMFLOAT4(1.0f, 0.0f, 0.0f, 1.0f) }, // 3
-			{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT4(0.0f, 0.0f, 1.0f, 1.0f) }, // 4
-			{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT4(0.0f, 1.0f, 1.0f, 1.0f) }, // 5
-			{ XMFLOAT3(1.0f,  1.0f,  1.0f),  XMFLOAT4(1.0f, 1.0f, 1.0f, 1.0f) }, // 6
-			{ XMFLOAT3(1.0f, -1.0f,  1.0f),  XMFLOAT4(1.0f, 0.0f, 1.0f, 1.0f) }  // 7
+		{   { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) }, // 0
+			{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) }, // 1
+			{ XMFLOAT3(1.0f,  1.0f, -1.0f),  XMFLOAT2(0.0f, 1.0f) }, // 2
+			{ XMFLOAT3(1.0f, -1.0f, -1.0f),  XMFLOAT2(1.0f, 0.0f) }, // 3
+			{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT2(0.0f, 1.0f) }, // 4
+			{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT2(1.0f, 0.0f) }, // 5
+			{ XMFLOAT3(1.0f,  1.0f,  1.0f),  XMFLOAT2(0.0f, 0.0f) }, // 6
+			{ XMFLOAT3(1.0f, -1.0f,  1.0f),  XMFLOAT2(1.0f, 1.0f) }  // 7
 		};
 
 		int16_t indices[36] =
@@ -234,36 +257,7 @@ void D3D12HelloTriangle::LoadAssets()
 			1, 5, 6, 1, 6, 2,
 			4, 0, 3, 4, 3, 7
 		};
-		// Note: using upload heaps to transfer static data like vert buffers is not
-		// recommended. Every time the GPU needs it, the upload heap will be marshalled 
-		// over. Please read up on Default Heap usage. An upload heap is used here for 
-		// code simplicity and because there are very few verts to actually transfer.
-
-		/*
-		{
-			const uint32_t vertexBufferSize = sizeof(triangleVerties);
-
-			auto upload = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
-			auto buffer = CD3DX12_RESOURCE_DESC::Buffer(vertexBufferSize);
-
-			ThrowIfFailed(m_device->CreateCommittedResource(
-				&upload,
-				D3D12_HEAP_FLAG_NONE,
-				&buffer,
-				D3D12_RESOURCE_STATE_GENERIC_READ,
-				nullptr,
-				IID_PPV_ARGS(&m_vertexBuffer)));
-
-			UINT8* pVertexDataBegin;
-			CD3DX12_RANGE readRange(0, 0);
-			ThrowIfFailed(m_vertexBuffer->Map(0, &readRange, reinterpret_cast<void**>(&pVertexDataBegin)));
-			memcpy(pVertexDataBegin, triangleVerties, sizeof(triangleVerties));
-			m_vertexBuffer->Unmap(0, nullptr);
-
-			
-		}
-		*/
-
+	
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
 		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize);
 
@@ -281,6 +275,12 @@ void D3D12HelloTriangle::LoadAssets()
 		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
 		m_indexBufferView.SizeInBytes = indexBufferSize;
 	}
+
+	// load texture data
+	TD3D12Texture texture(128, 128, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	
+	if(texture.CreateDDSFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/Wood.dds", 0, false))
+		m_SRV.push_back(texture.GetSRV());
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -330,7 +330,16 @@ void D3D12HelloTriangle::PopulateCommandList()
 	// Update the MVP matrix
 	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
 	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+
 	g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+	
+	descriptorCache->AppendCbvSrvUavDescriptors(m_SRV);
+
+	ID3D12DescriptorHeap* Heaps[] = { descriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get() };
+
+	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps);
+	D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = descriptorCache->GetCacheCbvSrvUavDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
+	g_CommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(1, srvHandle);
 
 	g_CommandContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 	g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &m_vertexBufferView);

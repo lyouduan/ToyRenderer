@@ -1,7 +1,7 @@
 #include "D3D12Buffer.h"
 #include "stdafx.h"
 #include "D3D12RHI.h"
-
+#include "D3D12Resource.h"
 
 TD3D12VertexBufferRef TD3D12RHI::CreateVertexBuffer(const void* Contents, uint32_t Size)
 {
@@ -31,7 +31,6 @@ void TD3D12RHI::CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RES
 
 void TD3D12RHI::CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
 {
-    TD3D12RHI::g_CommandContext.ResetCommandAllocator();
     TD3D12RHI::g_CommandContext.ResetCommandList();
 
     // create DefaultBuffer resource

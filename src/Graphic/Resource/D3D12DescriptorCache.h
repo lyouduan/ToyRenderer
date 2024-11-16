@@ -18,7 +18,7 @@ public:
 		return CbvSrvUavDescriptorSize;
 	}
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE AppendCbvSrvUavDescriptors(const std::vector<D3D12_GPU_DESCRIPTOR_HANDLE>& SrvDescriptors);
+	CD3DX12_GPU_DESCRIPTOR_HANDLE AppendCbvSrvUavDescriptors(const std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& SrvDescriptors);
 
 	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetCacheRtvDescriptorHeap()
 	{

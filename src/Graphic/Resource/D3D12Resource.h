@@ -8,6 +8,8 @@ class TD3D12Resource
 public:
 	TD3D12Resource(Microsoft::WRL::ComPtr<ID3D12Resource> InD3DResource, D3D12_RESOURCE_STATES InitState = D3D12_RESOURCE_STATE_COMMON);
 
+	TD3D12Resource(ID3D12Resource* InD3DResource, D3D12_RESOURCE_STATES InitState = D3D12_RESOURCE_STATE_COMMON);
+
 	// for upload buffer
 	void Map();
 
