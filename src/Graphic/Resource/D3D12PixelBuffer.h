@@ -12,6 +12,7 @@ public:
 	uint32_t GetDepth(void) const { return m_ArraySize; }
 	const DXGI_FORMAT& GetFormat(void) const { return m_Format; }
 
+	TD3D12Resource* Resource() const { return ResourceLocation.UnderlyingResource; }
 	ID3D12Resource* GetResource() const { return ResourceLocation.UnderlyingResource->D3DResource.Get(); }
 
 public:
@@ -22,8 +23,10 @@ protected:
 
 	void AssociateWithResource(ID3D12Device* Device, const std::wstring& Name, ID3D12Resource* Resource, D3D12_RESOURCE_STATES CurrentState);
 
-	void CreateTextureResource(ID3D12Device* Device, const std::wstring& Name, const D3D12_RESOURCE_DESC& ResourceDesc,
+	void CreateTextureResource(D3D12_RESOURCE_STATES State, const D3D12_RESOURCE_DESC& ResourceDesc,
 		D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
+
+	DXGI_FORMAT GetDepthFormat(DXGI_FORMAT defaultFormat);
 
 	uint32_t m_Width;
 	uint32_t m_Height;
@@ -93,6 +96,34 @@ private:
 
 class D3D12DepthBuffer : public D3D12PixelBuffer
 {
+public:
 
+	D3D12DepthBuffer(float ClearDepth = 0.0f, uint8_t ClearStencil = 0)
+		: m_ClearDepth(ClearDepth), m_ClearStencil(ClearStencil)
+	{
+		m_DSVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+		m_SRVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+	}
+	
+	void Create(const std::wstring& name, uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
+
+	void Create(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t NumSamples, DXGI_FORMAT Format,
+		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
+
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() const { return m_DSVHandle; }
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_SRVHandle; }
+
+	float GetClearDepth() const { return m_ClearDepth; }
+	uint8_t GetClearStencil() const { return m_ClearStencil; }
+
+private:
+
+	void CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format);
+
+	float m_ClearDepth;
+	uint8_t m_ClearStencil;
+
+	D3D12_CPU_DESCRIPTOR_HANDLE m_DSVHandle;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_SRVHandle;
 };
 

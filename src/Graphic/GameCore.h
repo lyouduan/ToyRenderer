@@ -31,7 +31,7 @@ private:
 
 	//ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
 	D3D12ColorBuffer m_renderTragetrs[FrameCount];
-
+	D3D12DepthBuffer DepthBuffer;
 
 	ComPtr<ID3D12Resource> m_Depth;
 

@@ -39,12 +39,46 @@ void D3D12PixelBuffer::AssociateWithResource(ID3D12Device* Device, const std::ws
     m_Format = ResourceDesc.Format;
 }
 
-void D3D12PixelBuffer::CreateTextureResource(ID3D12Device* Device, const std::wstring& Name, const D3D12_RESOURCE_DESC& ResourceDesc, D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+DXGI_FORMAT D3D12PixelBuffer::GetDepthFormat(DXGI_FORMAT defaultFormat)
+{
+    switch (defaultFormat)
+    {
+        // 32-bit Z w/ Stencil
+    case DXGI_FORMAT_R32G8X24_TYPELESS:
+    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+    case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+    case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+        return DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS;
+
+        // No Stencil
+    case DXGI_FORMAT_R32_TYPELESS:
+    case DXGI_FORMAT_D32_FLOAT:
+    case DXGI_FORMAT_R32_FLOAT:
+        return DXGI_FORMAT_R32_FLOAT;
+
+        // 24-bit Z
+    case DXGI_FORMAT_R24G8_TYPELESS:
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+    case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+        return DXGI_FORMAT_R24_UNORM_X8_TYPELESS;
+
+        // 16-bit Z w/o Stencil
+    case DXGI_FORMAT_R16_TYPELESS:
+    case DXGI_FORMAT_D16_UNORM:
+    case DXGI_FORMAT_R16_UNORM:
+        return DXGI_FORMAT_R16_UNORM;
+
+    default:
+        return DXGI_FORMAT_UNKNOWN;
+    }
+}
+
+void D3D12PixelBuffer::CreateTextureResource(D3D12_RESOURCE_STATES State, const D3D12_RESOURCE_DESC& ResourceDesc, D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
 {
     (void)VidMemPtr;
 
-    TD3D12RHI::TextureResourceAllocator->AllocTextureResource(D3D12_RESOURCE_STATE_PRESENT, ResourceDesc, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
-
+    TD3D12RHI::PixelResourceAllocator->AllocTextureResource(State, ResourceDesc, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
 }
 
 void D3D12ColorBuffer::CreateFromSwapChain(const std::wstring& name, ID3D12Resource* BaseResource)
@@ -74,7 +108,7 @@ void D3D12ColorBuffer::Create(const std::wstring& name, uint32_t Width, uint32_t
     ClearValue.Color[3] = m_ClearColor.w;
 
     // create Texture Resource
-    CreateTextureResource(g_Device, name, ResourceDesc, ClearValue, VidMemPtr);
+    CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMemPtr);
     // create view
     CreateDerivedViews(g_Device, Format, 1, NumMips);
 }
@@ -92,7 +126,7 @@ void D3D12ColorBuffer::CreateArray(const std::wstring& Name, uint32_t Width, uin
     ClearValue.Color[2] = m_ClearColor.z;
     ClearValue.Color[3] = m_ClearColor.w;
 
-    CreateTextureResource(g_Device, Name, ResourceDesc, ClearValue, VidMem);
+    CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMem);
     CreateDerivedViews(g_Device, Format, ArrayCount, 1);
 }
 
@@ -152,3 +186,70 @@ void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
     // create the shader resource view
     Device->CreateShaderResourceView(Resource, &SRVDesc, m_SRVHandle);
 }
+
+void D3D12DepthBuffer::Create(const std::wstring& name, uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+{
+    Create(name, Width, Height, 1, Format, VidMemPtr);
+}
+
+void D3D12DepthBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t NumSamples, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+{
+    D3D12_RESOURCE_DESC ResourceDesc = DescribeTex2D(Width, Height, 1, 1, Format, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+    ResourceDesc.SampleDesc.Count = NumSamples;
+
+    D3D12_CLEAR_VALUE ClearValue = {};
+    ClearValue.Format = Format;
+
+    CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMemPtr);
+    CreateDerivedViews(g_Device, Format);
+}
+
+void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format)
+{
+    ID3D12Resource* Resource = ResourceLocation.UnderlyingResource->D3DResource.Get();
+
+    D3D12_DEPTH_STENCIL_VIEW_DESC DSVDesc;
+    DSVDesc.Format = Format;
+    if (Resource->GetDesc().SampleDesc.Count == 1)
+    {
+        DSVDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
+        DSVDesc.Texture2D.MipSlice = 0;
+    }
+    // multi-sampling
+    else
+    {
+        DSVDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DMS;
+    }
+
+    if (m_DSVHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+    {
+        m_DSVHandle = DSVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    }
+
+    DSVDesc.Flags = D3D12_DSV_FLAG_NONE;
+    Device->CreateDepthStencilView(Resource, &DSVDesc, m_DSVHandle);
+
+    // create SRV
+
+    if (m_SRVHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+    {
+        m_SRVHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    }
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+    SRVDesc.Format = GetDepthFormat(Format);
+    if(DSVDesc.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2D)
+    {
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+        SRVDesc.Texture2D.MipLevels = 1;
+    }
+    else
+    {
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DMS;
+    }
+
+    SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
+    Device->CreateShaderResourceView(Resource, &SRVDesc, m_SRVHandle);
+}
+

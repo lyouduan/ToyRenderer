@@ -17,7 +17,7 @@ TD3D12Texture::TD3D12Texture(size_t Width, size_t Height, DXGI_FORMAT Format)
 
 void TD3D12Texture::Create2D()
 {
-	auto state = D3D12_RESOURCE_STATE_COPY_DEST; // copy the data to this buffer
+	auto state = D3D12_RESOURCE_STATE_COPY_DEST; // 
 
     D3D12_RESOURCE_DESC texDesc = {};
     texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;

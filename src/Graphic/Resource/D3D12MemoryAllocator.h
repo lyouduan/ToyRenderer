@@ -155,6 +155,21 @@ private:
 	ID3D12Device* D3DDevice = nullptr;
 };
 
+class TD3D12PiexlResourceAllocator
+{
+public:
+	TD3D12PiexlResourceAllocator(ID3D12Device* InDevice);
+
+	void AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
+
+	void CleanUpAllocations();
+
+private:
+	std::unique_ptr<TD3D12MultiBuddyAllocator> Allocator = nullptr;
+
+	ID3D12Device* D3DDevice = nullptr;
+};
+
 class TD3D12TextureResourceAllocator
 {
 public:

@@ -426,3 +426,42 @@ void TD3D12TextureResourceAllocator::CleanUpAllocations()
 {
 	Allocator->CleanUpAllocations();
 }
+
+TD3D12PiexlResourceAllocator::TD3D12PiexlResourceAllocator(ID3D12Device* InDevice)
+{
+	TD3D12BuddyAllocator::TAllocatorInitData InitData;
+
+	// placed resource : differents states for different resources
+	InitData.AllocatioStrategy = TD3D12BuddyAllocator::EAllocationStrategy::PlacedResource;
+	InitData.HeapType = D3D12_HEAP_TYPE_DEFAULT;
+	InitData.HeapFlags = D3D12_HEAP_FLAG_ALLOW_ONLY_RT_DS_TEXTURES;
+
+	Allocator = std::make_unique<TD3D12MultiBuddyAllocator>(InDevice, InitData);
+
+	D3DDevice = InDevice;
+}
+
+void TD3D12PiexlResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
+{
+	const D3D12_RESOURCE_ALLOCATION_INFO Info = D3DDevice->GetResourceAllocationInfo(0, 1, &ResourceDesc);
+
+	Allocator->AllocResource((uint32_t)Info.SizeInBytes, Alignment, ResourceLocation);
+
+	// create placed resource
+	{
+		Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
+
+		ID3D12Heap* BackingHeap = ResourceLocation.Allocator->GetBackingHeap();
+		uint64_t HeapOffset = ResourceLocation.OffsetFromBaseOfHeap;
+		D3DDevice->CreatePlacedResource(BackingHeap, HeapOffset, &ResourceDesc, ResourceState, nullptr, IID_PPV_ARGS(&Resource));
+
+		TD3D12Resource* NewResource = new TD3D12Resource(Resource);
+		ResourceLocation.UnderlyingResource = NewResource;
+		ResourceLocation.BlockData.PlacedResource = NewResource; // will delete Resource when ResourceLocation was destoryed
+	}
+}
+
+void TD3D12PiexlResourceAllocator::CleanUpAllocations()
+{
+	Allocator->CleanUpAllocations();
+}

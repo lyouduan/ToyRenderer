@@ -19,6 +19,7 @@ namespace TD3D12RHI
 	extern std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator;
 	extern std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator;
 	extern std::unique_ptr<TD3D12TextureResourceAllocator> TextureResourceAllocator;
+	extern std::unique_ptr<TD3D12PiexlResourceAllocator> PixelResourceAllocator;
 
 	// heapSlot allocator
 	extern std::unique_ptr<TD3D12HeapSlotAllocator> RTVHeapSlotAllocator;
@@ -30,9 +31,9 @@ namespace TD3D12RHI
 	// cache descriptor for GPU
 	extern std::unique_ptr<TD3D12DescriptorCache> DescriptorCache;
 
-	void Initialze();
-
 	void InitialzeAllocator();
+
+	void Initialze();
 
 	TD3D12VertexBufferRef CreateVertexBuffer(const void* Contents, uint32_t Size);
 

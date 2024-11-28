@@ -42,3 +42,8 @@ void Display::Initialize()
 	));
 	
 }
+
+void Display::Present()
+{
+
+}

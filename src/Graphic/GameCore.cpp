@@ -126,7 +126,7 @@ void GameCore::LoadPipeline()
 	// create the dsv
 	{
 
-		//m_depthBuffer.Create(m_device.Get(), L"Depth buffer", m_width, m_height,// DXGI_FORMAT_D32_FLOAT);
+		DepthBuffer.Create(L"Depth Buffer", 64, 64, DXGI_FORMAT_D32_FLOAT);
 	}
 }
 
@@ -283,15 +283,16 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
 	// indicate that back buffer will be used as a render target
-	//auto barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
-	//	m_depthBuffer.GetResource(),
-	//	m_depthBuffer.GetCurrentState(),
-	//	D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	//m_commandList->ResourceBarrier(1, &barrier2);
+	auto barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
+		DepthBuffer.GetResource(),
+		DepthBuffer.Resource()->CurrentState,
+		D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier2);
 
 	//CD3DX12_CPU_DESCRIPTOR_HANDLE dsvhandle(m_depthBuffer.GetDSV());
+	g_CommandContext.GetCommandList()->ClearDepthStencilView(DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, DepthBuffer.GetClearDepth(), DepthBuffer.GetClearStencil(),0, nullptr);
 
-	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, nullptr);
+	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &DepthBuffer.GetDSV());
 
 	// Record commands
 	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
