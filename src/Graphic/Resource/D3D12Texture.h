@@ -1,5 +1,7 @@
 #pragma once
 #include "D3D12Resource.h"
+#include <memory>
+
 class TD3D12Texture
 {
 public:
@@ -31,4 +33,3 @@ private:
 
 	D3D12_CPU_DESCRIPTOR_HANDLE m_hCpuDescriptorHandle;
 };
-

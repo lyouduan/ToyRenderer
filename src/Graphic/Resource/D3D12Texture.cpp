@@ -17,7 +17,7 @@ TD3D12Texture::TD3D12Texture(size_t Width, size_t Height, DXGI_FORMAT Format)
 
 void TD3D12Texture::Create2D()
 {
-	auto state = D3D12_RESOURCE_STATE_COPY_DEST;
+	auto state = D3D12_RESOURCE_STATE_COPY_DEST; // copy the data to this buffer
 
     D3D12_RESOURCE_DESC texDesc = {};
     texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
@@ -37,7 +37,6 @@ void TD3D12Texture::Create2D()
         m_hCpuDescriptorHandle = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
 
     TD3D12RHI::g_Device->CreateShaderResourceView(ResourceLocation.UnderlyingResource->D3DResource.Get(), nullptr, m_hCpuDescriptorHandle);
- 
 }
 
 bool TD3D12Texture::CreateDDSFromMemory(const void* memBuffer, size_t fileSize, bool sRGB)

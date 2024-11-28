@@ -5,6 +5,8 @@ namespace TD3D12RHI
 {
     ID3D12Device* g_Device = nullptr;
     TD3D12CommandContext g_CommandContext;
+    Microsoft::WRL::ComPtr<IDXGISwapChain1> g_SwapCHain;
+
     // memory allocator
     std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator = nullptr;
     std::unique_ptr<TD3D12DefaultBufferAllocator> DefaultBufferAllocator = nullptr;

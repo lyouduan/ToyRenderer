@@ -19,44 +19,35 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Graphic\Resource\D3D12PixelBuffer.cpp" />
+    <ClCompile Include="src\Graphic\Display.cpp" />
+    <ClCompile Include="src\Graphic\GameCore.cpp" />
     <ClCompile Include="src\Graphic\Resource\DDSTextureLoader.cpp" />
-    <ClCompile Include="src\TResource\BuddyAllocator.cpp" />
-    <ClCompile Include="src\TResource\DepthBuffer.cpp" />
-    <ClCompile Include="src\TResource\ColorBuffer.cpp" />
-    <ClCompile Include="src\TResource\PixelBuffer.cpp" />
-    <ClCompile Include="src\TResource\GpuBuffer.cpp" />
-    <ClCompile Include="src\TResource\GpuResource.cpp" />
     <ClCompile Include="src\Graphic\Shader\Shader.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12Texture.cpp" />
     <ClCompile Include="src\Graphic\D3D12RHI.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12DescriptorCache.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12HeapSlotAllocator.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\D3D12HelloTriangle.cpp" />
     <ClCompile Include="src\D3D12Utils.cpp" />
     <ClCompile Include="src\DXSample.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12Buffer.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12MemoryAllocator.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12Resource.cpp" />
     <ClCompile Include="src\Win32Application.cpp" />
-    <ClCompile Include="src\TResource\UploadBuffer.cpp" />
     <ClCompile Include="src\Graphic\D3D12CommandContext.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Graphic\Resource\D3D12PixelBuffer.h" />
+    <ClInclude Include="src\Graphic\Display.h" />
+    <ClInclude Include="src\Graphic\GameCore.h" />
     <ClInclude Include="src\Graphic\Resource\dds.h" />
     <ClInclude Include="src\Graphic\Resource\DDSTextureLoader.h" />
-    <ClInclude Include="src\TResource\BuddyAllocator.h" />
-    <ClInclude Include="src\TResource\DepthBuffer.h" />
-    <ClInclude Include="src\TResource\ColorBuffer.h" />
-    <ClInclude Include="src\TResource\PixelBuffer.h" />
-    <ClInclude Include="src\TResource\GpuBuffer.h" />
-    <ClInclude Include="src\TResource\GpuResource.h" />
     <ClInclude Include="src\Graphic\Shader\Shader.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12Texture.h" />
     <ClInclude Include="src\Graphic\D3D12RHI.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12DescriptorCache.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12HeapSlotAllocator.h" />
-    <ClInclude Include="src\D3D12HelloTriangle.h" />
     <ClInclude Include="src\D3D12Utils.h" />
     <ClInclude Include="src\d3dx12.h" />
     <ClInclude Include="src\DXSample.h" />
@@ -66,7 +57,6 @@
     <ClInclude Include="src\Graphic\Resource\D3D12Resource.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\Win32Application.h" />
-    <ClInclude Include="src\TResource\UploadBuffer.h" />
     <ClInclude Include="src\Graphic\D3D12CommandContext.h" />
   </ItemGroup>
   <ItemGroup>
@@ -136,7 +126,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/TResource;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -153,7 +143,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/TResource;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -170,7 +160,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/TResource;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -187,7 +177,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./src; ./shaders;./inc;./src/TResource;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./src;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

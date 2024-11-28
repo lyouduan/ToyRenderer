@@ -1,12 +1,13 @@
-#include "D3D12HelloTriangle.h"
+#include "GameCore.h"
 #include "D3D12MemoryAllocator.h"
 #include "D3D12Buffer.h"
 #include "D3D12RHI.h"
 #include "D3D12Texture.h"
+#include "Display.h"
 
 using namespace TD3D12RHI;
 
-D3D12HelloTriangle::D3D12HelloTriangle(uint32_t width, uint32_t height, std::wstring name)
+GameCore::GameCore(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
 	m_frameIndex(0),
 	m_viewport(0.0f,0.0f, static_cast<float>(width), static_cast<float>(height)),
@@ -15,14 +16,13 @@ D3D12HelloTriangle::D3D12HelloTriangle(uint32_t width, uint32_t height, std::wst
 {
 }
 
-void D3D12HelloTriangle::OnInit()
+void GameCore::OnInit()
 {
-
 	LoadPipeline();
 	LoadAssets();
 }
 
-void D3D12HelloTriangle::OnUpdate()
+void GameCore::OnUpdate()
 {
 	float angle = static_cast<float>(1 * 90.0);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
@@ -39,7 +39,7 @@ void D3D12HelloTriangle::OnUpdate()
 	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
 }
 
-void D3D12HelloTriangle::OnRender()
+void GameCore::OnRender()
 {
 	// record all the commands we need to render the scene into the command list
 	PopulateCommandList();
@@ -53,14 +53,14 @@ void D3D12HelloTriangle::OnRender()
 	WaitForPreviousFrame();
 } 
 
-void D3D12HelloTriangle::OnDestroy()
+void GameCore::OnDestroy()
 {
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
 	WaitForPreviousFrame();
 }
 
-void D3D12HelloTriangle::LoadPipeline()
+void GameCore::LoadPipeline()
 {
 	uint32_t dxgiFactoryFlags = 0;
 #if defined(_DEBUG)
@@ -98,51 +98,28 @@ void D3D12HelloTriangle::LoadPipeline()
 			IID_PPV_ARGS(&m_device)));
 	}
 	TD3D12RHI::g_Device = m_device.Detach();
-	// using device to initialize
+
+	// using device to initialize CommandContext and allocator
 	TD3D12RHI::Initialze();
 
 	descriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
 
-	// describe and create the swap chain
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.BufferCount = FrameCount;
-	swapChainDesc.Width = m_width;
-	swapChainDesc.Height = m_height;
-	swapChainDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.SampleDesc = { 1,0 };
-
-	ComPtr<IDXGISwapChain1> swapChain;
-	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		g_CommandContext.GetCommandQueue(),
-		Win32Application::GetHwnd(),
-		&swapChainDesc,
-		nullptr,
-		nullptr,
-		&swapChain
-	));
+	// create the swap chain
+	Display::Initialize();
 
 	// this sample does not support fullscreen transition
 	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
-	ThrowIfFailed(swapChain.As(&m_swapChain));
+	ThrowIfFailed(TD3D12RHI::g_SwapCHain.As(&m_swapChain));
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
-
-	auto HeapSlotAllocator = TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
 
 	// create frame resources
 	{
-		//CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(m_rtvHeap->GetCPUDescriptorHandleForHeapStart());
-		// create a rtv for each frame
 		for(uint32_t n = 0; n < FrameCount; ++n)
 		{
-			auto HeapSlot = HeapSlotAllocator->AllocateHeapSlot();
-			
-			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&m_renderTragetrs[n])));
-			TD3D12RHI::g_Device->CreateRenderTargetView(m_renderTragetrs[n].Get(), nullptr, HeapSlot.Handle);
-			
-			RtvDescriptors.push_back(HeapSlot.Handle);
+			ComPtr<ID3D12Resource> resource = nullptr;
+			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&resource)));
+			m_renderTragetrs[n].CreateFromSwapChain(L"Render Target", resource.Detach());
 		}
 	}
 
@@ -154,7 +131,7 @@ void D3D12HelloTriangle::LoadPipeline()
 }
 
 // load the sample assets
-void D3D12HelloTriangle::LoadAssets()
+void GameCore::LoadAssets()
 {
 	// create an empty root signature
 	{
@@ -277,7 +254,7 @@ void D3D12HelloTriangle::LoadAssets()
 	}
 
 	// load texture data
-	TD3D12Texture texture(128, 128, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	TD3D12Texture texture(64, 64, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	
 	if(texture.CreateDDSFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/Wood.dds", 0, false))
 		m_SRV.push_back(texture.GetSRV());
@@ -285,7 +262,7 @@ void D3D12HelloTriangle::LoadAssets()
 	g_CommandContext.FlushCommandQueue();
 }
 
-void D3D12HelloTriangle::PopulateCommandList()
+void GameCore::PopulateCommandList()
 {
 	//
 	//ThrowIfFailed(m_commandAllocator->Reset());
@@ -300,7 +277,7 @@ void D3D12HelloTriangle::PopulateCommandList()
 
 	// indicate that back buffer will be used as a render target
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_renderTragetrs[m_frameIndex].Get(),
+		m_renderTragetrs[m_frameIndex].GetResource(),
 		D3D12_RESOURCE_STATE_COMMON,
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
@@ -312,18 +289,14 @@ void D3D12HelloTriangle::PopulateCommandList()
 	//	D3D12_RESOURCE_STATE_DEPTH_WRITE);
 	//m_commandList->ResourceBarrier(1, &barrier2);
 
-	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
-	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
-	TD3D12RHI::DescriptorCache->AppendRtvDescriptors(RtvDescriptors, GpuHandle, CpuHandle);
-	CD3DX12_CPU_DESCRIPTOR_HANDLE rtvHandle(CpuHandle, m_frameIndex, TD3D12RHI::DescriptorCache->GetRtvDescriptorSize());
-
 	//CD3DX12_CPU_DESCRIPTOR_HANDLE dsvhandle(m_depthBuffer.GetDSV());
 
-	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &rtvHandle, TRUE, nullptr);
+	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, nullptr);
 
 	// Record commands
 	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
-	g_CommandContext.GetCommandList()->ClearRenderTargetView(rtvHandle, clearColor, 0, nullptr);
+	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), clearColor, 0, nullptr);
+
 	g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
 	//m_commandList->ClearDepthStencilView(dsvhandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
@@ -347,7 +320,7 @@ void D3D12HelloTriangle::PopulateCommandList()
 	g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
 	// indicate that the back buffer will now be used to present
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].Get(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
+	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
 	g_CommandContext.FlushCommandQueue();
@@ -357,11 +330,12 @@ void D3D12HelloTriangle::PopulateCommandList()
 	//	D3D12_RESOURCE_STATE_DEPTH_WRITE,
 	//	m_depthBuffer.GetCurrentState());
 	//m_commandList->ResourceBarrier(1, &barrier2);
-	
+	DescriptorCache->Reset();
+
 	//ThrowIfFailed(g_CommandContext.GetCommandList()->Close());
 }
 
-void D3D12HelloTriangle::WaitForPreviousFrame()
+void GameCore::WaitForPreviousFrame()
 {
 	
 	// Signal and increment the fence value

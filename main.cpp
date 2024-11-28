@@ -4,8 +4,8 @@
 #include <tchar.h>
 #include <strsafe.h>
 
-#include "./src/Win32Application.h"
-#include "./src/D3D12HelloTriangle.h"
+#include "Win32Application.h"
+#include "GameCore.h"
 
 #define GRS_THROW_IF_FAILED(hr) if (FAILED(hr)){ throw CGRSCOMException(hr); }
 
@@ -128,7 +128,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 	// detect GPU memory architecture
 	//test();
 
-	D3D12HelloTriangle sample(1280, 720, L"D3D12 Hello Triangle");
+	GameCore sample(1280, 720, L"D3D12 Hello Triangle");
 	return Win32Application::Run(&sample, hInstance, nCmdShow);
 }
 
