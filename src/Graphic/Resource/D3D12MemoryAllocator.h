@@ -3,7 +3,7 @@
 #include <vector>
 #include <set>
 
-#define DEFAULT_POOL_SIZE (512 * 1024)
+#define DEFAULT_POOL_SIZE (512 * 512 * 1024)
 
 #define DEFAULT_RESOURCE_ALIGNMENT 4
 #define UPLOAD_RESOURCE_ALIGNMENT 256
@@ -155,12 +155,12 @@ private:
 	ID3D12Device* D3DDevice = nullptr;
 };
 
-class TD3D12PiexlResourceAllocator
+class TD3D12PixelResourceAllocator
 {
 public:
-	TD3D12PiexlResourceAllocator(ID3D12Device* InDevice);
+	TD3D12PixelResourceAllocator(ID3D12Device* InDevice);
 
-	void AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
+	void AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, D3D12_CLEAR_VALUE ClearValue, TD3D12ResourceLocation& ResourceLocation);
 
 	void CleanUpAllocations();
 

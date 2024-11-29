@@ -11,9 +11,10 @@ GameCore::GameCore(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
 	m_frameIndex(0),
 	m_viewport(0.0f,0.0f, static_cast<float>(width), static_cast<float>(height)),
-	m_scissorRect(0,0, static_cast<LONG>(width), static_cast<LONG>(height)),
-	m_rtvDescriptorSize(0)
+	m_scissorRect(0,0, static_cast<LONG>(width), static_cast<LONG>(height))
 {
+	g_DisplayWidth = width;
+	g_DisplayHeight = height;
 }
 
 void GameCore::OnInit()
@@ -121,12 +122,6 @@ void GameCore::LoadPipeline()
 			ThrowIfFailed(m_swapChain->GetBuffer(n, IID_PPV_ARGS(&resource)));
 			m_renderTragetrs[n].CreateFromSwapChain(L"Render Target", resource.Detach());
 		}
-	}
-
-	// create the dsv
-	{
-
-		DepthBuffer.Create(L"Depth Buffer", 64, 64, DXGI_FORMAT_D32_FLOAT);
 	}
 }
 
@@ -236,21 +231,10 @@ void GameCore::LoadAssets()
 		};
 	
 		const uint32_t vertexBufferSize = sizeof(triangleVerties);
-		auto vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize);
+		vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize, sizeof(Vertex));
 
-		// use memory Allocator
 		const uint32_t indexBufferSize = sizeof(indices);
-		auto indexBufferRef = TD3D12RHI::CreateIndexBuffer(&indices, indexBufferSize);
-
-		// initialize the vertex buffer view
-		//m_vertexBufferView.BufferLocation = m_vertexBuffer->GetGPUVirtualAddress();
-		m_vertexBufferView.BufferLocation = vertexBufferRef->ResourceLocation.GPUVirtualAddress;
-		m_vertexBufferView.StrideInBytes = sizeof(Vertex);
-		m_vertexBufferView.SizeInBytes = vertexBufferSize;
-
-		m_indexBufferView.BufferLocation = indexBufferRef->ResourceLocation.GPUVirtualAddress;
-		m_indexBufferView.Format = DXGI_FORMAT_R16_UINT;
-		m_indexBufferView.SizeInBytes = indexBufferSize;
+		indexBufferRef = TD3D12RHI::CreateIndexBuffer(&indices, indexBufferSize, DXGI_FORMAT_R16_UINT);
 	}
 
 	// load texture data
@@ -264,9 +248,7 @@ void GameCore::LoadAssets()
 
 void GameCore::PopulateCommandList()
 {
-	//
-	//ThrowIfFailed(m_commandAllocator->Reset());
-	//ThrowIfFailed(m_commandList->Reset(m_commandAllocator.Get(), m_pipelineState.Get()));
+	// reset CommandAllocator and CommandList
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
@@ -282,17 +264,16 @@ void GameCore::PopulateCommandList()
 		D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
-	// indicate that back buffer will be used as a render target
-	auto barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
-		DepthBuffer.GetResource(),
-		DepthBuffer.Resource()->CurrentState,
+	auto barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(
+		g_DepthBuffer.GetResource(),
+		D3D12_RESOURCE_STATE_COMMON,
 		D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier2);
+	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier1);
 
-	//CD3DX12_CPU_DESCRIPTOR_HANDLE dsvhandle(m_depthBuffer.GetDSV());
-	g_CommandContext.GetCommandList()->ClearDepthStencilView(DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, DepthBuffer.GetClearDepth(), DepthBuffer.GetClearStencil(),0, nullptr);
+	// indicate that back buffer will be used as a render target
+	g_CommandContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
-	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &DepthBuffer.GetDSV());
+	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
 	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
@@ -316,24 +297,20 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(1, srvHandle);
 
 	g_CommandContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &m_vertexBufferView);
-	g_CommandContext.GetCommandList()->IASetIndexBuffer(&m_indexBufferView);
+	g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferRef->GetVBV());
+	g_CommandContext.GetCommandList()->IASetIndexBuffer(&indexBufferRef->GetIBV());
 	g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
 
 	// indicate that the back buffer will now be used to present
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
 	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
-	g_CommandContext.FlushCommandQueue();
-	// indicate that back buffer will be used as a render target
-	//barrier2 = CD3DX12_RESOURCE_BARRIER::Transition(
-	//	m_depthBuffer.GetResource(),
-	//	D3D12_RESOURCE_STATE_DEPTH_WRITE,
-	//	m_depthBuffer.GetCurrentState());
-	//m_commandList->ResourceBarrier(1, &barrier2);
-	DescriptorCache->Reset();
+	barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(
+		g_DepthBuffer.GetResource(),
+		D3D12_RESOURCE_STATE_DEPTH_WRITE,
+		D3D12_RESOURCE_STATE_COMMON);
+	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier1);
 
-	//ThrowIfFailed(g_CommandContext.GetCommandList()->Close());
 }
 
 void GameCore::WaitForPreviousFrame()
@@ -350,5 +327,6 @@ void GameCore::WaitForPreviousFrame()
 	//	WaitForSingleObject(m_fenceEvent, INFINITE);
 	//}
 	g_CommandContext.FlushCommandQueue();
+	DescriptorCache->Reset();
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }

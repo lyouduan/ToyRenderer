@@ -3,21 +3,23 @@
 #include "D3D12RHI.h"
 #include "D3D12Resource.h"
 
-TD3D12VertexBufferRef TD3D12RHI::CreateVertexBuffer(const void* Contents, uint32_t Size)
+TD3D12VertexBufferRef TD3D12RHI::CreateVertexBuffer(const void* Contents, uint32_t Size, uint32_t Stride)
 {
     TD3D12VertexBufferRef VertexBufferRef = std::make_shared<TD3D12VertexBuffer>();
 
     CreateAndInitDefaultBuffer(Contents, Size, DEFAULT_RESOURCE_ALIGNMENT, VertexBufferRef->ResourceLocation);
-
+    // create VBV
+    VertexBufferRef->CreateDerivedViews(Size, Stride);
     return VertexBufferRef;
 }
 
-TD3D12IndexBufferRef TD3D12RHI::CreateIndexBuffer(const void* Contents, uint32_t Size)
+TD3D12IndexBufferRef TD3D12RHI::CreateIndexBuffer(const void* Contents, uint32_t Size, DXGI_FORMAT Format)
 {
     TD3D12IndexBufferRef IndexBufferRef = std::make_shared<TD3D12IndexBuffer>();
 
     CreateAndInitDefaultBuffer(Contents, Size, DEFAULT_RESOURCE_ALIGNMENT, IndexBufferRef->ResourceLocation);
-
+    
+    IndexBufferRef->CreateDerivedViews(Size, Format);
     return IndexBufferRef;
 }
 
@@ -54,4 +56,26 @@ void TD3D12RHI::CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, 
     TD3D12RHI::g_CommandContext.GetCommandList()->CopyBufferRegion(DefaultBuffer->D3DResource.Get(), ResourceLocation.OffsetFromBaseOfResource, UploadBuffer->D3DResource.Get(), uploadResourceLocation.OffsetFromBaseOfResource, Size);
 
     TD3D12RHI::g_CommandContext.ExecuteCommandLists();
+}
+
+void TD3D12VertexBuffer::CreateDerivedViews(uint32_t Size, UINT Stride)
+{
+    // 由于DefaultBufferAllocator共用一个Resource（状态相同）进行手动分化，
+    // 所以所以不能直接获取通过GetGPUVirtualAddress()方法来获取Resource的GPUVirtualAddress地址
+    //m_VBV.BufferLocation = ResourceLocation.UnderlyingResource->D3DResource->GetGPUVirtualAddress();
+    // 上述方法获取的GPU地址，会给出初始的Resource位置，并非划分后的对应的地址
+    // 调换VertexBuffer和IndexBuffer可以进行检验
+
+    m_VBV.BufferLocation = ResourceLocation.GPUVirtualAddress;
+    m_VBV.SizeInBytes = Size;
+    m_VBV.StrideInBytes = Stride;
+}
+
+void TD3D12IndexBuffer::CreateDerivedViews(uint32_t Size, DXGI_FORMAT Format)
+{
+    //m_IBV.BufferLocation = ResourceLocation.UnderlyingResource->D3DResource->GetGPUVirtualAddress();
+    
+    m_IBV.BufferLocation = ResourceLocation.GPUVirtualAddress;
+    m_IBV.SizeInBytes = Size;
+    m_IBV.Format = Format;
 }

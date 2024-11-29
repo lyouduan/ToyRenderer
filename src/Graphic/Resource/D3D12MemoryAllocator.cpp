@@ -427,7 +427,7 @@ void TD3D12TextureResourceAllocator::CleanUpAllocations()
 	Allocator->CleanUpAllocations();
 }
 
-TD3D12PiexlResourceAllocator::TD3D12PiexlResourceAllocator(ID3D12Device* InDevice)
+TD3D12PixelResourceAllocator::TD3D12PixelResourceAllocator(ID3D12Device* InDevice)
 {
 	TD3D12BuddyAllocator::TAllocatorInitData InitData;
 
@@ -441,7 +441,7 @@ TD3D12PiexlResourceAllocator::TD3D12PiexlResourceAllocator(ID3D12Device* InDevic
 	D3DDevice = InDevice;
 }
 
-void TD3D12PiexlResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation)
+void TD3D12PixelResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STATES& ResourceState, const D3D12_RESOURCE_DESC& ResourceDesc, uint32_t Alignment, D3D12_CLEAR_VALUE ClearValue, TD3D12ResourceLocation& ResourceLocation)
 {
 	const D3D12_RESOURCE_ALLOCATION_INFO Info = D3DDevice->GetResourceAllocationInfo(0, 1, &ResourceDesc);
 
@@ -453,7 +453,7 @@ void TD3D12PiexlResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STA
 
 		ID3D12Heap* BackingHeap = ResourceLocation.Allocator->GetBackingHeap();
 		uint64_t HeapOffset = ResourceLocation.OffsetFromBaseOfHeap;
-		D3DDevice->CreatePlacedResource(BackingHeap, HeapOffset, &ResourceDesc, ResourceState, nullptr, IID_PPV_ARGS(&Resource));
+		D3DDevice->CreatePlacedResource(BackingHeap, HeapOffset, &ResourceDesc, ResourceState, &ClearValue, IID_PPV_ARGS(&Resource));
 
 		TD3D12Resource* NewResource = new TD3D12Resource(Resource);
 		ResourceLocation.UnderlyingResource = NewResource;
@@ -461,7 +461,7 @@ void TD3D12PiexlResourceAllocator::AllocTextureResource(const D3D12_RESOURCE_STA
 	}
 }
 
-void TD3D12PiexlResourceAllocator::CleanUpAllocations()
+void TD3D12PixelResourceAllocator::CleanUpAllocations()
 {
 	Allocator->CleanUpAllocations();
 }

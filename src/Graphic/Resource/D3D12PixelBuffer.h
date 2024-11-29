@@ -98,7 +98,7 @@ class D3D12DepthBuffer : public D3D12PixelBuffer
 {
 public:
 
-	D3D12DepthBuffer(float ClearDepth = 0.0f, uint8_t ClearStencil = 0)
+	D3D12DepthBuffer(float ClearDepth = 1.0f, uint8_t ClearStencil = 0)
 		: m_ClearDepth(ClearDepth), m_ClearStencil(ClearStencil)
 	{
 		m_DSVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
@@ -117,6 +117,8 @@ public:
 	uint8_t GetClearStencil() const { return m_ClearStencil; }
 
 private:
+
+	DXGI_FORMAT GetDSVFormat(DXGI_FORMAT Format);
 
 	void CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format);
 

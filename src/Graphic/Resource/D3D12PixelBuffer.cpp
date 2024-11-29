@@ -37,6 +37,8 @@ void D3D12PixelBuffer::AssociateWithResource(ID3D12Device* Device, const std::ws
     m_Height = ResourceDesc.Height;
     m_ArraySize = ResourceDesc.DepthOrArraySize;
     m_Format = ResourceDesc.Format;
+
+    ResourceLocation.UnderlyingResource->D3DResource->SetName(Name.c_str());
 }
 
 DXGI_FORMAT D3D12PixelBuffer::GetDepthFormat(DXGI_FORMAT defaultFormat)
@@ -78,8 +80,16 @@ void D3D12PixelBuffer::CreateTextureResource(D3D12_RESOURCE_STATES State, const 
 {
     (void)VidMemPtr;
 
-    TD3D12RHI::PixelResourceAllocator->AllocTextureResource(State, ResourceDesc, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
+    CD3DX12_HEAP_PROPERTIES HeapProps(D3D12_HEAP_TYPE_DEFAULT);
+    Microsoft::WRL::ComPtr<ID3D12Resource> Resource;
+
+    g_Device->CreateCommittedResource(&HeapProps, D3D12_HEAP_FLAG_NONE, &ResourceDesc, State, &ClearValue, IID_PPV_ARGS(&Resource));
+    
+    TD3D12Resource* NewResource = new TD3D12Resource(Resource, State);
+    ResourceLocation.UnderlyingResource = NewResource;
+    ResourceLocation.SetType(TD3D12ResourceLocation::EResourceLocationType::StandAlone);
 }
+
 
 void D3D12ColorBuffer::CreateFromSwapChain(const std::wstring& name, ID3D12Resource* BaseResource)
 {
@@ -111,6 +121,8 @@ void D3D12ColorBuffer::Create(const std::wstring& name, uint32_t Width, uint32_t
     CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMemPtr);
     // create view
     CreateDerivedViews(g_Device, Format, 1, NumMips);
+
+    ResourceLocation.UnderlyingResource->D3DResource->SetName(name.c_str());
 }
 
 void D3D12ColorBuffer::CreateArray(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t ArrayCount,
@@ -199,9 +211,46 @@ void D3D12DepthBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t
 
     D3D12_CLEAR_VALUE ClearValue = {};
     ClearValue.Format = Format;
+    ClearValue.DepthStencil.Depth = m_ClearDepth;
+    ClearValue.DepthStencil.Stencil = m_ClearStencil;
 
     CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMemPtr);
     CreateDerivedViews(g_Device, Format);
+}
+
+DXGI_FORMAT D3D12DepthBuffer::GetDSVFormat(DXGI_FORMAT Format)
+{
+    switch (Format)
+    {
+        // 32-bit Z w/ Stencil
+    case DXGI_FORMAT_R32G8X24_TYPELESS:
+    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+    case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+    case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+        return DXGI_FORMAT_D32_FLOAT_S8X24_UINT;
+
+        // No Stencil
+    case DXGI_FORMAT_R32_TYPELESS:
+    case DXGI_FORMAT_D32_FLOAT:
+    case DXGI_FORMAT_R32_FLOAT:
+        return DXGI_FORMAT_D32_FLOAT;
+
+        // 24-bit Z
+    case DXGI_FORMAT_R24G8_TYPELESS:
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+    case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+        return DXGI_FORMAT_D24_UNORM_S8_UINT;
+
+        // 16-bit Z w/o Stencil
+    case DXGI_FORMAT_R16_TYPELESS:
+    case DXGI_FORMAT_D16_UNORM:
+    case DXGI_FORMAT_R16_UNORM:
+        return DXGI_FORMAT_D16_UNORM;
+
+    default:
+        return Format;
+    }
 }
 
 void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format)
@@ -209,7 +258,9 @@ void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
     ID3D12Resource* Resource = ResourceLocation.UnderlyingResource->D3DResource.Get();
 
     D3D12_DEPTH_STENCIL_VIEW_DESC DSVDesc;
-    DSVDesc.Format = Format;
+
+    DSVDesc.Format = GetDSVFormat(Format);
+
     if (Resource->GetDesc().SampleDesc.Count == 1)
     {
         DSVDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;

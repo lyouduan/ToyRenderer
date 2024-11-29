@@ -4,6 +4,8 @@
 namespace TD3D12RHI
 {
 	extern Microsoft::WRL::ComPtr<IDXGISwapChain1> g_SwapCHain;
+	extern uint32_t g_DisplayWidth;
+	extern uint32_t g_DisplayHeight;
 };
 
 namespace Display

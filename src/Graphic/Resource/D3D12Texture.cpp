@@ -64,7 +64,6 @@ void TD3D12RHI::InitializeTexture(TD3D12Resource& Dest, UINT NumSubresources, D3
 {
     UINT64 uploadBufferSize = GetRequiredIntermediateSize(Dest.D3DResource.Get(), 0, NumSubresources);
 
-    TD3D12RHI::g_CommandContext.ResetCommandAllocator();
     TD3D12RHI::g_CommandContext.ResetCommandList();
 
     // create UploadBuffer resource

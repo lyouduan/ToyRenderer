@@ -2,6 +2,7 @@
 #include "DXSample.h"
 #include "D3D12CommandContext.h"
 #include "D3D12PixelBuffer.h"
+#include "D3D12Buffer.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -31,28 +32,30 @@ private:
 
 	//ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
 	D3D12ColorBuffer m_renderTragetrs[FrameCount];
-	D3D12DepthBuffer DepthBuffer;
 
-	ComPtr<ID3D12Resource> m_Depth;
+	TD3D12IndexBufferRef indexBufferRef;
+	TD3D12VertexBufferRef vertexBufferRef;
+
+	//ComPtr<ID3D12Resource> m_Depth;
 
 	//ComPtr<ID3D12CommandAllocator> m_commandAllocator;
 	//ComPtr<ID3D12CommandQueue> m_commandQueue;
 	//ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
 	ComPtr<ID3D12RootSignature> m_rootSignature;
-	ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
+	//ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
 	ComPtr<ID3D12PipelineState> m_pipelineState;
-	uint32_t m_rtvDescriptorSize;
+	//uint32_t m_rtvDescriptorSize;
 
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
+	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
 	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRV;
 
 	std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
 
 	// app resource
-	ComPtr<ID3D12Resource> m_vertexBuffer;
-	D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-	D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
+	//ComPtr<ID3D12Resource> m_vertexBuffer;
+	//D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
+	//D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
 
 	// synchronization objects
