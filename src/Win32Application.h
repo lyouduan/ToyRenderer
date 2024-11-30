@@ -2,7 +2,10 @@
 #include <Windows.h>
 #include <cstdint>
 #include "DXSample.h"
+#include "GameTimer.h"
+
 class DXSample;
+class GameTimer;
 
 class Win32Application
 {
@@ -15,5 +18,6 @@ protected:
 
 private:
 	static HWND m_hwnd;
+	
 };
 

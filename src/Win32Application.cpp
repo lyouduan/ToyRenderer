@@ -1,4 +1,5 @@
 #include "Win32Application.h"
+#include "GameTimer.h"
 
 HWND Win32Application::m_hwnd = nullptr;
 
@@ -45,10 +46,18 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
     MSG msg = {};
     while (msg.message != WM_QUIT)
     {
+        // If there are Window messages then process them.
         if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+        }
+        // Otherwise, do animation/game stuff.
+        else
+        {
+            pSample->GetTimer().Tick();
+            pSample->CalculateFrameStats();
+
         }
     }
 
@@ -71,13 +80,26 @@ LRESULT Win32Application::WindowProc(HWND hWnd, uint32_t message, WPARAM wParam,
             SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
         }
         return 0;
+    case WM_ACTIVATE:
+        if (LOWORD(wParam) == WA_INACTIVE)
+        {
+            pSample->GetTimer().Stop();
+        }
+        else
+        {
+            pSample->GetTimer().Start();
+        }
+        return 0;
     case WM_PAINT:
         if (pSample)
         {
-            pSample->OnUpdate();
+            pSample->GetTimer().Start();
+
+            pSample->OnUpdate(pSample->GetTimer());
             pSample->OnRender();
         }
         return 0;
+    
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;

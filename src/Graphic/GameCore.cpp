@@ -4,6 +4,7 @@
 #include "D3D12RHI.h"
 #include "D3D12Texture.h"
 #include "Display.h"
+#include <chrono>
 
 using namespace TD3D12RHI;
 
@@ -23,9 +24,10 @@ void GameCore::OnInit()
 	LoadAssets();
 }
 
-void GameCore::OnUpdate()
+void GameCore::OnUpdate(const GameTimer& gt)
 {
-	float angle = static_cast<float>(1 * 90.0);
+	totalTime += gt.DeltaTime() * 0.001;
+	float angle = static_cast<float>(totalTime * 90.0);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
 	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
 
@@ -244,6 +246,8 @@ void GameCore::LoadAssets()
 		m_SRV.push_back(texture.GetSRV());
 
 	g_CommandContext.FlushCommandQueue();
+
+	descriptorCache->AppendCbvSrvUavDescriptors(m_SRV);
 }
 
 void GameCore::PopulateCommandList()
@@ -287,8 +291,6 @@ void GameCore::PopulateCommandList()
 	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
 
 	g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-	
-	descriptorCache->AppendCbvSrvUavDescriptors(m_SRV);
 
 	ID3D12DescriptorHeap* Heaps[] = { descriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get() };
 
@@ -310,7 +312,8 @@ void GameCore::PopulateCommandList()
 		D3D12_RESOURCE_STATE_DEPTH_WRITE,
 		D3D12_RESOURCE_STATE_COMMON);
 	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier1);
-
+	
+	g_CommandContext.FlushCommandQueue();
 }
 
 void GameCore::WaitForPreviousFrame()
@@ -327,6 +330,8 @@ void GameCore::WaitForPreviousFrame()
 	//	WaitForSingleObject(m_fenceEvent, INFINITE);
 	//}
 	g_CommandContext.FlushCommandQueue();
+	
 	DescriptorCache->Reset();
+
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }

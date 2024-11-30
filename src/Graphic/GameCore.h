@@ -12,7 +12,7 @@ class GameCore : public DXSample
 public:
 	GameCore(uint32_t width, uint32_t height, std::wstring name);
 	void OnInit() override;
-	void OnUpdate() override;
+	void OnUpdate(const GameTimer& gt) override;
 	void OnRender() override;
 	void OnDestroy() override;
 
@@ -67,6 +67,8 @@ private:
 	DirectX::XMMATRIX m_ModelMatrix;
 	DirectX::XMMATRIX m_ViewMatrix;
 	DirectX::XMMATRIX m_ProjectionMatrix;
+
+	float totalTime = 0;
 
 	void LoadPipeline();
 	void LoadAssets();

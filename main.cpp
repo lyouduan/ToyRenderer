@@ -128,7 +128,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLin
 	// detect GPU memory architecture
 	//test();
 
-	GameCore sample(1280, 720, L"D3D12 Hello Triangle");
+	GameCore sample(1280, 720, L"D3D12 Engine");
 	return Win32Application::Run(&sample, hInstance, nCmdShow);
 }
 

@@ -2,6 +2,7 @@
 #include "DXSamplerHelper.h"
 #include "Win32Application.h"
 #include "stdafx.h"
+#include "GameTimer.h"
 
 class DXSample
 {
@@ -10,7 +11,7 @@ public:
 	virtual ~DXSample();
 
 	virtual void OnInit() = 0;
-	virtual void OnUpdate() = 0;
+	virtual void OnUpdate(const GameTimer& gt) = 0;
 	virtual void OnRender() = 0;
 	virtual void OnDestroy() = 0;
 
@@ -21,8 +22,11 @@ public:
 	uint32_t GetWidth() const { return m_width; }
 	uint32_t GetHeight() const { return m_height; }
 	const wchar_t* GetTitle() const { return m_title.c_str(); }
+	GameTimer GetTimer() const { return m_Timer; }
 
 	void ParseCommandLineArgs(_In_reads_(argc) wchar_t* argv[], int argc);
+	
+	void CalculateFrameStats();
 
 protected:
 	std::wstring GetAssetFullPath(LPCWSTR assetName);
@@ -42,7 +46,11 @@ protected:
 	// Adapter info
 	bool m_useWarpDevice;
 
+	// Game Timer
+	GameTimer m_Timer;
+
 private:
+
 	// Root assets path.
 	std::wstring m_assetsPath;
 
