@@ -27,5 +27,5 @@ private:
 	bool mStopped;
 };
 
-#endif GAMETIMER_H
+#endif // GAMETIMER_H
 

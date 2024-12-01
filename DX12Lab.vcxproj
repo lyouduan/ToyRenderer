@@ -19,10 +19,11 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\Camera.cpp" />
     <ClCompile Include="src\Utils\GameTimer.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12PixelBuffer.cpp" />
     <ClCompile Include="src\Graphic\Display.cpp" />
-    <ClCompile Include="src\Graphic\GameCore.cpp" />
+    <ClCompile Include="src\GameCore.cpp" />
     <ClCompile Include="src\Graphic\Resource\DDSTextureLoader.cpp" />
     <ClCompile Include="src\Graphic\Shader\Shader.cpp" />
     <ClCompile Include="src\Graphic\Resource\D3D12Texture.cpp" />
@@ -39,10 +40,11 @@
     <ClCompile Include="src\Graphic\D3D12CommandContext.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\Camera.h" />
     <ClInclude Include="src\Utils\GameTimer.h" />
     <ClInclude Include="src\Graphic\Resource\D3D12PixelBuffer.h" />
     <ClInclude Include="src\Graphic\Display.h" />
-    <ClInclude Include="src\Graphic\GameCore.h" />
+    <ClInclude Include="src\GameCore.h" />
     <ClInclude Include="src\Graphic\Resource\dds.h" />
     <ClInclude Include="src\Graphic\Resource\DDSTextureLoader.h" />
     <ClInclude Include="src\Graphic\Shader\Shader.h" />

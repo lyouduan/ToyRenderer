@@ -56,7 +56,6 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
         else
         {
             pSample->GetTimer().Tick();
-            pSample->CalculateFrameStats();
 
         }
     }
@@ -97,6 +96,7 @@ LRESULT Win32Application::WindowProc(HWND hWnd, uint32_t message, WPARAM wParam,
 
             pSample->OnUpdate(pSample->GetTimer());
             pSample->OnRender();
+            pSample->CalculateFrameStats();
         }
         return 0;
     

@@ -3,6 +3,7 @@
 #include "D3D12CommandContext.h"
 #include "D3D12PixelBuffer.h"
 #include "D3D12Buffer.h"
+#include "Camera.h"
 
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
@@ -64,11 +65,14 @@ private:
 	ComPtr<ID3D12Fence> m_fence;
 	uint64_t m_fenceValue;
 
+	Camera m_Camera;
+
 	DirectX::XMMATRIX m_ModelMatrix;
-	DirectX::XMMATRIX m_ViewMatrix;
-	DirectX::XMMATRIX m_ProjectionMatrix;
+	//DirectX::XMMATRIX m_ViewMatrix;
+	//DirectX::XMMATRIX m_ProjectionMatrix;
 
 	float totalTime = 0;
+
 
 	void LoadPipeline();
 	void LoadAssets();

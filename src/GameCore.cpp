@@ -35,11 +35,15 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
 	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
 	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-	m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
+
+	m_Camera.SetLookAt(eyePosition, focusPoint, upDirection);
+
+	//m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
 	// Update the projection matrix.
 	float aspectRatio = GetWidth() / static_cast<float>(GetHeight());
-	m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
+	m_Camera.SetAspectRatio(aspectRatio);
+	//m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
 }
 
 void GameCore::OnRender()
@@ -287,8 +291,9 @@ void GameCore::PopulateCommandList()
 	//m_commandList->ClearDepthStencilView(dsvhandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
 	// Update the MVP matrix
-	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_ViewMatrix);
-	mvpMatrix = XMMatrixMultiply(mvpMatrix, m_ProjectionMatrix);
+	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());
+	//XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewMat());
+	//mvpMatrix = XMMatrixMultiply(mvpMatrix, m_Camera.GetProjMat());
 
 	g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
