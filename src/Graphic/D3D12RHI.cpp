@@ -10,6 +10,7 @@ namespace TD3D12RHI
     ID3D12Device* g_Device = nullptr;
     TD3D12CommandContext g_CommandContext;
     ComPtr<IDXGISwapChain1> g_SwapCHain;
+    Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> g_ImGuiSrvHeap;
 
     // buffer
     D3D12DepthBuffer g_DepthBuffer;
@@ -24,6 +25,7 @@ namespace TD3D12RHI
     std::unique_ptr<TD3D12HeapSlotAllocator> RTVHeapSlotAllocator = nullptr;
     std::unique_ptr<TD3D12HeapSlotAllocator> DSVHeapSlotAllocator = nullptr;
     std::unique_ptr<TD3D12HeapSlotAllocator> SRVHeapSlotAllocator = nullptr;
+    std::unique_ptr<TD3D12HeapSlotAllocator> ImGuiSRVHeapAllocator = nullptr;
 
     // cache descriptor handle
     std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
@@ -36,6 +38,8 @@ namespace TD3D12RHI
         InitialzeAllocator();
 
         InitialzeBuffer();
+
+        g_ImGuiSrvHeap = GetImGuiSRVHeapAllocator();
     }
 
     void InitialzeBuffer()
@@ -52,7 +56,8 @@ namespace TD3D12RHI
 
         RTVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_RTV, 256);
         DSVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_DSV, 256);
-        SRVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
+        SRVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128);
+        ImGuiSRVHeapAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 
         DescriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
     }
@@ -85,4 +90,9 @@ TD3D12HeapSlotAllocator* TD3D12RHI::GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_T
     default:
         return nullptr;
     }
+}
+
+ComPtr<ID3D12DescriptorHeap> TD3D12RHI::GetImGuiSRVHeapAllocator()
+{
+    return ImGuiSRVHeapAllocator->AllocateHeapOnly();
 }

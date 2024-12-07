@@ -16,6 +16,7 @@ namespace TD3D12RHI
 	extern ID3D12Device* g_Device;
 	extern TD3D12CommandContext g_CommandContext;
 	extern Microsoft::WRL::ComPtr<IDXGISwapChain1> g_SwapCHain;
+	extern Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> g_ImGuiSrvHeap;
 
 	extern uint32_t g_DisplayWidth;
 	extern uint32_t g_DisplayHeight;
@@ -32,6 +33,7 @@ namespace TD3D12RHI
 	extern std::unique_ptr<TD3D12HeapSlotAllocator> RTVHeapSlotAllocator;
 	extern std::unique_ptr<TD3D12HeapSlotAllocator> DSVHeapSlotAllocator;
 	extern std::unique_ptr<TD3D12HeapSlotAllocator> SRVHeapSlotAllocator;
+	extern std::unique_ptr<TD3D12HeapSlotAllocator> ImGuiSRVHeapAllocator;
 
 	// cache descriptor for GPU
 	extern std::unique_ptr<TD3D12DescriptorCache> DescriptorCache;
@@ -51,4 +53,6 @@ namespace TD3D12RHI
 	void InitializeTexture(TD3D12Resource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
 
 	TD3D12HeapSlotAllocator* GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE HeapType);
+
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> GetImGuiSRVHeapAllocator();
 }

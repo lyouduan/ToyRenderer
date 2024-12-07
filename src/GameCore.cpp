@@ -22,14 +22,35 @@ void GameCore::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
+
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
+
+	ImGui::StyleColorsDark();
+	
+	ImGui_ImplWin32_Init(Win32Application::GetHwnd());
+
+	// Setup Platform/Renderer backends
+	//ImGui_ImplDX12_InitInfo init_info = {};
+	//init_info.Device = g_Device;
+	//init_info.CommandQueue = g_CommandContext.GetCommandQueue();
+	//init_info.NumFramesInFlight = FrameCount;
+	//init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM; // Or your render target format.
+	//init_info.SrvDescriptorHeap = ImGuiSrvHeap;
+	auto cpuhandle = g_ImGuiSrvHeap->GetCPUDescriptorHandleForHeapStart();
+	auto gpuhandle = g_ImGuiSrvHeap->GetGPUDescriptorHandleForHeapStart();
+	ImGui_ImplDX12_Init(g_Device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, g_ImGuiSrvHeap.Get(), cpuhandle, gpuhandle);
 }
 
 void GameCore::OnUpdate(const GameTimer& gt)
 {
-	totalTime += gt.DeltaTime() * 0.001;
-	float angle = static_cast<float>(totalTime * 90.0);
+	//totalTime += gt.DeltaTime() * 0.001;
+	float rotate_angle = static_cast<float>(angle * 360);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(angle));
+	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
 
 	// Update the view matrix.
 	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
@@ -48,8 +69,49 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 void GameCore::OnRender()
 {
+	
+	
 	// record all the commands we need to render the scene into the command list
 	PopulateCommandList();
+
+	// Start the Dear ImGui frame
+	ImGui_ImplDX12_NewFrame();
+	ImGui_ImplWin32_NewFrame();
+	ImGui::NewFrame();
+
+	bool show_demo_window = true;
+	if (show_demo_window)
+		ImGui::ShowDemoWindow(&show_demo_window);
+
+	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+	{
+		static int counter = 0;
+
+		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+
+		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		//ImGui::Checkbox("Another Window", &show_another_window);
+		ImGui::SliderFloat("float", &angle, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		//ImVec4 clearColor = { 0.0, 0.0, 0.0, 1.0 };
+		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
+
+		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+			counter++;
+		ImGui::SameLine();
+		ImGui::Text("counter = %d", counter);
+
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		ImGui::End();
+	}
+
+	// Rendering
+	ImGui::Render();
+
+	// ImGui
+	ID3D12DescriptorHeap* Heaps[] = { g_ImGuiSrvHeap.Get()};
+	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps);
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), TD3D12RHI::g_CommandContext.GetCommandList());
 
 	// execute the command list
 	g_CommandContext.ExecuteCommandLists();
@@ -65,6 +127,11 @@ void GameCore::OnDestroy()
 	// Ensure that the GPU is no longer referencing resources that are about to be
 	// cleaned up by the destructor.
 	WaitForPreviousFrame();
+
+	ImGui_ImplDX12_Shutdown();
+	ImGui_ImplWin32_Shutdown();
+	ImGui::DestroyContext();
+
 }
 
 void GameCore::LoadPipeline()
@@ -284,8 +351,8 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
-	const float clearColor[] = { 0.0, 0.2, 0.4, 1.0 };
-	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), clearColor, 0, nullptr);
+
+	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
 
 	g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
 	//m_commandList->ClearDepthStencilView(dsvhandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
@@ -307,6 +374,8 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferRef->GetVBV());
 	g_CommandContext.GetCommandList()->IASetIndexBuffer(&indexBufferRef->GetIBV());
 	g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
+
+	
 
 	// indicate that the back buffer will now be used to present
 	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);

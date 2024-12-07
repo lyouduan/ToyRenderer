@@ -39,6 +39,8 @@ public:
 
 	HeapSlot AllocateHeapSlot();
 
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> AllocateHeapOnly();
+
 	void FreeHeapSlot(const HeapSlot& Slot);
 
 private:

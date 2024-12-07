@@ -50,6 +50,19 @@ TD3D12HeapSlotAllocator::HeapSlot TD3D12HeapSlotAllocator::AllocateHeapSlot()
 	return Slot;
 }
 
+Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> TD3D12HeapSlotAllocator::AllocateHeapOnly()
+{
+	// create a new descriptorHeap
+	Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> Heap;
+	D3D12_DESCRIPTOR_HEAP_DESC Desc = HeapDesc;
+	Desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
+	ThrowIfFailed(D3DDevice->CreateDescriptorHeap(&Desc, IID_PPV_ARGS(&Heap)));
+	SetDebugName(Heap.Get(), L"TD3D12Heap Descriptor Heap");
+
+	// add the entry to heapMap
+	return Heap;
+}
+
 D3D12_DESCRIPTOR_HEAP_DESC TD3D12HeapSlotAllocator::CreateHeapDesc(D3D12_DESCRIPTOR_HEAP_TYPE Type, uint32_t NumDescriptorPerHeap)
 {
 	D3D12_DESCRIPTOR_HEAP_DESC Desc = {};

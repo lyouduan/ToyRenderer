@@ -5,6 +5,7 @@
 #include "D3D12Buffer.h"
 #include "Camera.h"
 
+
 using namespace DirectX;
 using Microsoft::WRL::ComPtr;
 
@@ -58,12 +59,11 @@ private:
 	//D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
 	//D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
-
 	// synchronization objects
 	uint32_t m_frameIndex;
-	HANDLE m_fenceEvent;
-	ComPtr<ID3D12Fence> m_fence;
-	uint64_t m_fenceValue;
+	//HANDLE m_fenceEvent;
+	//ComPtr<ID3D12Fence> m_fence;
+	//uint64_t m_fenceValue;
 
 	Camera m_Camera;
 
@@ -71,8 +71,8 @@ private:
 	//DirectX::XMMATRIX m_ViewMatrix;
 	//DirectX::XMMATRIX m_ProjectionMatrix;
 
-	float totalTime = 0;
-
+	float angle = 0;
+	float clearColor[4] = {0.1, 0.2, 0.4, 1.0};
 
 	void LoadPipeline();
 	void LoadAssets();
