@@ -5,6 +5,7 @@
 #include "D3D12Texture.h"
 #include "Display.h"
 #include <chrono>
+#include "ImGuiManager.h"
 
 using namespace TD3D12RHI;
 
@@ -23,37 +24,17 @@ void GameCore::OnInit()
 	LoadPipeline();
 	LoadAssets();
 
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-
-	ImGui::StyleColorsDark();
-	
-	ImGui_ImplWin32_Init(Win32Application::GetHwnd());
-
-	// Setup Platform/Renderer backends
-	//ImGui_ImplDX12_InitInfo init_info = {};
-	//init_info.Device = g_Device;
-	//init_info.CommandQueue = g_CommandContext.GetCommandQueue();
-	//init_info.NumFramesInFlight = FrameCount;
-	//init_info.RTVFormat = DXGI_FORMAT_R8G8B8A8_UNORM; // Or your render target format.
-	//init_info.SrvDescriptorHeap = ImGuiSrvHeap;
-	auto cpuhandle = g_ImGuiSrvHeap->GetCPUDescriptorHandleForHeapStart();
-	auto gpuhandle = g_ImGuiSrvHeap->GetGPUDescriptorHandleForHeapStart();
-	ImGui_ImplDX12_Init(g_Device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, g_ImGuiSrvHeap.Get(), cpuhandle, gpuhandle);
 }
 
 void GameCore::OnUpdate(const GameTimer& gt)
 {
-	//totalTime += gt.DeltaTime() * 0.001;
-	float rotate_angle = static_cast<float>(angle * 360);
+	totalTime += gt.DeltaTime() * 0.01;
+	float rotate_angle = static_cast<float>(speed * 360 * totalTime);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
 	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
 
 	// Update the view matrix.
-	const XMVECTOR eyePosition = XMVectorSet(0, 0, -10, 1);
+	const XMVECTOR eyePosition = XMVectorSet(0, 0, -50, 1);
 	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
 	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
 
@@ -69,31 +50,26 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 void GameCore::OnRender()
 {
-	
-	
-	// record all the commands we need to render the scene into the command list
-	PopulateCommandList();
-
 	// Start the Dear ImGui frame
 	ImGui_ImplDX12_NewFrame();
 	ImGui_ImplWin32_NewFrame();
 	ImGui::NewFrame();
 
-	bool show_demo_window = true;
-	if (show_demo_window)
-		ImGui::ShowDemoWindow(&show_demo_window);
+	if (ImGuiManager::show_demo_window)
+		ImGui::ShowDemoWindow(&ImGuiManager::show_demo_window);
 
 	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 	{
 		static int counter = 0;
-
-		ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+		static char buffer[1024];
+		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
 		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		ImGui::Checkbox("Demo Window", &ImGuiManager::show_demo_window);      // Edit bools storing our window open/close state
 		//ImGui::Checkbox("Another Window", &show_another_window);
-		ImGui::SliderFloat("float", &angle, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		//ImVec4 clearColor = { 0.0, 0.0, 0.0, 1.0 };
+		ImGui::SliderFloat("Speed Factor", &speed, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		
 		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
 		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -101,17 +77,20 @@ void GameCore::OnRender()
 		ImGui::SameLine();
 		ImGui::Text("counter = %d", counter);
 
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		// Buffer
+		ImGui::InputText("Butts", buffer, sizeof(buffer));
+
+		// camera control
+		m_Camera.CamerImGui();
+
 		ImGui::End();
 	}
 
 	// Rendering
 	ImGui::Render();
 
-	// ImGui
-	ID3D12DescriptorHeap* Heaps[] = { g_ImGuiSrvHeap.Get()};
-	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), TD3D12RHI::g_CommandContext.GetCommandList());
+	// record all the commands we need to render the scene into the command list
+	PopulateCommandList();
 
 	// execute the command list
 	g_CommandContext.ExecuteCommandLists();
@@ -128,9 +107,8 @@ void GameCore::OnDestroy()
 	// cleaned up by the destructor.
 	WaitForPreviousFrame();
 
-	ImGui_ImplDX12_Shutdown();
-	ImGui_ImplWin32_Shutdown();
-	ImGui::DestroyContext();
+	// destroy ImGui
+	ImGuiManager::DestroyImGui();
 
 }
 
@@ -268,12 +246,16 @@ void GameCore::LoadAssets()
 		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState.DepthEnable = FALSE;
+		psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth testing
+		psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; 
+		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; 
+		psoDesc.DSVFormat = g_DepthBuffer.GetFormat(); 
 		psoDesc.DepthStencilState.StencilEnable = FALSE;
+
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = DXGI_FORMAT_R8G8B8A8_UNORM;
+		psoDesc.RTVFormats[0] = m_renderTragetrs->GetFormat();
 		psoDesc.SampleDesc.Count = 1;
 
 		ThrowIfFailed(TD3D12RHI::g_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
@@ -282,47 +264,50 @@ void GameCore::LoadAssets()
 	// create the vertex buffer
 	{
 		// define  the geometry for a triangle
-		Vertex triangleVerties[] =
-		{   { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) }, // 0
-			{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) }, // 1
-			{ XMFLOAT3(1.0f,  1.0f, -1.0f),  XMFLOAT2(0.0f, 1.0f) }, // 2
-			{ XMFLOAT3(1.0f, -1.0f, -1.0f),  XMFLOAT2(1.0f, 0.0f) }, // 3
-			{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT2(0.0f, 1.0f) }, // 4
-			{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT2(1.0f, 0.0f) }, // 5
-			{ XMFLOAT3(1.0f,  1.0f,  1.0f),  XMFLOAT2(0.0f, 0.0f) }, // 6
-			{ XMFLOAT3(1.0f, -1.0f,  1.0f),  XMFLOAT2(1.0f, 1.0f) }  // 7
-		};
+		//std::vector<Vertex> triangleVerties =
+		//{   { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) }, // 0
+		//	{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) }, // 1
+		//	{ XMFLOAT3(1.0f,  1.0f, -1.0f),  XMFLOAT2(0.0f, 1.0f) }, // 2
+		//	{ XMFLOAT3(1.0f, -1.0f, -1.0f),  XMFLOAT2(1.0f, 0.0f) }, // 3
+		//	{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT2(0.0f, 1.0f) }, // 4
+		//	{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT2(1.0f, 0.0f) }, // 5
+		//	{ XMFLOAT3(1.0f,  1.0f,  1.0f),  XMFLOAT2(0.0f, 0.0f) }, // 6
+		//	{ XMFLOAT3(1.0f, -1.0f,  1.0f),  XMFLOAT2(1.0f, 1.0f) }  // 7
+		//};
+		//
+		//std::vector<int16_t> indices =
+		//{
+		//	0, 1, 2, 0, 2, 3,
+		//	4, 6, 5, 4, 7, 6,
+		//	4, 5, 1, 4, 1, 0,
+		//	3, 2, 6, 3, 6, 7,
+		//	1, 5, 6, 1, 6, 2,
+		//	4, 0, 3, 4, 3, 7 
+		//};
+		//
+		//vertexBufferRef = TD3D12RHI::CreateVertexBuffer(triangleVerties.data(), triangleVerties.size()* sizeof//(Vertex), sizeof(Vertex));
+		//
+		//indexBufferRef = TD3D12RHI::CreateIndexBuffer(indices.data(), indices.size() * sizeof(int16_t), DXGI_FORMAT_R16_UINT);
 
-		int16_t indices[36] =
-		{
-			0, 1, 2, 0, 2, 3,
-			4, 6, 5, 4, 7, 6,
-			4, 5, 1, 4, 1, 0,
-			3, 2, 6, 3, 6, 7,
-			1, 5, 6, 1, 6, 2,
-			4, 0, 3, 4, 3, 7
-		};
-	
-		const uint32_t vertexBufferSize = sizeof(triangleVerties);
-		vertexBufferRef = TD3D12RHI::CreateVertexBuffer(&triangleVerties, vertexBufferSize, sizeof(Vertex));
-
-		const uint32_t indexBufferSize = sizeof(indices);
-		indexBufferRef = TD3D12RHI::CreateIndexBuffer(&indices, indexBufferSize, DXGI_FORMAT_R16_UINT);
+		if (!model.Load("./models/nanosuit/nanosuit.obj"))
+			assert(false);
 	}
 
 	// load texture data
-	TD3D12Texture texture(64, 64, DXGI_FORMAT_R16G16B16A16_FLOAT);
-	
-	if(texture.CreateDDSFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/Wood.dds", 0, false))
-		m_SRV.push_back(texture.GetSRV());
+	//TD3D12Texture texture(64, 64);
+	//if(texture.CreateDDSFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/Wood.dds", 0, false))
+	//if(texture.CreateWICFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/container.jpg", 0, false))
+		//m_SRV.push_back(texture.GetSRV());
 
 	g_CommandContext.FlushCommandQueue();
 
-	descriptorCache->AppendCbvSrvUavDescriptors(m_SRV);
+	//descriptorCache->AppendCbvSrvUavDescriptors(m_SRV);
 }
 
 void GameCore::PopulateCommandList()
 {
+	// before reset a allocator, all commandlist associated with the allocator have completed
+	g_CommandContext.FlushCommandQueue();
 	// reset CommandAllocator and CommandList
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
@@ -333,61 +318,48 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
 	// indicate that back buffer will be used as a render target
-	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
-		m_renderTragetrs[m_frameIndex].GetResource(),
-		D3D12_RESOURCE_STATE_COMMON,
-		D3D12_RESOURCE_STATE_RENDER_TARGET);
-	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
-
-	auto barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(
-		g_DepthBuffer.GetResource(),
-		D3D12_RESOURCE_STATE_COMMON,
-		D3D12_RESOURCE_STATE_DEPTH_WRITE);
-	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier1);
+	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// indicate that back buffer will be used as a render target
+	
+	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
 	g_CommandContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
 
-	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
-
 	g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
-	//m_commandList->ClearDepthStencilView(dsvhandle, D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
 	// Update the MVP matrix
 	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());
-	//XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewMat());
-	//mvpMatrix = XMMatrixMultiply(mvpMatrix, m_Camera.GetProjMat());
 
 	g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
-	ID3D12DescriptorHeap* Heaps[] = { descriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get() };
+	//ID3D12DescriptorHeap* Heaps[] = { descriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get() };
 
-	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps);
-	D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = descriptorCache->GetCacheCbvSrvUavDescriptorHeap()->GetGPUDescriptorHandleForHeapStart();
-	g_CommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(1, srvHandle);
-
-	g_CommandContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferRef->GetVBV());
-	g_CommandContext.GetCommandList()->IASetIndexBuffer(&indexBufferRef->GetIBV());
-	g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
-
+	//g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps);
+	//D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = descriptorCache->GetCacheCbvSrvUavDescriptorHeap()-、//>etGPUDescriptorHandleForHeapStart();
+	//g_CommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(1, srvHandle);
+	//
+	//g_CommandContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+	//g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferRef->GetVBV());
+	//g_CommandContext.GetCommandList()->IASetIndexBuffer(&indexBufferRef->GetIBV());
+	//g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
 	
+	model.Draw(g_CommandContext);
+
+	// ImGui
+	ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };
+	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps2);
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), TD3D12RHI::g_CommandContext.GetCommandList());
 
 	// indicate that the back buffer will now be used to present
-	barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_renderTragetrs[m_frameIndex].GetResource(), D3D12_RESOURCE_STATE_RENDER_TARGET, D3D12_RESOURCE_STATE_PRESENT);
-	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier);
 
-	barrier1 = CD3DX12_RESOURCE_BARRIER::Transition(
-		g_DepthBuffer.GetResource(),
-		D3D12_RESOURCE_STATE_DEPTH_WRITE,
-		D3D12_RESOURCE_STATE_COMMON);
-	g_CommandContext.GetCommandList()->ResourceBarrier(1, &barrier1);
+	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);
+	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
 	
-	g_CommandContext.FlushCommandQueue();
 }
 
 void GameCore::WaitForPreviousFrame()

@@ -3,7 +3,7 @@
 #include <vector>
 #include <set>
 
-#define DEFAULT_POOL_SIZE (512 * 512 * 1024)
+#define DEFAULT_POOL_SIZE (1024 * 1024 * 512)
 
 #define DEFAULT_RESOURCE_ALIGNMENT 4
 #define UPLOAD_RESOURCE_ALIGNMENT 256

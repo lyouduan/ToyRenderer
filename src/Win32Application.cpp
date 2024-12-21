@@ -2,11 +2,10 @@
 #include "GameTimer.h"
 #include "D3D12RHI.h"
 
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
+#include "ImGuiManager.h"
 
 HWND Win32Application::m_hwnd = nullptr;
+Keyboard Win32Application::kbd;
 
 int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
 {
@@ -45,6 +44,9 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
 
     // initialze the sample
     pSample->OnInit();
+    
+    // initialze ImGui
+    ImGuiManager::InitImGui();
 
     ShowWindow(m_hwnd, nCmdShow);
 
@@ -56,6 +58,8 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
+
+            
         }
         // Otherwise, do animation/game stuff.
         else
@@ -63,7 +67,10 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
             pSample->GetTimer().Tick();
 
         }
-
+        if (kbd.KeyIsPressed(VK_SPACE))
+        {
+            MessageBox(nullptr, L"Something Happon!", L"The alt key was pressed", MB_OK | MB_ICONEXCLAMATION);
+        }
     }
 
     pSample->OnDestroy();
@@ -82,7 +89,7 @@ LRESULT Win32Application::WindowProc(HWND hWnd, uint32_t message, WPARAM wParam,
     {
         return true;
     }
-
+   
     switch (message)
     {
     case WM_CREATE:
@@ -92,32 +99,51 @@ LRESULT Win32Application::WindowProc(HWND hWnd, uint32_t message, WPARAM wParam,
             SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(pCreateStruct->lpCreateParams));
         }
         return 0;
-    case WM_ACTIVATE:
-        if (LOWORD(wParam) == WA_INACTIVE)
-        {
-            pSample->GetTimer().Stop();
-        }
-        else
-        {
-            pSample->GetTimer().Start();
-        }
-        return 0;
+    
     case WM_PAINT:
         if (pSample)
         {
-            pSample->GetTimer().Start();
-
             pSample->OnUpdate(pSample->GetTimer());
             pSample->OnRender();
-            pSample->CalculateFrameStats();
         }
         return 0;
-    
+
+    case WM_KILLFOCUS:
+        kbd.ClearState();
+        break;
+    case WM_KEYDOWN:
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            break;
+        }
+        if (!(lParam & 0x40000000) || kbd.AutoRepeatIsEnabled()) // filter autorepeat
+        {
+            kbd.OnKeyPressed(static_cast<unsigned char>(wParam));
+        }
+        break;
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        // stifle this keyboard message if imgui wants to capture
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            break;
+        }
+        kbd.OnKeyReleased(static_cast<unsigned char>(wParam));
+        break;
+    case WM_CHAR:
+        // stifle this keyboard message if imgui wants to capture
+        if (ImGui::GetIO().WantCaptureKeyboard)
+        {
+            break;
+        }
+        kbd.OnChar(static_cast<unsigned char>(wParam));
+        break;
+    /*********** END KEYBOARD MESSAGES ***********/
+
     case WM_DESTROY:
         PostQuitMessage(0);
-        return 0;
-    default:
         break;
+
     }
     return DefWindowProc(hWnd, message, wParam, lParam);
 }

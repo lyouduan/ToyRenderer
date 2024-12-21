@@ -1,6 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "D3D12DescriptorCache.h"
+#include "D3D12Resource.h"
 
 class TD3D12CommandContext
 {
@@ -18,6 +19,8 @@ public:
 	ID3D12GraphicsCommandList* GetCommandList() { return CommandList.Get(); }
 
 	TD3D12DescriptorCache* GetDescriptorCache() { return DescriptorCache.get(); }
+
+	void Transition(TD3D12Resource* resource, D3D12_RESOURCE_STATES afterState);
 
 	void ResetCommandAllocator();
 

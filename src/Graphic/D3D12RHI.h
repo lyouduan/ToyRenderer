@@ -51,6 +51,7 @@ namespace TD3D12RHI
 	void CreateAndInitDefaultBuffer(const void* Contents, uint32_t Size, uint32_t Alignment, TD3D12ResourceLocation& ResourceLocation);
 
 	void InitializeTexture(TD3D12Resource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
+	void UploadTextureData(TD3D12Resource TextureResource, const std::vector<D3D12_SUBRESOURCE_DATA>& InitData);
 
 	TD3D12HeapSlotAllocator* GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE HeapType);
 

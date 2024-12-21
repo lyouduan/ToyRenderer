@@ -7,6 +7,7 @@ class Camera
 public:
 	Camera();
 
+	void UpadteViewMat();
 	void UpadteProjMat();
 
 	// orient camera space
@@ -27,12 +28,33 @@ public:
 	const DirectX::XMMATRIX& GetProjMat() const { return m_ProjMat; }
 	const DirectX::XMMATRIX& GetViewProjMat() const { return m_ViewProjMat; }
 
+	void CamerImGui();
+
+	float& GetRoll() { return roll; }
+	float& GetPitch() { return pitch; }
+	float& GetYaw() { return yaw; }
+
 private:
 
 	float m_VerticalFOV;
 	float m_AspectRatio;
 	float m_NearClip;
 	float m_FarClip;
+
+	//
+	DirectX::XMVECTOR m_pos;
+	DirectX::XMVECTOR m_right;
+	DirectX::XMVECTOR m_up;
+	DirectX::XMVECTOR m_look;
+
+
+	// Euler Angle
+	bool rotDirty = false;
+
+	float roll = 1.0;
+	float pitch = 1.0;
+	float yaw = 1.0;
+	float distance = 1.0;
 
 	DirectX::XMMATRIX m_ViewMat;
 	DirectX::XMMATRIX m_ProjMat;

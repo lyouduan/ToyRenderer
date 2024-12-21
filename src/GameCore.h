@@ -1,12 +1,14 @@
 #pragma once
+#include "stdafx.h"
 #include "DXSample.h"
 #include "D3D12CommandContext.h"
 #include "D3D12PixelBuffer.h"
 #include "D3D12Buffer.h"
 #include "Camera.h"
-
+#include "ModelLoader.h"
 
 using namespace DirectX;
+
 using Microsoft::WRL::ComPtr;
 
 class GameCore : public DXSample
@@ -19,7 +21,6 @@ public:
 	void OnDestroy() override;
 
 private:
-	static const uint32_t FrameCount = 2;
 
 	struct Vertex {
 		XMFLOAT3 position;
@@ -37,7 +38,7 @@ private:
 
 	TD3D12IndexBufferRef indexBufferRef;
 	TD3D12VertexBufferRef vertexBufferRef;
-
+	ModelLoader model;
 	//ComPtr<ID3D12Resource> m_Depth;
 
 	//ComPtr<ID3D12CommandAllocator> m_commandAllocator;
@@ -71,8 +72,9 @@ private:
 	//DirectX::XMMATRIX m_ViewMatrix;
 	//DirectX::XMMATRIX m_ProjectionMatrix;
 
-	float angle = 0;
-	float clearColor[4] = {0.1, 0.2, 0.4, 1.0};
+	float totalTime = 0;
+	float speed = 0.1;
+	float clearColor[4] = {0.9, 0.9, 0.9, 1.0};
 
 	void LoadPipeline();
 	void LoadAssets();

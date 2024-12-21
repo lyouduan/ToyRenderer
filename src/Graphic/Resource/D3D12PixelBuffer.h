@@ -12,7 +12,7 @@ public:
 	uint32_t GetDepth(void) const { return m_ArraySize; }
 	const DXGI_FORMAT& GetFormat(void) const { return m_Format; }
 
-	TD3D12Resource* Resource() const { return ResourceLocation.UnderlyingResource; }
+	TD3D12Resource* GetD3D12Resource() const { return ResourceLocation.UnderlyingResource; }
 	ID3D12Resource* GetResource() const { return ResourceLocation.UnderlyingResource->D3DResource.Get(); }
 
 public:
