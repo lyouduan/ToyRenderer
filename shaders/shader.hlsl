@@ -5,7 +5,7 @@ cbuffer ModelViewProjectionCB : register(b0)
 }
 
 Texture2D tex : register(t0);
-SamplerState LinearSampler : register(s0);
+SamplerState LinearWrapSampler : register(s0);
 
 struct PSInput
 {
@@ -25,6 +25,6 @@ PSInput VSMain(float4 position : POSITION, float2 tex : TEXCOORD)
 
 float4 PSMain(PSInput input) : SV_Target
 {
-    float3 color = tex.Sample(LinearSampler, input.tex).xyz;
+    float3 color = tex.Sample(LinearWrapSampler, input.tex).xyz;
     return float4(color, 1.0);
 }

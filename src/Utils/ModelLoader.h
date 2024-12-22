@@ -26,8 +26,6 @@ private:
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
 	std::vector<TD3D12Texture> loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, const aiScene* scene);
 
-	TD3D12Texture loadEmbeddedTexture(const aiTexture* embeddedTexture);
-
 	std::string m_directory;
 	std::vector<Mesh> m_meshes;
 	std::vector<TD3D12Texture> textures_loaded;

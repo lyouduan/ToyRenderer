@@ -33,7 +33,6 @@ public:
 	bool CreateDDSFromMemory(const void* memBuffer, size_t fileSize, bool sRGB);
 	bool CreateDDSFromFile(const wchar_t* fileName, size_t fileSize, bool sRGB);
 	bool CreateWICFromFile(const wchar_t* fileName, size_t fileSize, bool sRGB);
-	bool LoadImageFromFile(std::string fileName, size_t fileSize, bool sRGB);
 
 	void Create2D();
 	void Create2D(TextureInfo info);

@@ -94,53 +94,6 @@ bool TD3D12Texture::CreateWICFromFile(const wchar_t* fileName, size_t fileSize, 
     return SUCCEEDED(hr);
 }
 
-bool TD3D12Texture::LoadImageFromFile(std::string fileName, size_t fileSize, bool sRGB)
-{
-    stbi_set_flip_vertically_on_load(true);
-
-    int width, height, nrComponents;
-    float* data = stbi_loadf(fileName.c_str(), &width, &height, &nrComponents, 0);
-
-    if (data)
-    {
-        if (nrComponents == 1)
-            m_TexInfo.Format = DXGI_FORMAT_R32_FLOAT;
-        else if (nrComponents == 3)
-            m_TexInfo.Format = DXGI_FORMAT_R32G32B32_FLOAT;
-        else if (nrComponents == 4)
-            m_TexInfo.Format = DXGI_FORMAT_R32G32B32A32_FLOAT;
-
-        m_TexInfo.Width = width;
-        m_TexInfo.Height = height;
-        m_TexInfo.DepthOrArraySize = 1;
-        m_TexInfo.MipCount = 1;
-        m_TexInfo.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-
-        Create2D(m_TexInfo);
-
-        LONG RowBytes = width * nrComponents * sizeof(float);
-        LONG NumBytes = width * height * nrComponents * sizeof(float);
-
-        decodedData.resize(NumBytes);
-        memcpy_s(decodedData.data(), NumBytes, data, NumBytes);
-
-        stbi_image_free(data);
-
-        D3D12_SUBRESOURCE_DATA InitData;
-        InitData.pData = decodedData.data();
-        InitData.RowPitch = static_cast<LONG>(RowBytes);
-        InitData.SlicePitch = static_cast<LONG>(NumBytes);
-
-        m_InitData.push_back(InitData);
-
-        TD3D12Resource DestTexture(this->GetD3DResource(), D3D12_RESOURCE_STATE_COPY_DEST);
-        TD3D12RHI::UploadTextureData(DestTexture, m_InitData);
-
-        return true;
-    }
-    return false;
-}
-
 void TD3D12Texture::Create2D()
 {
     if (m_Width != m_Desc.Width)

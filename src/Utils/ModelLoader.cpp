@@ -1,5 +1,6 @@
 #include "ModelLoader.h"
 #include "WICTextureLoader.h"
+#include <wchar.h>
 
 ModelLoader::ModelLoader()
 	: m_meshes()
@@ -70,14 +71,27 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 		vertex.position.y = mesh->mVertices[i].y;
 		vertex.position.z = mesh->mVertices[i].z;
 
-		constexpr unsigned int uvIndex = 0;
-		if (mesh->HasTextureCoords(uvIndex))
+		if (mesh->mTextureCoords[0])
 		{
-			vertex.tex.x = (float)mesh->mTextureCoords[uvIndex][i].x;
-			vertex.tex.y = (float)mesh->mTextureCoords[uvIndex][i].y;
+			vertex.tex.x = mesh->mTextureCoords[0][i].x;
+			vertex.tex.y = mesh->mTextureCoords[0][i].y;
+			if (!(vertex.tex.x >= 0.0f && vertex.tex.x <= 1.0f))
+			{
+				wchar_t buffer[128];
+				swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"Warning: Missing UV coordinates for vertex, tex.x = %f\n", vertex.tex.x);
+				OutputDebugString(buffer);
+			}
+
+			if (!(vertex.tex.y >= 0.0f && vertex.tex.y <= 1.0f))
+			{
+				wchar_t buffer[128];
+				swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"Warning: Missing UV coordinates for vertex, tex.y = %f\n", vertex.tex.y);
+				OutputDebugString(buffer);
+			}
+			//assert(vertex.tex.x >= 0.0f && vertex.tex.x <= 1.0f);
+			//assert(vertex.tex.y >= 0.0f && vertex.tex.y <= 1.0f);
 		}
 		else {
-			vertex.tex = { 0.0f, 0.0f };
 		}
 
 		vertices.push_back(vertex);
@@ -122,11 +136,11 @@ std::vector<TD3D12Texture> ModelLoader::loadMaterialTextures(aiMaterial* mat, ai
 			}
 		}
 		if (!skip) {   // If texture hasn't been loaded already, load it
-			TD3D12Texture texture;
+			TD3D12Texture texture(64, 64);
 
 			std::string filename = std::string(str.C_Str());
 			filename = m_directory + '/' + filename;
-
+			
 			const aiTexture* embeddedTexture = scene->GetEmbeddedTexture(str.C_Str());
 			if (embeddedTexture != nullptr)
 			{
@@ -135,7 +149,14 @@ std::vector<TD3D12Texture> ModelLoader::loadMaterialTextures(aiMaterial* mat, ai
 			else
 			{
 				std::wstring filenames = std::wstring(filename.begin(), filename.end());
-				texture.LoadImageFromFile(std::string(filenames.begin(), filenames.end()), 0, false);
+				if (filename.find("dds") != std::string::npos)
+				{
+					texture.CreateDDSFromFile(filenames.c_str(), 0, false);
+				}
+				else if (filename.find("png") != std::string::npos || filename.find("jpg") != std::string::npos)
+				{
+					texture.CreateWICFromFile(filenames.c_str(), 0, false);
+				}
 			}
 
 			texture.name = str.C_Str();
@@ -146,42 +167,3 @@ std::vector<TD3D12Texture> ModelLoader::loadMaterialTextures(aiMaterial* mat, ai
 
 	return textures;
 }
-
-TD3D12Texture ModelLoader::loadEmbeddedTexture(const aiTexture* embeddedTexture)
-{
-	HRESULT hr;
-
-	TD3D12Texture texture;
-
-	if (embeddedTexture->mHeight != 0)
-	{
-		TextureInfo info;
-		info.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-		info.Width = embeddedTexture->mWidth;
-		info.Height = embeddedTexture->mHeight;
-		info.DepthOrArraySize = 1;
-		info.MipCount = 1;
-		info.Format = DXGI_FORMAT_B8G8R8A8_UNORM;
-		info.InitState = D3D12_RESOURCE_STATE_COPY_DEST;
-		TD3D12Texture texture;
-		texture.Create2D(info);
-
-		D3D12_SUBRESOURCE_DATA subresourceData;
-		subresourceData.pData = embeddedTexture->pcData;
-		subresourceData.RowPitch = embeddedTexture->mWidth * 4;
-		subresourceData.SlicePitch = embeddedTexture->mWidth * embeddedTexture->mHeight * 4;
-
-		TD3D12Resource DestTexture(texture.GetResource()->D3DResource.Get(), D3D12_RESOURCE_STATE_COPY_DEST);
-		TD3D12RHI::InitializeTexture(DestTexture, 1, &subresourceData);
-
-		return texture;
-	}
-
-	// mHeight is 0, so try to load a compressed texture of mWidth bytes
-	//const size_t size = embeddedTexture->mWidth;
-	//hr = CreateWICTextureFromMemory(size, reinterpret_cast<const unsigned char*>(embeddedTexture->pcData), texture);
-
-
-	return texture;
-}
-

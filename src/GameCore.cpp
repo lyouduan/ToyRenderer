@@ -191,10 +191,10 @@ void GameCore::LoadAssets()
 
 		// sampler
 		D3D12_STATIC_SAMPLER_DESC sampler = {};
-		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_POINT;
-		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
-		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_BORDER;
+		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
+		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // Wrap
+		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
+		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
 		sampler.MipLODBias = 0;
 		sampler.MaxAnisotropy = 0;
 		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
@@ -289,7 +289,7 @@ void GameCore::LoadAssets()
 		//
 		//indexBufferRef = TD3D12RHI::CreateIndexBuffer(indices.data(), indices.size() * sizeof(int16_t), DXGI_FORMAT_R16_UINT);
 
-		if (!model.Load("./models/nanosuit/nanosuit.obj"))
+		if (!model.Load("./models/gas/8YCM1L5HM3IT6LCVBQVRX5A5A.obj"))
 			assert(false);
 	}
 
