@@ -6,8 +6,10 @@
 #include "Display.h"
 #include <chrono>
 #include "ImGuiManager.h"
+#include "PSOManager.h"
 
 using namespace TD3D12RHI;
+using namespace PSOManager;
 
 GameCore::GameCore(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
@@ -28,10 +30,15 @@ void GameCore::OnInit()
 
 void GameCore::OnUpdate(const GameTimer& gt)
 {
-	totalTime += gt.DeltaTime() * 0.01;
-	float rotate_angle = static_cast<float>(speed * 360 * totalTime);
-	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 1, 0);
-	m_ModelMatrix = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
+	XMMATRIX scalingMat = XMMatrixScaling(scale, scale, scale);
+
+	//totalTime += gt.DeltaTime() * 0.01;
+	float rotate_angle = static_cast<float>(RotationY * 360 /* * totalTime*/);
+	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
+	XMMATRIX rotationYMat = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
+	XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y, position.z);
+
+	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
 
 	// Update the view matrix.
 	const XMVECTOR eyePosition = XMVectorSet(0, 0, -50, 1);
@@ -65,10 +72,15 @@ void GameCore::OnRender()
 		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
-		ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+		               // Display some text (you can use a format strings too)
 		ImGui::Checkbox("Demo Window", &ImGuiManager::show_demo_window);      // Edit bools storing our window open/close state
 		//ImGui::Checkbox("Another Window", &show_another_window);
-		ImGui::SliderFloat("Speed Factor", &speed, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::Text("Model Control Parameters");
+		ImGui::SliderFloat("RotationY", &RotationY, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model PositionX", &position.x, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model PositionY", &position.y, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model PositionZ", &position.z, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
 		
 		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
@@ -216,6 +228,8 @@ void GameCore::LoadAssets()
 		ThrowIfFailed(TD3D12RHI::g_Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
 	}
 
+	PSOManager::InitializePSO();
+
 	// create the pipeline state, which includes compiling and loading shaders
 	{
 		ComPtr<ID3DBlob> vertexShader;
@@ -228,24 +242,9 @@ void GameCore::LoadAssets()
 		uint32_t compileFlags = 0;
 #endif // defined(_DEBUG)
 
-		ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
+		//ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
+		//ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
-
-		{
-			TShaderInfo info;
-			info.FileName = "shaders/shader";
-
-			info.bCreateVS = true;
-			info.bCreatePS = true;
-			info.bCreateCS = false;
-			info.VSEntryPoint = "VSMain";
-			info.PSEntryPoint = "PSMain";
-
-			m_shader = std::make_unique<TShader>(info);
-
-		}
-		
 
 		// define  the vertex input layout
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -269,15 +268,16 @@ void GameCore::LoadAssets()
 		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; 
 		psoDesc.DSVFormat = g_DepthBuffer.GetFormat(); 
 		psoDesc.DepthStencilState.StencilEnable = FALSE;
-
+		
 		psoDesc.SampleMask = UINT_MAX;
 		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
 		psoDesc.NumRenderTargets = 1;
 		psoDesc.RTVFormats[0] = m_renderTragetrs->GetFormat();
 		psoDesc.SampleDesc.Count = 1;
-
+		
 		ThrowIfFailed(TD3D12RHI::g_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
+
 
 	// load model
 	{
@@ -300,7 +300,8 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandList();
 
 	// set necessary state
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(m_shader->RootSignature.Get());
+	//g_CommandContext.GetCommandList()->SetGraphicsRootSignature(m_shader->RootSignature.Get());
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(&PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
@@ -317,7 +318,9 @@ void GameCore::PopulateCommandList()
 
 	// Record commands
 
-	g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
+	//g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
+
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
 	// Update the MVP matrix
 	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());

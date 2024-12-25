@@ -26,6 +26,8 @@
     <ClCompile Include="3rdParty\imgui\imgui_draw.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_tables.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\Graphic\Resource\PSOManager.cpp" />
+    <ClCompile Include="src\Graphic\Resource\PSO.cpp" />
     <ClCompile Include="src\Utils\Mesh.cpp" />
     <ClCompile Include="src\Utils\ModelLoader.cpp" />
     <ClCompile Include="src\Utils\Keyboard.cpp" />
@@ -60,6 +62,9 @@
     <ClInclude Include="3rdParty\imgui\imstb_rectpack.h" />
     <ClInclude Include="3rdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="3rdParty\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Graphic\Resource\PSOManager.h" />
+    <ClInclude Include="src\Utils\hash.h" />
+    <ClInclude Include="src\Graphic\Resource\PSO.h" />
     <ClInclude Include="src\Utils\PlatformHelpers.h" />
     <ClInclude Include="src\Utils\LoadHelpers.h" />
     <ClInclude Include="src\Utils\Mesh.h" />
@@ -162,6 +167,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -179,6 +185,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -196,6 +203,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
@@ -213,6 +221,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>

@@ -38,7 +38,7 @@ void ModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12
 		shader->SetParameter("MVPcBuffer", ConstantBufferRef);
 
 		auto m_SRV = mesh.GetSRV();
-		shader->SetParameter("tex", m_SRV);
+		shader->SetParameter("diffuseMap", m_SRV);
 
 		shader->SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
 		

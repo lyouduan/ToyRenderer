@@ -7,6 +7,7 @@
 #include "D3D12DescriptorCache.h"
 #include "D3D12CommandContext.h"
 #include "D3D12PixelBuffer.h"
+#include "Shader.h"
 
 #include <memory>
 #define FrameCount 2

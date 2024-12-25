@@ -51,7 +51,7 @@ private:
 
 	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
 	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRV;
-	std::unique_ptr<TShader> m_shader = nullptr;
+	//std::unique_ptr<TShader> m_shader = nullptr;
 
 	//std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
 
@@ -68,13 +68,16 @@ private:
 
 	Camera m_Camera;
 
+	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
+	float scale = 1.0;
+
 	DirectX::XMMATRIX m_ModelMatrix;
 	//DirectX::XMMATRIX m_ViewMatrix;
 	//DirectX::XMMATRIX m_ProjectionMatrix;
 	Mesh boxMeshes;
 
 	float totalTime = 0;
-	float speed = 0.1;
+	float RotationY = 0.5;
 	float clearColor[4] = {0.9, 0.9, 0.9, 1.0};
 
 	void LoadPipeline();

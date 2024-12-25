@@ -88,7 +88,7 @@ void Camera::CamerImGui()
 	bool rotDirty = false;
 	const auto dcheck = [](bool d, bool& carry) { carry = carry || d; };
 
-	ImGui::Text("Orientation");
+	ImGui::Text("Camera Orientation");
 	dcheck(ImGui::SliderFloat("Position", &distance, -50.0f, 50.0f, "%.1f"), rotDirty);
 	dcheck(ImGui::SliderFloat("FOV", &m_VerticalFOV, 0.1f, 89.0f, "%.1f"), rotDirty);
 	dcheck(ImGui::SliderFloat("Pitch", &pitch, -45.0f, 45.0f, "%.1f"), rotDirty);

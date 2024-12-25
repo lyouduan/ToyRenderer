@@ -4,7 +4,7 @@ cbuffer MVPcBuffer : register(b0)
     matrix MVP;
 }
 
-Texture2D tex : register(t0);
+Texture2D diffuseMap : register(t0);
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -31,6 +31,6 @@ PSInput VSMain(float4 position : POSITION, float2 tex : TEXCOORD)
 
 float4 PSMain(PSInput input) : SV_Target
 {
-    float3 color = tex.Sample(LinearWrapSampler, input.tex).xyz;
+    float3 color = diffuseMap.Sample(LinearWrapSampler, input.tex).xyz;
     return float4(color, 1.0);
 }
