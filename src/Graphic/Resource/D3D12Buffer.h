@@ -41,3 +41,14 @@ private:
 };
 typedef std::shared_ptr<TD3D12IndexBuffer> TD3D12IndexBufferRef;
 
+class TD3D12ConstantBuffer : public TD3D12Buffer
+{
+
+public:
+	void CreateDerivedViews(uint32_t Size);
+
+private:
+	D3D12_CONSTANT_BUFFER_VIEW_DESC CBV_Desc;
+};
+
+typedef std::shared_ptr<TD3D12ConstantBuffer> TD3D12ConstantBufferRef;

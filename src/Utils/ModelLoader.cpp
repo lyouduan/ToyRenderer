@@ -1,6 +1,7 @@
 #include "ModelLoader.h"
 #include "WICTextureLoader.h"
 #include <wchar.h>
+#include "Shader.h"
 
 ModelLoader::ModelLoader()
 	: m_meshes()
@@ -29,10 +30,19 @@ bool ModelLoader::Load(std::string fileName)
 	return true;
 }
 
-void ModelLoader::Draw(TD3D12CommandContext& gfxContext)
+void ModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef)
 {
 	for (auto& mesh : m_meshes)
 	{
+		// draw call
+		shader->SetParameter("MVPcBuffer", ConstantBufferRef);
+
+		auto m_SRV = mesh.GetSRV();
+		shader->SetParameter("tex", m_SRV);
+
+		shader->SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
+		
+		shader->BindParameters();
 		mesh.DrawMesh(gfxContext);
 	}
 }
@@ -75,25 +85,27 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 		{
 			vertex.tex.x = mesh->mTextureCoords[0][i].x;
 			vertex.tex.y = mesh->mTextureCoords[0][i].y;
-			if (!(vertex.tex.x >= 0.0f && vertex.tex.x <= 1.0f))
+			/*if (!(vertex.tex.x >= 0.0f && vertex.tex.x <= 1.0f))
 			{
 				wchar_t buffer[128];
-				swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"Warning: Missing UV coordinates for vertex, tex.x = %f\n", vertex.tex.x);
+				swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"Warning: Missing UV coordinates for vertex, 、ex.x = %f\n", vertex.tex.x);
 				OutputDebugString(buffer);
 			}
-
+			
 			if (!(vertex.tex.y >= 0.0f && vertex.tex.y <= 1.0f))
 			{
 				wchar_t buffer[128];
-				swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"Warning: Missing UV coordinates for vertex, tex.y = %f\n", vertex.tex.y);
+				swprintf(buffer, sizeof(buffer) / sizeof(buffer[0]), L"Warning: Missing UV coordinates for vertex, 、ex.y = %f\n", vertex.tex.y);
 				OutputDebugString(buffer);
-			}
+			}*/
 			//assert(vertex.tex.x >= 0.0f && vertex.tex.x <= 1.0f);
 			//assert(vertex.tex.y >= 0.0f && vertex.tex.y <= 1.0f);
 		}
-		else {
+		else 
+		{
+			vertex.tex = { 0.0 ,0.0 };
 		}
-
+		
 		vertices.push_back(vertex);
 	}
 

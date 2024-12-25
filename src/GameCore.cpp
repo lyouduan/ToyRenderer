@@ -110,6 +110,7 @@ void GameCore::OnDestroy()
 	// destroy ImGui
 	ImGuiManager::DestroyImGui();
 
+	model.Close();
 }
 
 void GameCore::LoadPipeline()
@@ -154,7 +155,7 @@ void GameCore::LoadPipeline()
 	// using device to initialize CommandContext and allocator
 	TD3D12RHI::Initialze();
 
-	descriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
+	//descriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
 
 	// create the swap chain
 	Display::Initialize();
@@ -231,6 +232,21 @@ void GameCore::LoadAssets()
 		ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
 
 
+		{
+			TShaderInfo info;
+			info.FileName = "shaders/shader";
+
+			info.bCreateVS = true;
+			info.bCreatePS = true;
+			info.bCreateCS = false;
+			info.VSEntryPoint = "VSMain";
+			info.PSEntryPoint = "PSMain";
+
+			m_shader = std::make_unique<TShader>(info);
+
+		}
+		
+
 		// define  the vertex input layout
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 		{
@@ -241,9 +257,11 @@ void GameCore::LoadAssets()
 		// describe and create the graphics pipeline state object (PSO)
 		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
 		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_rootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
+		psoDesc.pRootSignature = m_shader->RootSignature.Get();
+		psoDesc.VS = CD3DX12_SHADER_BYTECODE(m_shader->ShaderPass["VS"].Get());
+		//psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
+		psoDesc.PS = CD3DX12_SHADER_BYTECODE(m_shader->ShaderPass["PS"].Get());
+		//psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
 		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
 		psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth testing
@@ -261,47 +279,16 @@ void GameCore::LoadAssets()
 		ThrowIfFailed(TD3D12RHI::g_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
 	}
 
-	// create the vertex buffer
+	// load model
 	{
-		// define  the geometry for a triangle
-		//std::vector<Vertex> triangleVerties =
-		//{   { XMFLOAT3(-1.0f, -1.0f, -1.0f), XMFLOAT2(0.0f, 0.0f) }, // 0
-		//	{ XMFLOAT3(-1.0f,  1.0f, -1.0f), XMFLOAT2(1.0f, 1.0f) }, // 1
-		//	{ XMFLOAT3(1.0f,  1.0f, -1.0f),  XMFLOAT2(0.0f, 1.0f) }, // 2
-		//	{ XMFLOAT3(1.0f, -1.0f, -1.0f),  XMFLOAT2(1.0f, 0.0f) }, // 3
-		//	{ XMFLOAT3(-1.0f, -1.0f,  1.0f), XMFLOAT2(0.0f, 1.0f) }, // 4
-		//	{ XMFLOAT3(-1.0f,  1.0f,  1.0f), XMFLOAT2(1.0f, 0.0f) }, // 5
-		//	{ XMFLOAT3(1.0f,  1.0f,  1.0f),  XMFLOAT2(0.0f, 0.0f) }, // 6
-		//	{ XMFLOAT3(1.0f, -1.0f,  1.0f),  XMFLOAT2(1.0f, 1.0f) }  // 7
-		//};
-		//
-		//std::vector<int16_t> indices =
-		//{
-		//	0, 1, 2, 0, 2, 3,
-		//	4, 6, 5, 4, 7, 6,
-		//	4, 5, 1, 4, 1, 0,
-		//	3, 2, 6, 3, 6, 7,
-		//	1, 5, 6, 1, 6, 2,
-		//	4, 0, 3, 4, 3, 7 
-		//};
-		//
-		//vertexBufferRef = TD3D12RHI::CreateVertexBuffer(triangleVerties.data(), triangleVerties.size()* sizeof//(Vertex), sizeof(Vertex));
-		//
-		//indexBufferRef = TD3D12RHI::CreateIndexBuffer(indices.data(), indices.size() * sizeof(int16_t), DXGI_FORMAT_R16_UINT);
-
 		if (!model.Load("./models/gas/8YCM1L5HM3IT6LCVBQVRX5A5A.obj"))
 			assert(false);
+
+
+		boxMeshes.CreateBox(2, 2, 2, 3);
 	}
 
-	// load texture data
-	//TD3D12Texture texture(64, 64);
-	//if(texture.CreateDDSFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/Wood.dds", 0, false))
-	//if(texture.CreateWICFromFile(L"D:/gcRepo/DX12Lab/DX12Lab/textures/container.jpg", 0, false))
-		//m_SRV.push_back(texture.GetSRV());
-
 	g_CommandContext.FlushCommandQueue();
-
-	//descriptorCache->AppendCbvSrvUavDescriptors(m_SRV);
 }
 
 void GameCore::PopulateCommandList()
@@ -313,7 +300,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandList();
 
 	// set necessary state
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(m_rootSignature.Get());
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(m_shader->RootSignature.Get());
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
@@ -335,20 +322,13 @@ void GameCore::PopulateCommandList()
 	// Update the MVP matrix
 	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());
 
-	g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+	//g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
 
-	//ID3D12DescriptorHeap* Heaps[] = { descriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get() };
+	cBufferRef = TD3D12RHI::CreateConstantBuffer(&mvpMatrix, sizeof(XMMATRIX));
 
-	//g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps);
-	//D3D12_GPU_DESCRIPTOR_HANDLE srvHandle = descriptorCache->GetCacheCbvSrvUavDescriptorHeap()-、//>etGPUDescriptorHandleForHeapStart();
-	//g_CommandContext.GetCommandList()->SetGraphicsRootDescriptorTable(1, srvHandle);
-	//
-	//g_CommandContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-	//g_CommandContext.GetCommandList()->IASetVertexBuffers(0, 1, &vertexBufferRef->GetVBV());
-	//g_CommandContext.GetCommandList()->IASetIndexBuffer(&indexBufferRef->GetIBV());
-	//g_CommandContext.GetCommandList()->DrawIndexedInstanced(36, 1, 0, 0, 0);
-	
-	model.Draw(g_CommandContext);
+	model.Draw(g_CommandContext, m_shader.get(), cBufferRef);
+
+	//boxMeshes.DrawMesh(g_CommandContext);
 
 	// ImGui
 	ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };
@@ -356,7 +336,6 @@ void GameCore::PopulateCommandList()
 	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), TD3D12RHI::g_CommandContext.GetCommandList());
 
 	// indicate that the back buffer will now be used to present
-
 	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
 	
@@ -365,16 +344,6 @@ void GameCore::PopulateCommandList()
 void GameCore::WaitForPreviousFrame()
 {
 	
-	// Signal and increment the fence value
-	//const uint64_t fence = ++m_fenceValue;
-	//ThrowIfFailed(m_commandQueue->Signal(m_fence.Get(), fence));
-	//
-	//// wait until the previous frame is finished
-	//if (m_fence->GetCompletedValue() < fence)
-	//{
-	//	ThrowIfFailed(m_fence->SetEventOnCompletion(fence, m_fenceEvent));
-	//	WaitForSingleObject(m_fenceEvent, INFINITE);
-	//}
 	g_CommandContext.FlushCommandQueue();
 	
 	DescriptorCache->Reset();

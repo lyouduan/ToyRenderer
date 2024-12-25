@@ -1,6 +1,8 @@
 #pragma once
 #include "stdafx.h"
 #include "Mesh.h"
+#include "Shader.h"
+
 #include "D3D12CommandContext.h"
 #include <unordered_map>
 
@@ -17,7 +19,9 @@ public:
 	~ModelLoader();
 
 	bool Load(std::string fileName);
-	void Draw(TD3D12CommandContext& gfxContext);
+	void Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef);
+
+	// for binding shader
 
 	void Close();
 

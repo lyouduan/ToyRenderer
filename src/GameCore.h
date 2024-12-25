@@ -6,6 +6,8 @@
 #include "D3D12Buffer.h"
 #include "Camera.h"
 #include "ModelLoader.h"
+#include "Mesh.h"
+#include "Shader.h"
 
 using namespace DirectX;
 
@@ -22,11 +24,6 @@ public:
 
 private:
 
-	struct Vertex {
-		XMFLOAT3 position;
-		XMFLOAT2 tex;
-	};
-
 	// pipleline objects
 	CD3DX12_VIEWPORT m_viewport;;
 	CD3DX12_RECT m_scissorRect;
@@ -36,8 +33,10 @@ private:
 	//ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
 	D3D12ColorBuffer m_renderTragetrs[FrameCount];
 
-	TD3D12IndexBufferRef indexBufferRef;
-	TD3D12VertexBufferRef vertexBufferRef;
+	//TD3D12IndexBufferRef indexBufferRef;
+	//TD3D12VertexBufferRef vertexBufferRef;
+	TD3D12ConstantBufferRef cBufferRef;
+
 	ModelLoader model;
 	//ComPtr<ID3D12Resource> m_Depth;
 
@@ -51,9 +50,10 @@ private:
 	//uint32_t m_rtvDescriptorSize;
 
 	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
-	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRV;
+	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRV;
+	std::unique_ptr<TShader> m_shader = nullptr;
 
-	std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
+	//std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
 
 	// app resource
 	//ComPtr<ID3D12Resource> m_vertexBuffer;
@@ -71,6 +71,7 @@ private:
 	DirectX::XMMATRIX m_ModelMatrix;
 	//DirectX::XMMATRIX m_ViewMatrix;
 	//DirectX::XMMATRIX m_ProjectionMatrix;
+	Mesh boxMeshes;
 
 	float totalTime = 0;
 	float speed = 0.1;

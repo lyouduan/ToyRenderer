@@ -23,6 +23,19 @@ TD3D12IndexBufferRef TD3D12RHI::CreateIndexBuffer(const void* Contents, uint32_t
     return IndexBufferRef;
 }
 
+TD3D12ConstantBufferRef TD3D12RHI::CreateConstantBuffer(const void* Contents, uint32_t Size)
+{
+    TD3D12ConstantBufferRef ConstantBufferRef = std::make_shared<TD3D12ConstantBuffer>();
+
+    void* Mappedata = UploadBufferAllocator->AllocUploadResource(Size, UPLOAD_RESOURCE_ALIGNMENT, ConstantBufferRef->ResourceLocation);
+
+    memcpy(Mappedata, Contents, Size);
+
+    ConstantBufferRef->CreateDerivedViews(Size);
+
+    return ConstantBufferRef;
+}
+
 void TD3D12RHI::CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation)
 {
     // create default resource
@@ -78,4 +91,14 @@ void TD3D12IndexBuffer::CreateDerivedViews(uint32_t Size, DXGI_FORMAT Format)
     m_IBV.BufferLocation = ResourceLocation.GPUVirtualAddress;
     m_IBV.SizeInBytes = Size;
     m_IBV.Format = Format;
+}
+
+void TD3D12ConstantBuffer::CreateDerivedViews(uint32_t Size)
+{
+    CBV_Desc.BufferLocation = ResourceLocation.GPUVirtualAddress;
+    CBV_Desc.SizeInBytes = (sizeof(Size) + 255) & ~255; // Align to 256 bytes
+
+    auto HeapHandle = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+
+    TD3D12RHI::g_Device->CreateConstantBufferView(&CBV_Desc, HeapHandle);
 }
