@@ -44,9 +44,9 @@ private:
 	//ComPtr<ID3D12CommandQueue> m_commandQueue;
 	//ComPtr<ID3D12GraphicsCommandList> m_commandList;
 
-	ComPtr<ID3D12RootSignature> m_rootSignature;
+	//ComPtr<ID3D12RootSignature> m_rootSignature;
 	//ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	ComPtr<ID3D12PipelineState> m_pipelineState;
+	//ComPtr<ID3D12PipelineState> m_pipelineState;
 	//uint32_t m_rtvDescriptorSize;
 
 	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;

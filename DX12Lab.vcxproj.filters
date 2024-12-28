@@ -99,13 +99,13 @@
     <ClCompile Include="src\Utils\Keyboard.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Utils\ModelLoader.cpp">
+    <ClCompile Include="src\Graphic\ModelLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Utils\WICTextureLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Utils\Mesh.cpp">
+    <ClCompile Include="src\Graphic\Mesh.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Graphic\Resource\PSO.cpp">
@@ -212,10 +212,10 @@
     <ClInclude Include="src\Utils\Keyboard.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utils\ModelLoader.h">
+    <ClInclude Include="src\Graphic\ModelLoader.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Utils\Mesh.h">
+    <ClInclude Include="src\Graphic\Mesh.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Utils\WICTextureLoader.h">

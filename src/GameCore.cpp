@@ -67,8 +67,8 @@ void GameCore::OnRender()
 
 	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 	{
-		static int counter = 0;
-		static char buffer[1024];
+		//static int counter = 0;
+		//static char buffer[1024];
 		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 
@@ -84,13 +84,13 @@ void GameCore::OnRender()
 		
 		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
-		if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-			counter++;
-		ImGui::SameLine();
-		ImGui::Text("counter = %d", counter);
+		//if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+			//counter++;
+		//ImGui::SameLine();
+		//ImGui::Text("counter = %d", counter);
 
 		// Buffer
-		ImGui::InputText("Butts", buffer, sizeof(buffer));
+		//ImGui::InputText("Butts", buffer, sizeof(buffer));
 
 		// camera control
 		m_Camera.CamerImGui();
@@ -192,98 +192,15 @@ void GameCore::LoadPipeline()
 // load the sample assets
 void GameCore::LoadAssets()
 {
-	// create an empty root signature
+	// create PSO and rootSignature
 	{
-		// A single 32-bit constant root parameter that is used by the vertex shader.
-		CD3DX12_DESCRIPTOR_RANGE1 srvRange;
-		srvRange.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, 1, 0, D3D12_DESCRIPTOR_RANGE_FLAG_NONE);
-
-		CD3DX12_ROOT_PARAMETER1 rootParameters[2];
-		rootParameters[0].InitAsConstants(sizeof(XMMATRIX) / 4, 0, 0, D3D12_SHADER_VISIBILITY_VERTEX);
-		rootParameters[1].InitAsDescriptorTable(1, &srvRange);
-
-		// sampler
-		D3D12_STATIC_SAMPLER_DESC sampler = {};
-		sampler.Filter = D3D12_FILTER_MIN_MAG_MIP_LINEAR;
-		sampler.AddressU = D3D12_TEXTURE_ADDRESS_MODE_WRAP; // Wrap
-		sampler.AddressV = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler.AddressW = D3D12_TEXTURE_ADDRESS_MODE_WRAP;
-		sampler.MipLODBias = 0;
-		sampler.MaxAnisotropy = 0;
-		sampler.ComparisonFunc = D3D12_COMPARISON_FUNC_NEVER;
-		sampler.BorderColor = D3D12_STATIC_BORDER_COLOR_TRANSPARENT_BLACK;
-		sampler.MinLOD = 0.0f;
-		sampler.MaxLOD = D3D12_FLOAT32_MAX;
-		sampler.ShaderRegister = 0;
-		sampler.RegisterSpace = 0;
-		sampler.ShaderVisibility = D3D12_SHADER_VISIBILITY_PIXEL;
-
-		CD3DX12_VERSIONED_ROOT_SIGNATURE_DESC rootSignatureDescription;
-		rootSignatureDescription.Init_1_1(_countof(rootParameters), rootParameters, 1, &sampler, D3D12_ROOT_SIGNATURE_FLAG_ALLOW_INPUT_ASSEMBLER_INPUT_LAYOUT);
-
-		ComPtr<ID3DBlob> signature;
-		ComPtr<ID3DBlob> error;
-
-		ThrowIfFailed(D3DX12SerializeVersionedRootSignature(&rootSignatureDescription, D3D_ROOT_SIGNATURE_VERSION_1, &signature, &error));
-		ThrowIfFailed(TD3D12RHI::g_Device->CreateRootSignature(0, signature->GetBufferPointer(), signature->GetBufferSize(), IID_PPV_ARGS(&m_rootSignature)));
+		PSOManager::InitializePSO();
 	}
-
-	PSOManager::InitializePSO();
-
-	// create the pipeline state, which includes compiling and loading shaders
-	{
-		ComPtr<ID3DBlob> vertexShader;
-		ComPtr<ID3DBlob> pixelShader;
-
-#if defined(_DEBUG)
-		// enable better shader debugging with the graphics debugging tools
-		uint32_t compileFlags = D3DCOMPILE_DEBUG | D3DCOMPILE_SKIP_OPTIMIZATION;
-#else
-		uint32_t compileFlags = 0;
-#endif // defined(_DEBUG)
-
-		//ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "VSMain", "vs_5_0", compileFlags, 0, &vertexShader, nullptr));
-		//ThrowIfFailed(D3DCompileFromFile(L"shaders/shader.hlsl", nullptr, nullptr, "PSMain", "ps_5_0", compileFlags, 0, &pixelShader, nullptr));
-
-
-		// define  the vertex input layout
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-		{
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-		};
-
-		// describe and create the graphics pipeline state object (PSO)
-		D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc = {};
-		psoDesc.InputLayout = { inputElementDescs, _countof(inputElementDescs) };
-		psoDesc.pRootSignature = m_shader->RootSignature.Get();
-		psoDesc.VS = CD3DX12_SHADER_BYTECODE(m_shader->ShaderPass["VS"].Get());
-		//psoDesc.VS = CD3DX12_SHADER_BYTECODE(vertexShader.Get());
-		psoDesc.PS = CD3DX12_SHADER_BYTECODE(m_shader->ShaderPass["PS"].Get());
-		//psoDesc.PS = CD3DX12_SHADER_BYTECODE(pixelShader.Get());
-		psoDesc.RasterizerState = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
-		psoDesc.BlendState = CD3DX12_BLEND_DESC(D3D12_DEFAULT);
-		psoDesc.DepthStencilState.DepthEnable = TRUE; // enable depth testing
-		psoDesc.DepthStencilState.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL; 
-		psoDesc.DepthStencilState.DepthFunc = D3D12_COMPARISON_FUNC_LESS; 
-		psoDesc.DSVFormat = g_DepthBuffer.GetFormat(); 
-		psoDesc.DepthStencilState.StencilEnable = FALSE;
-		
-		psoDesc.SampleMask = UINT_MAX;
-		psoDesc.PrimitiveTopologyType = D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE;
-		psoDesc.NumRenderTargets = 1;
-		psoDesc.RTVFormats[0] = m_renderTragetrs->GetFormat();
-		psoDesc.SampleDesc.Count = 1;
-		
-		ThrowIfFailed(TD3D12RHI::g_Device->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&m_pipelineState)));
-	}
-
 
 	// load model
 	{
 		if (!model.Load("./models/gas/8YCM1L5HM3IT6LCVBQVRX5A5A.obj"))
 			assert(false);
-
 
 		boxMeshes.CreateBox(2, 2, 2, 3);
 	}
@@ -346,7 +263,6 @@ void GameCore::PopulateCommandList()
 
 void GameCore::WaitForPreviousFrame()
 {
-	
 	g_CommandContext.FlushCommandQueue();
 	
 	DescriptorCache->Reset();

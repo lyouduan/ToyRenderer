@@ -6,6 +6,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd eyes_d.png
+map_Bump bump_null.png
 
 newmtl mat_1-backpack_d.png
 Ka 0.000000 0.000000 0.000000
@@ -15,6 +16,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd backpack_d.png
+map_Bump backpack_n.png
 
 newmtl mat_2-flashlight_d.png
 Ka 0.000000 0.000000 0.000000
@@ -24,6 +26,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd flashlight_d.png
+map_Bump flashlight_n.png
 
 newmtl mat_3-face_d.png
 Ka 0.000000 0.000000 0.000000
@@ -33,6 +36,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd face_d.png
+map_Bump face_n.png
 
 newmtl mat_4-hands_d.png
 Ka 0.000000 0.000000 0.000000
@@ -42,6 +46,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd hands_d.png
+map_Bump hands_n.png
 
 newmtl mat_5-shirt_d.png
 Ka 0.000000 0.000000 0.000000
@@ -51,6 +56,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd shirt_d.png
+map_Bump shirt_n.png
 
 newmtl mat_6-shoes_d.png
 Ka 0.000000 0.000000 0.000000
@@ -60,6 +66,8 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd shoes_d.png
+map_Bump shoes_n.png
+
 
 newmtl mat_7-trousers_d.png
 Ka 0.000000 0.000000 0.000000
@@ -69,6 +77,8 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd trousers_d.png
+map_Bump trousers_n.png
+
 
 newmtl mat_8-eyeoverlay_d.png
 Ka 0.000000 0.000000 0.000000
@@ -78,6 +88,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd eyeoverlay_d.png
+map_Bump eyeoverlay_n.png
 
 newmtl mat_9-hair_d.png
 Ka 0.000000 0.000000 0.000000
@@ -87,6 +98,8 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd hair_d.png
+map_Bump hair_n.png
+
 
 newmtl mat_10-lashes.png
 Ka 0.000000 0.000000 0.000000
@@ -96,6 +109,7 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd lashes.png
+map_Bump bump_null.png
 
 newmtl mat_11-default-grey.jpg
 Ka 0.000000 0.000000 0.000000
@@ -105,4 +119,4 @@ d 1.000000
 illum 2
 Ns 9.84916
 map_Kd default-grey.jpg
-
+map_Bump bump_null.png

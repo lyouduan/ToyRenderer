@@ -28,8 +28,8 @@
     <ClCompile Include="3rdParty\imgui\imgui_widgets.cpp" />
     <ClCompile Include="src\Graphic\Resource\PSOManager.cpp" />
     <ClCompile Include="src\Graphic\Resource\PSO.cpp" />
-    <ClCompile Include="src\Utils\Mesh.cpp" />
-    <ClCompile Include="src\Utils\ModelLoader.cpp" />
+    <ClCompile Include="src\Graphic\Mesh.cpp" />
+    <ClCompile Include="src\Graphic\ModelLoader.cpp" />
     <ClCompile Include="src\Utils\Keyboard.cpp" />
     <ClCompile Include="src\ImGuiManager.cpp" />
     <ClCompile Include="src\Camera.cpp" />
@@ -67,8 +67,8 @@
     <ClInclude Include="src\Graphic\Resource\PSO.h" />
     <ClInclude Include="src\Utils\PlatformHelpers.h" />
     <ClInclude Include="src\Utils\LoadHelpers.h" />
-    <ClInclude Include="src\Utils\Mesh.h" />
-    <ClInclude Include="src\Utils\ModelLoader.h" />
+    <ClInclude Include="src\Graphic\Mesh.h" />
+    <ClInclude Include="src\Graphic\ModelLoader.h" />
     <ClInclude Include="src\Utils\Keyboard.h" />
     <ClInclude Include="src\ImGuiManager.h" />
     <ClInclude Include="src\Camera.h" />

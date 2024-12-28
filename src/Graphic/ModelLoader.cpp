@@ -38,7 +38,8 @@ void ModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12
 		shader->SetParameter("MVPcBuffer", ConstantBufferRef);
 
 		auto m_SRV = mesh.GetSRV();
-		shader->SetParameter("diffuseMap", m_SRV);
+		shader->SetParameter("diffuseMap", m_SRV[0]);
+		shader->SetParameter("normalMap", m_SRV[1]);
 
 		shader->SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
 		
@@ -81,6 +82,13 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 		vertex.position.y = mesh->mVertices[i].y;
 		vertex.position.z = mesh->mVertices[i].z;
 
+		if (mesh->HasNormals())
+		{
+			vertex.normal.x = mesh->mNormals[i].x;
+			vertex.normal.y = mesh->mNormals[i].y;
+			vertex.normal.z = mesh->mNormals[i].z;
+		}
+
 		if (mesh->mTextureCoords[0])
 		{
 			vertex.tex.x = mesh->mTextureCoords[0][i].x;
@@ -100,6 +108,13 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 			}*/
 			//assert(vertex.tex.x >= 0.0f && vertex.tex.x <= 1.0f);
 			//assert(vertex.tex.y >= 0.0f && vertex.tex.y <= 1.0f);
+			if(mesh->HasTangentsAndBitangents())
+			{
+				vertex.tangent.x = mesh->mTangents[i].x;
+				vertex.tangent.y = mesh->mTangents[i].y;
+				vertex.tangent.z = mesh->mTangents[i].z;
+			}
+			
 		}
 		else 
 		{
@@ -123,8 +138,11 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 		std::vector<TD3D12Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 		textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-		//std::vector<TD3D12Texture> specularMaps = this->loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular", scene);
-		//textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+		std::vector<TD3D12Texture> specularMaps = this->loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular", scene);
+		textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
+
+		std::vector<TD3D12Texture> normalMaps = this->loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal", scene);
+		textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
 	}
 
 	return Mesh(vertices, indices, textures);

@@ -9,40 +9,40 @@ void Mesh::CreateBox(float width, float height, float depth, uint32_t numSubdivi
 	float d2 = 0.5f * depth;
 
 	// Fill in the front face vertex data.
-	v[0] = Vertex{ { -w2, -h2, -d2}, { 0.0f, 1.0f} };
-	v[1] = Vertex{ { -w2, +h2, -d2}, { 0.0f, 0.0f} };
-	v[2] = Vertex{ { +w2, +h2, -d2}, { 1.0f, 0.0f} };
-	v[3] = Vertex{ { +w2, -h2, -d2}, { 1.0f, 1.0f} };
+	v[0] = Vertex{ { -w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f} };
+	v[1] = Vertex{ { -w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f} };
+	v[2] = Vertex{ { +w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f} };
+	v[3] = Vertex{ { +w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f} };
 
 	// Fill in the back face vertex data.
-	v[4] = Vertex{ { -w2, -h2, +d2}, { 1.0f, 1.0f} };
-	v[5] = Vertex{ { +w2, -h2, +d2}, { 0.0f, 1.0f} };
-	v[6] = Vertex{ { +w2, +h2, +d2}, { 0.0f, 0.0f} };
-	v[7] = Vertex{ { -w2, +h2, +d2}, { 1.0f, 0.0f} };
+	v[4] = Vertex{ { -w2, -h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f} };
+	v[5] = Vertex{ { +w2, -h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f} };
+	v[6] = Vertex{ { +w2, +h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f} };
+	v[7] = Vertex{ { -w2, +h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f} };
 
 	// Fill in the top face vertex data.
-	v[8]  = Vertex{ { -w2, +h2, -d2}, { 0.0f, 1.0f} };
-	v[9]  = Vertex{ { -w2, +h2, +d2}, { 0.0f, 0.0f} };
-	v[10] = Vertex{ { +w2, +h2, +d2}, { 1.0f, 0.0f} };
-	v[11] = Vertex{ { +w2, +h2, -d2}, { 1.0f, 1.0f} };
+	v[8]  = Vertex{ { -w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f} };
+	v[9]  = Vertex{ { -w2, +h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f} };
+	v[10] = Vertex{ { +w2, +h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f} };
+	v[11] = Vertex{ { +w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f} };
 
 	// Fill in the bottom face vertex data.
-	v[12] = Vertex{ { -w2, -h2, -d2}, { 1.0f, 1.0f} };
-	v[13] = Vertex{ { +w2, -h2, -d2}, { 0.0f, 1.0f} };
-	v[14] = Vertex{ { +w2, -h2, +d2}, { 0.0f, 0.0f} };
-	v[15] = Vertex{ { -w2, -h2, +d2}, { 1.0f, 0.0f} };
+	v[12] = Vertex{ { -w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f} };
+	v[13] = Vertex{ { +w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f} };
+	v[14] = Vertex{ { +w2, -h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f} };
+	v[15] = Vertex{ { -w2, -h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f} };
 
 	// Fill in the left face vertex data.
-	v[16] = Vertex{ { -w2, -h2, +d2}, { 0.0f, 1.0f} };
-	v[17] = Vertex{ { -w2, +h2, +d2}, { 0.0f, 0.0f} };
-	v[18] = Vertex{ { -w2, +h2, -d2}, { 1.0f, 0.0f} };
-	v[19] = Vertex{ { -w2, -h2, -d2}, { 1.0f, 1.0f} };
+	v[16] = Vertex{ { -w2, -h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f} };
+	v[17] = Vertex{ { -w2, +h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f} };
+	v[18] = Vertex{ { -w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f} };
+	v[19] = Vertex{ { -w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f} };
 
 	// Fill in the right face vertex data.
-	v[20] = Vertex{ { +w2, -h2, -d2}, { 0.0f, 1.0f} };
-	v[21] = Vertex{ { +w2, +h2, -d2}, { 0.0f, 0.0f} };
-	v[22] = Vertex{ { +w2, +h2, +d2}, { 1.0f, 0.0f} };
-	v[23] = Vertex{ { +w2, -h2, +d2}, { 1.0f, 1.0f} };
+	v[20] = Vertex{ { +w2, -h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 1.0f} };
+	v[21] = Vertex{ { +w2, +h2, -d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 0.0f, 0.0f} };
+	v[22] = Vertex{ { +w2, +h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 0.0f} };
+	v[23] = Vertex{ { +w2, -h2, +d2}, {0.0f, 0.0f, -1.0f}, { 1.0f, 0.0f, 0.0f }, { 1.0f, 1.0f} };
 
 	m_vertices.assign(&v[0], &v[24]);
 
@@ -157,9 +157,12 @@ Vertex Mesh::MidPoint(const Vertex& v0, const Vertex& v1)
 	// Compute the midpoints of all the attributes.  Vectors need to be normalized
 	// since linear interpolating can make them not unit length.  
 	XMFLOAT3 pos = { 0.5f * (v0.position.x + v1.position.x), 0.5f * (v0.position.y + v1.position.y), 0.5f * (v0.position.z + v1.position.z) };
+	XMFLOAT3 normal = { 0.5f * (v0.normal.x + v1.normal.x), 0.5f * (v0.normal.y + v1.normal.y), 0.5f * (v0.normal.z + v1.normal.z) };
+	XMFLOAT3 tangent = { 0.5f * (v0.tangent.x + v1.tangent.x), 0.5f * (v0.tangent.y + v1.tangent.y), 0.5f * (v0.tangent.z + v1.tangent.z) };
+
 	XMFLOAT2 tex = { 0.5f * (v0.tex.x + v1.tex.x), 0.5f * (v0.tex.y + v1.tex.y) };
 
-	return Vertex{ pos, tex };
+	return Vertex{ pos, normal, tangent, tex };
 }
 
 void Mesh::GenerateIndices16()
