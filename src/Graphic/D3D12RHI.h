@@ -39,6 +39,8 @@ namespace TD3D12RHI
 	// cache descriptor for GPU
 	extern std::unique_ptr<TD3D12DescriptorCache> DescriptorCache;
 
+	extern D3D12_SHADER_RESOURCE_VIEW_DESC NullDescriptor;
+
 	void InitialzeAllocator();
 	void InitialzeBuffer();
 	void Initialze();
@@ -55,6 +57,8 @@ namespace TD3D12RHI
 
 	void InitializeTexture(TD3D12Resource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[]);
 	void UploadTextureData(TD3D12Resource TextureResource, const std::vector<D3D12_SUBRESOURCE_DATA>& InitData);
+
+	D3D12_SHADER_RESOURCE_VIEW_DESC& CreateNullDescriptor();
 
 	TD3D12HeapSlotAllocator* GetHeapSlotAllocator(D3D12_DESCRIPTOR_HEAP_TYPE HeapType);
 

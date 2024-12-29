@@ -30,6 +30,7 @@ namespace TD3D12RHI
     // cache descriptor handle
     std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
 
+
     void Initialze()
     {
         // initialize CommandContext

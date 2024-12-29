@@ -21,6 +21,7 @@ public:
 	bool Load(std::string fileName);
 	void Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef);
 
+	const std::vector<Mesh>& GetMeshes() const { return m_meshes; }
 	// for binding shader
 
 	void Close();

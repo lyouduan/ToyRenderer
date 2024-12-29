@@ -114,6 +114,9 @@
     <ClCompile Include="src\Graphic\Resource\PSOManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Utils\GeometryGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -239,9 +242,13 @@
     <ClInclude Include="src\Graphic\Resource\PSOManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Utils\GeometryGenerator.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shaders\shader.hlsl" />
+    <None Include="shaders\modelShader.hlsl" />
+    <None Include="shaders\boxShader.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

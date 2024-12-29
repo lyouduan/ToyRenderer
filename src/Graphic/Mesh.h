@@ -99,9 +99,6 @@ private:
 		//}
 	}
 
-	void Subdivide();
-
-	Vertex MidPoint(const Vertex& v0, const Vertex& v1);
 	std::vector<Vertex>	m_vertices;
 	std::vector<uint32_t> m_indices32;
 	std::vector<int16_t> m_indices16;

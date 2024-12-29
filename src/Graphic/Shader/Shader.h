@@ -106,6 +106,7 @@ struct TShaderInfo
 class TShader
 {
 public:
+	TShader() {}
 	TShader(const TShaderInfo& InShaderInfo);
 
 	void Initialize();

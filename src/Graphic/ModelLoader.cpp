@@ -35,15 +35,13 @@ void ModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12
 	for (auto& mesh : m_meshes)
 	{
 		// draw call
-		shader->SetParameter("MVPcBuffer", ConstantBufferRef);
-
-		auto m_SRV = mesh.GetSRV();
-		shader->SetParameter("diffuseMap", m_SRV[0]);
-		shader->SetParameter("normalMap", m_SRV[1]);
-
-		shader->SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
-		
-		shader->BindParameters();
+		//shader->SetParameter("MVPcBuffer", ConstantBufferRef);
+		//auto m_SRV = mesh.GetSRV();
+		//shader->SetParameter("diffuseMap", m_SRV[0]);
+		//shader->SetParameter("specularMap", m_SRV[1]);
+		//shader->SetParameter("normalMap", m_SRV[2]);
+		//shader->SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
+		//shader->BindParameters();
 		mesh.DrawMesh(gfxContext);
 	}
 }

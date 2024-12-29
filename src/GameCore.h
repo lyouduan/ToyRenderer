@@ -13,6 +13,12 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
+struct PasscBuffer
+{
+	XMMATRIX Model;
+	XMMATRIX VP;
+};
+
 class GameCore : public DXSample
 {
 public:

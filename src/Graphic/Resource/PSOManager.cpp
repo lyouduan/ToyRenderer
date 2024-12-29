@@ -6,7 +6,7 @@ using namespace TD3D12RHI;
 
 namespace PSOManager
 {
-	std::unique_ptr<TShader> m_shader = nullptr;
+	std::unordered_map<std::string, TShader> m_shaderMap;
 
 	std::unordered_map<std::string, GraphicsPSO> m_gfxPSOMap;
 
@@ -14,16 +14,26 @@ namespace PSOManager
 	{
 		{
 			TShaderInfo info;
-			info.FileName = "shaders/shader";
-
+			info.FileName = "shaders/modelShader";
 			info.bCreateVS = true;
 			info.bCreatePS = true;
 			info.bCreateCS = false;
 			info.VSEntryPoint = "VSMain";
 			info.PSEntryPoint = "PSMain";
 
-			m_shader = std::make_unique<TShader>(info);
+			TShader shader(info);
+			m_shaderMap["modelShader"] = shader;
 
+			TShaderInfo boxInfo;
+			boxInfo.FileName = "shaders/boxShader";
+			boxInfo.bCreateVS = true;
+			boxInfo.bCreatePS = true;
+			boxInfo.bCreateCS = false;
+			boxInfo.VSEntryPoint = "VSMain";
+			boxInfo.PSEntryPoint = "PSMain";
+
+			TShader boxShader(boxInfo);
+			m_shaderMap["boxShader"] = boxShader;
 		}
 
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -35,7 +45,7 @@ namespace PSOManager
 		};
 
 		GraphicsPSO pso(L"Normal PSO");
-		pso.SetShader(m_shader.get());
+		pso.SetShader(&m_shaderMap["modelShader"]);
 		pso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		pso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		pso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
@@ -54,6 +64,21 @@ namespace PSOManager
 		pso.Finalize();
 
 		m_gfxPSOMap["pso"] = pso;
+
+		GraphicsPSO boxPso(L"box PSO");
+		boxPso.SetShader(&m_shaderMap["boxShader"]);
+		boxPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		boxPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		boxPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		boxPso.SetDepthStencilState(dsvDesc);
+
+		boxPso.SetSampleMask(UINT_MAX);
+		boxPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		boxPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		boxPso.Finalize();
+
+		m_gfxPSOMap["boxPSO"] = boxPso;
 	}
 
 }

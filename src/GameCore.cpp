@@ -9,6 +9,7 @@
 #include "PSOManager.h"
 
 using namespace TD3D12RHI;
+using TD3D12RHI::g_CommandContext;
 using namespace PSOManager;
 
 GameCore::GameCore(uint32_t width, uint32_t height, std::wstring name)
@@ -199,7 +200,7 @@ void GameCore::LoadAssets()
 
 	// load model
 	{
-		if (!model.Load("./models/gas/8YCM1L5HM3IT6LCVBQVRX5A5A.obj"))
+		if (!model.Load("./models/nanosuit/nanosuit.obj"))
 			assert(false);
 
 		boxMeshes.CreateBox(2, 2, 2, 3);
@@ -240,20 +241,47 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
 	// Update the MVP matrix
-	XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());
+	//XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());
 
 	//g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
+	PasscBuffer passCB;
+	passCB.Model = m_ModelMatrix;
+	passCB.VP = m_Camera.GetViewProjMat();
 
-	cBufferRef = TD3D12RHI::CreateConstantBuffer(&mvpMatrix, sizeof(XMMATRIX));
+	cBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PasscBuffer));
 
-	model.Draw(g_CommandContext, m_shader.get(), cBufferRef);
+	//model.Draw(g_CommandContext, m_shader.get(), cBufferRef);
 
-	//boxMeshes.DrawMesh(g_CommandContext);
+	auto meshes = model.GetMeshes();
+	for (auto& mesh : meshes)
+	{
+		m_shaderMap["modelShader"].SetParameter("MVPcBuffer", cBufferRef);
+		// draw call
+		auto m_SRV = mesh.GetSRV();
+		m_shaderMap["modelShader"].SetParameter("diffuseMap", m_SRV[0]);
+		//m_shader->SetParameter("specularMap", m_SRV[1]);
+		//m_shader->SetParameter("normalMap", m_SRV[2]);
+
+		m_shaderMap["modelShader"].SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
+		m_shaderMap["modelShader"].BindParameters();
+		mesh.DrawMesh(g_CommandContext);
+	}
+
+
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(&PSOManager::m_gfxPSOMap["boxPSO"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["boxPSO"].GetPSO());
+	XMMATRIX translationMatrix = XMMatrixTranslation(position.x + 10, position.y-10, position.z);
+	passCB.Model = translationMatrix * m_ModelMatrix;
+	cBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PasscBuffer));
+	m_shaderMap["boxShader"].SetParameter("MVPcBuffer", cBufferRef);
+	m_shaderMap["boxShader"].SetDescriptorCache(boxMeshes.GetTD3D12DescriptorCache());
+	m_shaderMap["boxShader"].BindParameters();
+	boxMeshes.DrawMesh(g_CommandContext);
 
 	// ImGui
 	ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };
 	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps2);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), TD3D12RHI::g_CommandContext.GetCommandList());
+	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), g_CommandContext.GetCommandList());
 
 	// indicate that the back buffer will now be used to present
 	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);

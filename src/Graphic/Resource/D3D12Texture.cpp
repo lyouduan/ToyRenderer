@@ -10,6 +10,8 @@
 
 #define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
+using Microsoft::WRL::ComPtr;
+
 TD3D12Texture::TD3D12Texture(size_t Width, size_t Height, DXGI_FORMAT Format)
 {
 	m_hCpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
@@ -219,4 +221,19 @@ void TD3D12RHI::UploadTextureData(TD3D12Resource TextureResource, const std::vec
     TD3D12RHI::g_CommandContext.Transition(&TextureResource, D3D12_RESOURCE_STATE_GENERIC_READ);
 
     TD3D12RHI::g_CommandContext.ExecuteCommandLists();
+}
+
+D3D12_SHADER_RESOURCE_VIEW_DESC& TD3D12RHI::CreateNullDescriptor()
+{
+    auto HeapHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC NullDescriptor;
+    NullDescriptor.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
+    NullDescriptor.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
+    NullDescriptor.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    NullDescriptor.Texture2D.MipLevels = 0;
+
+    g_Device->CreateShaderResourceView(nullptr, &NullDescriptor, HeapHandle); // 绑定空资源
+
+    return NullDescriptor;
 }
