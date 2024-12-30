@@ -17,10 +17,10 @@ public:
         m_RootSignature = &BindMappings;
     }
 
-    ID3D12RootSignature& GetRootSignature(void)
+    ID3D12RootSignature* GetRootSignature(void)
     {
         assert(m_RootSignature != nullptr);
-        return *m_RootSignature;
+        return m_RootSignature;
     }
 
     ID3D12PipelineState* GetPSO(void) const { return m_PSO; }

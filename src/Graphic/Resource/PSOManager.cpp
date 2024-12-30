@@ -25,7 +25,7 @@ namespace PSOManager
 			m_shaderMap["modelShader"] = shader;
 
 			TShaderInfo boxInfo;
-			boxInfo.FileName = "shaders/boxShader";
+			boxInfo.FileName = "shaders/skyboxShader";
 			boxInfo.bCreateVS = true;
 			boxInfo.bCreatePS = true;
 			boxInfo.bCreateCS = false;
@@ -33,7 +33,7 @@ namespace PSOManager
 			boxInfo.PSEntryPoint = "PSMain";
 
 			TShader boxShader(boxInfo);
-			m_shaderMap["boxShader"] = boxShader;
+			m_shaderMap["skyboxShader"] = boxShader;
 		}
 
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -65,11 +65,14 @@ namespace PSOManager
 
 		m_gfxPSOMap["pso"] = pso;
 
-		GraphicsPSO boxPso(L"box PSO");
-		boxPso.SetShader(&m_shaderMap["boxShader"]);
+		GraphicsPSO boxPso(L"skybox PSO");
+		boxPso.SetShader(&m_shaderMap["skyboxShader"]);
 		boxPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		boxPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // camere inside skybox
+		boxPso.SetRasterizerState(rasterizerDesc);
 		boxPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // depth = 1
 		boxPso.SetDepthStencilState(dsvDesc);
 
 		boxPso.SetSampleMask(UINT_MAX);
@@ -78,7 +81,7 @@ namespace PSOManager
 		boxPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		boxPso.Finalize();
 
-		m_gfxPSOMap["boxPSO"] = boxPso;
+		m_gfxPSOMap["skyboxPSO"] = boxPso;
 	}
 
 }

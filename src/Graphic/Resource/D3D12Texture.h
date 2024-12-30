@@ -2,8 +2,7 @@
 #include "D3D12Resource.h"
 #include <memory>
 
-
-
+#define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
 
 struct TextureInfo
 {
@@ -25,17 +24,19 @@ struct TextureInfo
 class TD3D12Texture
 {
 public:
-	TD3D12Texture(size_t Width, size_t Height, DXGI_FORMAT Format = DXGI_FORMAT_R16G16B16A16_FLOAT);
-	TD3D12Texture();
 
-	void CreateDesc();
+	TD3D12Texture() {m_hCpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;}
+
+	void Create2D(size_t Width, size_t Height, DXGI_FORMAT Format=DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+	void Create2D(TextureInfo info);
+
+	void CreateCube(size_t Width, size_t Height, DXGI_FORMAT Format = DXGI_FORMAT_R32G32B32A32_FLOAT);
+	void CreateCube(TextureInfo info);
 
 	bool CreateDDSFromMemory(const void* memBuffer, size_t fileSize, bool sRGB);
 	bool CreateDDSFromFile(const wchar_t* fileName, size_t fileSize, bool sRGB);
 	bool CreateWICFromFile(const wchar_t* fileName, size_t fileSize, bool sRGB);
-
-	void Create2D();
-	void Create2D(TextureInfo info);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE GetSRV() const { return m_hCpuDescriptorHandle; }
 

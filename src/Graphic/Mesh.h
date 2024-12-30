@@ -76,8 +76,6 @@ public:
 	/// Creates a quad aligned with the screen.  This is useful for postprocessing and screen effects.
 	void CreateQuad(float x, float y, float w, float h, float depth);
 
-	void GenerateIndices16();
-
 private:
 	// initialize buffer
 	void setupMesh()

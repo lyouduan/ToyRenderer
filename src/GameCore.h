@@ -13,10 +13,19 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
-struct PasscBuffer
+__declspec(align(16))
+struct ObjCBuffer
 {
-	XMMATRIX Model;
-	XMMATRIX VP;
+	XMFLOAT4X4 ModelMat;
+};
+
+__declspec(align(16))
+struct PassCBuffer
+{
+	XMFLOAT4X4 ViewMat;
+	XMFLOAT4X4 ProjMat;
+	XMFLOAT3 EyePosition;
+	FLOAT Pad0 = 0.0;
 };
 
 class GameCore : public DXSample
@@ -41,7 +50,8 @@ private:
 
 	//TD3D12IndexBufferRef indexBufferRef;
 	//TD3D12VertexBufferRef vertexBufferRef;
-	TD3D12ConstantBufferRef cBufferRef;
+	TD3D12ConstantBufferRef objCBufferRef;
+	TD3D12ConstantBufferRef passCBufferRef;
 
 	ModelLoader model;
 	//ComPtr<ID3D12Resource> m_Depth;
@@ -56,7 +66,7 @@ private:
 	//uint32_t m_rtvDescriptorSize;
 
 	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
-	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> m_SRV;
+	std::unordered_map<std::string, D3D12_CPU_DESCRIPTOR_HANDLE> m_SrvMap;
 	//std::unique_ptr<TShader> m_shader = nullptr;
 
 	//std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;

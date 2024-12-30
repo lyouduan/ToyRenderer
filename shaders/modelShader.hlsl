@@ -1,8 +1,15 @@
 
-cbuffer MVPcBuffer : register(b0)
+cbuffer objCBuffer : register(b0)
 {
-    matrix ModelMat;
-    matrix ViewProjMat;
+    float4x4 ModelMat;
+}
+
+cbuffer passCBuffer : register(b1)
+{
+    float4x4 ViewMat;
+    float4x4 ProjMat;
+    float3 gEyePosW;
+    float pad0;
 }
 
 Texture2D diffuseMap : register(t0);
@@ -35,8 +42,8 @@ struct PSInput
 PSInput VSMain(VSInput vin)
 {
     PSInput vout;
-    vout.positionW = mul(ModelMat, float4(vin.position.xyz, 1.0f));
-    vout.position = mul(ViewProjMat, float4(vout.positionW, 1.0f));
+    vout.positionW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
+    vout.position = mul(mul(float4(vout.positionW, 1.0f), ViewMat), ProjMat);
     vout.tex = vin.tex;
     vout.normal = vin.normal;
     return vout;

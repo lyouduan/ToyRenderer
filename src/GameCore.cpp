@@ -27,33 +27,41 @@ void GameCore::OnInit()
 	LoadPipeline();
 	LoadAssets();
 
+	// set camera
+	m_Camera.SetPosition(0, 2, -10);
 }
 
 void GameCore::OnUpdate(const GameTimer& gt)
 {
 	XMMATRIX scalingMat = XMMatrixScaling(scale, scale, scale);
 
-	//totalTime += gt.DeltaTime() * 0.01;
-	float rotate_angle = static_cast<float>(RotationY * 360 /* * totalTime*/);
+	totalTime += gt.DeltaTime() * 0.01;
+	float rotate_angle = static_cast<float>(RotationY * 360  * totalTime);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX rotationYMat = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
 	XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y, position.z);
 
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
-
-	// Update the view matrix.
-	const XMVECTOR eyePosition = XMVectorSet(0, 0, -50, 1);
-	const XMVECTOR focusPoint = XMVectorSet(0, 0, 0, 1);
-	const XMVECTOR upDirection = XMVectorSet(0, 1, 0, 0);
-
-	m_Camera.SetLookAt(eyePosition, focusPoint, upDirection);
-
+	
+	m_Camera.UpdateViewMat();
 	//m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
 	// Update the projection matrix.
-	float aspectRatio = GetWidth() / static_cast<float>(GetHeight());
-	m_Camera.SetAspectRatio(aspectRatio);
+	//float aspectRatio = GetWidth() / static_cast<float>(GetHeight());
 	//m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
+	//m_Camera.SetAspectRatio(aspectRatio);
+
+	ObjCBuffer objCB;
+	XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(m_ModelMatrix));
+	objCBufferRef = TD3D12RHI::CreateConstantBuffer(&objCB, sizeof(ObjCBuffer));
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_Camera.GetProjMat()));
+
+	XMFLOAT3 pos;
+	passCB.EyePosition = m_Camera.GetPosition3f();
+	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 }
 
 void GameCore::OnRender()
@@ -203,7 +211,17 @@ void GameCore::LoadAssets()
 		if (!model.Load("./models/nanosuit/nanosuit.obj"))
 			assert(false);
 
-		boxMeshes.CreateBox(2, 2, 2, 3);
+		TD3D12Texture tex;
+		tex.Create2D(64, 64);
+		tex.CreateDDSFromFile(L"./textures/Wood.dds", 0, false);
+		m_SrvMap["wood"] = tex.GetSRV();
+
+		TD3D12Texture skytex;
+		skytex.CreateCube(64, 64);
+		skytex.CreateDDSFromFile(L"./textures/cubeMap.dds", 0, false);
+		m_SrvMap["skybox"] = skytex.GetSRV();
+
+		boxMeshes.CreateBox(2,2,2,3);
 	}
 
 	g_CommandContext.FlushCommandQueue();
@@ -218,8 +236,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandList();
 
 	// set necessary state
-	//g_CommandContext.GetCommandList()->SetGraphicsRootSignature(m_shader->RootSignature.Get());
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(&PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
@@ -228,39 +245,27 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// indicate that back buffer will be used as a render target
-	
 	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
 	g_CommandContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
-
-	//g_CommandContext.GetCommandList()->SetPipelineState(m_pipelineState.Get());
-
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
-	// Update the MVP matrix
-	//XMMATRIX mvpMatrix = XMMatrixMultiply(m_ModelMatrix, m_Camera.GetViewProjMat());
-
-	//g_CommandContext.GetCommandList()->SetGraphicsRoot32BitConstants(0, sizeof(XMMATRIX) / 4, &mvpMatrix, 0);
-	PasscBuffer passCB;
-	passCB.Model = m_ModelMatrix;
-	passCB.VP = m_Camera.GetViewProjMat();
-
-	cBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PasscBuffer));
-
+	
 	//model.Draw(g_CommandContext, m_shader.get(), cBufferRef);
 
 	auto meshes = model.GetMeshes();
 	for (auto& mesh : meshes)
 	{
-		m_shaderMap["modelShader"].SetParameter("MVPcBuffer", cBufferRef);
+		m_shaderMap["modelShader"].SetParameter("objCBuffer", objCBufferRef);
+		m_shaderMap["modelShader"].SetParameter("passCBuffer", passCBufferRef);
 		// draw call
-		auto m_SRV = mesh.GetSRV();
-		m_shaderMap["modelShader"].SetParameter("diffuseMap", m_SRV[0]);
-		//m_shader->SetParameter("specularMap", m_SRV[1]);
-		//m_shader->SetParameter("normalMap", m_SRV[2]);
+		auto SRV = mesh.GetSRV();
+		m_shaderMap["modelShader"].SetParameter("diffuseMap", SRV[0]);
+		//m_shader->SetParameter("specularMap", SRV[1]);
+		//m_shader->SetParameter("normalMap", SRV[2]);
 
 		m_shaderMap["modelShader"].SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
 		m_shaderMap["modelShader"].BindParameters();
@@ -268,14 +273,15 @@ void GameCore::PopulateCommandList()
 	}
 
 
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(&PSOManager::m_gfxPSOMap["boxPSO"].GetRootSignature());
-	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["boxPSO"].GetPSO());
-	XMMATRIX translationMatrix = XMMatrixTranslation(position.x + 10, position.y-10, position.z);
-	passCB.Model = translationMatrix * m_ModelMatrix;
-	cBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PasscBuffer));
-	m_shaderMap["boxShader"].SetParameter("MVPcBuffer", cBufferRef);
-	m_shaderMap["boxShader"].SetDescriptorCache(boxMeshes.GetTD3D12DescriptorCache());
-	m_shaderMap["boxShader"].BindParameters();
+	// sky box
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["skyboxPSO"].GetPSO());
+	
+	m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef);
+	m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
+	m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_SrvMap["skybox"]);
+	m_shaderMap["skyboxShader"].SetDescriptorCache(boxMeshes.GetTD3D12DescriptorCache());
+	m_shaderMap["skyboxShader"].BindParameters();
 	boxMeshes.DrawMesh(g_CommandContext);
 
 	// ImGui

@@ -1,8 +1,15 @@
 
-cbuffer MVPcBuffer : register(b0)
+cbuffer objCBuffer : register(b0)
 {
-    matrix ModelMat;
-    matrix ViewProjMat;
+    float4x4 ModelMat;
+}
+
+cbuffer passCBuffer : register(b1)
+{
+    float4x4 ViewMat;
+    float4x4 ProjMat;
+    float3 EyePosW;
+    float padding;
 }
 
 struct VSInput
@@ -21,7 +28,7 @@ struct PSInput
     float2 tex : TEXCOORD;
 };
 
-Texture2D diffuseMap : register(t0);
+TextureCube CubeMap : register(t0);
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -33,14 +40,19 @@ SamplerState AnisotropicClampSampler : register(s5);
 PSInput VSMain(VSInput vin)
 {
     PSInput vout;
-    vout.positionW = mul(ModelMat, float4(vin.position.xyz, 1.0f));
-    vout.position = mul(ViewProjMat, float4(vout.positionW, 1.0f));
-    vout.tex = vin.tex;
-    vout.normal = vin.normal;
+    vout.positionW = vin.position.xyz;
+    
+    //float4 posW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
+    
+    float4x4 View = ViewMat;
+    View[3][0] = View[3][1] = View[3][2] = 0.0f;
+    
+    vout.position = mul(mul(float4(vin.position.xyz, 1.0), View), ProjMat).xyww;
+    
     return vout;
 }
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    return float4(0.5, 0.5, 0.5, 1.0);
+    return float4(CubeMap.SampleLevel(LinearWrapSampler, pin.positionW, 0.0).rgb, 1.0);
 }

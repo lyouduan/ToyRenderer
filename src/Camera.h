@@ -6,58 +6,72 @@ class Camera
 {
 public:
 	Camera();
+	~Camera();
 
-	void UpadteViewMat();
-	void UpadteProjMat();
+	void SetPosition(float x, float y, float z);
+	void SetLen(float fov, float aspectRatio, float nearZ, float farZ);
 
 	// orient camera space
 	void SetEyeAtUp(DirectX::XMVECTOR eye, DirectX::XMVECTOR at, DirectX::XMVECTOR up);
 	void SetLookAt(DirectX::XMVECTOR eye, DirectX::XMVECTOR at, DirectX::XMVECTOR up);
 
-	void SetProjMatrix(float fov, float aspectRatio, float nearZ, float farZ);
-
 	void SetProjMatrix(const DirectX::XMMATRIX ProjMat) { m_ProjMat = ProjMat; }
-	void SetZClip(float nearZ, float farZ) { m_NearClip = nearZ; m_FarClip = farZ; }
-	void SetAspectRatio(float AspectRatio) 
-	{ 
-		m_AspectRatio = AspectRatio;
-		UpadteProjMat();
-	}
 
-	const DirectX::XMMATRIX& GetViewMat() const { return m_ViewMat; }
-	const DirectX::XMMATRIX& GetProjMat() const { return m_ProjMat; }
-	const DirectX::XMMATRIX& GetViewProjMat() const { return m_ViewProjMat; }
+	DirectX::XMMATRIX GetViewMat() const { return m_ViewMat; }
+	DirectX::XMMATRIX GetProjMat() const { return m_ProjMat; }
+
+	DirectX::XMFLOAT3 GetRight3f() const { return mRight; }
+	DirectX::XMFLOAT3 GetUp3f() const { return mUp; }
+	DirectX::XMFLOAT3 GetLook3f() const { return mLook; }
+
+	DirectX::XMFLOAT3 GetPosition3f() const { return mPosition; }
 
 	void CamerImGui();
 
-	float& GetRoll() { return roll; }
-	float& GetPitch() { return pitch; }
-	float& GetYaw() { return yaw; }
+	float GetRoll() { return roll; }
+	float GetPitch() { return pitch; }
+	float GetYaw() { return yaw; }
+
+	void MoveCamera(float moveForward, float strafe, float vertical);
+	// after modifying camera position/orientation, call to rebuild the view matrix
+
+	void Rotate(DirectX::XMVECTOR axis, float degrees);
+	void Pitch(float degrees);
+	void Yaw(float degrees);
+	void Roll(float degrees);
+
+	void UpdateViewMat();
+	void UpdateProjMat();
 
 private:
 
-	float m_VerticalFOV;
-	float m_AspectRatio;
-	float m_NearClip;
-	float m_FarClip;
+	// cache frustum properties
+	float mNearZ = 0.0f;
+	float mFarZ = 0.0f;
+	float mAspect = 0.0f;
+	float mFovY = 0.0;
 
-	//
-	DirectX::XMVECTOR m_pos;
-	DirectX::XMVECTOR m_right;
-	DirectX::XMVECTOR m_up;
-	DirectX::XMVECTOR m_look;
+	// camera coordinate system with coordinates relative to world space
+	DirectX::XMFLOAT3 mPosition = { 0.0f, 0.0f, 0.0f };
+	DirectX::XMFLOAT3 mRight = { 1.0f, 0.0f, 0.0f };
+	DirectX::XMFLOAT3 mUp = { 0.0f, 1.0f, 0.0f };
+	DirectX::XMFLOAT3 mLook = { 0.0f, 0.0f, 1.0f };
 
+	DirectX::XMMATRIX m_ViewMat = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX m_ProjMat = DirectX::XMMatrixIdentity();
 
 	// Euler Angle
-	bool rotDirty = false;
+	bool viewDirty = true;
 
-	float roll = 1.0;
-	float pitch = 1.0;
-	float yaw = 1.0;
-	float distance = 1.0;
+	float roll = 0.01;
+	float pitch = 0.01;
+	float yaw = 0.01;
+	float lastRoll = 0.01;
+	float lastPitch = 0.01;
+	float lastYaw = 0.01;
 
-	DirectX::XMMATRIX m_ViewMat;
-	DirectX::XMMATRIX m_ProjMat;
-	DirectX::XMMATRIX m_ViewProjMat;
+	float moveForward = 0.0;
+	float moveUp = 0.0;
+	float moveRight = 0.0;
 };
 

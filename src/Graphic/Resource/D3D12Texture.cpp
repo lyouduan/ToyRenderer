@@ -8,43 +8,7 @@
 #include "DDSTextureLoader.h"
 #include "WICTextureLoader.h"
 
-#define D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN   ((D3D12_GPU_VIRTUAL_ADDRESS)-1)
-
 using Microsoft::WRL::ComPtr;
-
-TD3D12Texture::TD3D12Texture(size_t Width, size_t Height, DXGI_FORMAT Format)
-{
-	m_hCpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
-    m_Width = (uint32_t)Width;
-    m_Height = (uint32_t)Height;
-    m_Format = Format;
-    m_Depth = 1;
-
-    CreateDesc();
-    Create2D();
-}
-
-TD3D12Texture::TD3D12Texture()
-{
-    m_hCpuDescriptorHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
-}
-
-void TD3D12Texture::CreateDesc()
-{
-	m_state = D3D12_RESOURCE_STATE_COPY_DEST; // 
-
-    m_Desc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
-    m_Desc.Width = m_Width;
-    m_Desc.Height = (UINT)m_Height;
-    m_Desc.Alignment = 0;
-    m_Desc.DepthOrArraySize = 1;
-    m_Desc.MipLevels = 1;
-    m_Desc.Format = m_Format;
-    m_Desc.SampleDesc.Count = 1;
-    m_Desc.SampleDesc.Quality = 0;
-    m_Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
-    m_Desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-}
 
 bool TD3D12Texture::CreateDDSFromMemory(const void* memBuffer, size_t fileSize, bool sRGB)
 {
@@ -96,19 +60,30 @@ bool TD3D12Texture::CreateWICFromFile(const wchar_t* fileName, size_t fileSize, 
     return SUCCEEDED(hr);
 }
 
-void TD3D12Texture::Create2D()
+void TD3D12Texture::Create2D(size_t Width, size_t Height, DXGI_FORMAT Format)
 {
-    if (m_Width != m_Desc.Width)
-    {
-        m_Width = m_Desc.Width;
-        m_Height = m_Desc.Height;
-        m_Format = m_Desc.Format;
-        m_Depth = m_Desc.DepthOrArraySize;
+    m_state = D3D12_RESOURCE_STATE_COPY_DEST;
 
-    }
+    m_Width = (uint32_t)Width;
+    m_Height = (uint32_t)Height;
+    m_Depth = 1;
 
-    TD3D12RHI::TextureResourceAllocator->AllocTextureResource(m_state, m_Desc, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
+    D3D12_RESOURCE_DESC texDesc = {};
+    texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texDesc.Width = Width;
+    texDesc.Height = (UINT)Height;
+    texDesc.DepthOrArraySize = 1;
+    texDesc.MipLevels = 1;
+    texDesc.Format = Format;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.SampleDesc.Quality = 0;
+    texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
 
+    // allocate Texture Resource
+    TD3D12RHI::TextureResourceAllocator->AllocTextureResource(m_state, texDesc, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
+
+    // allocate descriptor heap
     if (m_hCpuDescriptorHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
         m_hCpuDescriptorHandle = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
 
@@ -146,6 +121,77 @@ void TD3D12Texture::Create2D(TextureInfo info)
     SRVDesc.Format = info.Format;
 
     TD3D12RHI::g_Device->CreateShaderResourceView(ResourceLocation.UnderlyingResource->D3DResource.Get(), &SRVDesc, m_hCpuDescriptorHandle);
+}
+
+void TD3D12Texture::CreateCube(size_t Width, size_t Height, DXGI_FORMAT Format)
+{
+
+    m_state = D3D12_RESOURCE_STATE_COPY_DEST;
+
+    m_Width = (uint32_t)Width;
+    m_Height = (uint32_t)Height;
+    m_Depth = 6; // six faces
+
+    D3D12_RESOURCE_DESC texDesc = {};
+    texDesc.Dimension = D3D12_RESOURCE_DIMENSION_TEXTURE2D;
+    texDesc.Width = Width;
+    texDesc.Height = (UINT)Height;
+    texDesc.DepthOrArraySize = 6; // six faces
+    texDesc.MipLevels = 1;
+    texDesc.Format = Format;
+    texDesc.SampleDesc.Count = 1;
+    texDesc.SampleDesc.Quality = 0;
+    texDesc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    texDesc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    // allocate Texture Resource
+    TD3D12RHI::TextureResourceAllocator->AllocTextureResource(m_state, texDesc, DEFAULT_RESOURCE_ALIGNMENT, ResourceLocation);
+
+    // allocate descriptor heap
+    if (m_hCpuDescriptorHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+        m_hCpuDescriptorHandle = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+
+    // create srv
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = Format;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE; // texture cube
+    srvDesc.TextureCube.MipLevels = 1;
+    srvDesc.TextureCube.MostDetailedMip = 0;
+    srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+
+    TD3D12RHI::g_Device->CreateShaderResourceView(ResourceLocation.UnderlyingResource->D3DResource.Get(), &srvDesc, m_hCpuDescriptorHandle);
+}
+
+void TD3D12Texture::CreateCube(TextureInfo info)
+{
+    m_state = info.InitState; // 
+    m_Desc.Dimension = info.Dimension;
+    m_Desc.Width = info.Width;
+    m_Desc.Height = info.Height;
+    m_Desc.Alignment = 0;
+    m_Desc.DepthOrArraySize = info.DepthOrArraySize;
+    m_Desc.MipLevels = info.MipCount;
+    m_Desc.Format = info.Format;
+    m_Desc.SampleDesc.Count = 1;
+    m_Desc.SampleDesc.Quality = 0;
+    m_Desc.Layout = D3D12_TEXTURE_LAYOUT_UNKNOWN;
+    m_Desc.Flags = D3D12_RESOURCE_FLAG_NONE;
+
+    TD3D12RHI::TextureResourceAllocator->AllocTextureResource(m_state, m_Desc, 256, ResourceLocation);
+
+    if (m_hCpuDescriptorHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+        m_hCpuDescriptorHandle = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc;
+    srvDesc.Format = info.Format;
+    srvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    srvDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE; // texture cube
+    srvDesc.TextureCube.MipLevels = 1;
+    srvDesc.TextureCube.MostDetailedMip = 0;
+    srvDesc.TextureCube.ResourceMinLODClamp = 0.0f;
+
+    TD3D12RHI::g_Device->CreateShaderResourceView(ResourceLocation.UnderlyingResource->D3DResource.Get(), &srvDesc, m_hCpuDescriptorHandle);
 }
 
 void TD3D12RHI::InitializeTexture(TD3D12Resource& Dest, UINT NumSubresources, D3D12_SUBRESOURCE_DATA SubData[])

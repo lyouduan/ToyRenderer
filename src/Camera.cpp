@@ -7,111 +7,205 @@
 
 using namespace DirectX;
 
-Camera::Camera() :
-	m_VerticalFOV(45.0), m_AspectRatio(780.0 / 1280.0), m_NearClip(0.1), m_FarClip(100.0)
+Camera::Camera()
 {
-	UpadteProjMat();
+	SetLen(45.0, 780.0 / 1280.0, 0.1f, 1000.0f);
 }
 
-void Camera::UpadteViewMat()
+Camera::~Camera()
 {
-	XMVECTOR x = XMVector3Dot(m_right, m_pos);
-	XMVECTOR y = XMVector3Dot(m_up, m_pos);
-	XMVECTOR z = XMVector3Dot(m_look, m_pos);
-
-	m_ViewMat.r[0] = m_right;
-	m_ViewMat.r[1] = m_up;
-	m_ViewMat.r[2] = m_look;
-	m_ViewMat.r[3] = XMVECTOR{ -XMVectorGetX(x),-XMVectorGetX(y),-XMVectorGetX(z), 1.0 };
-
-	m_ViewProjMat = XMMatrixMultiply(m_ViewMat, m_ProjMat);
 }
 
-void Camera::UpadteProjMat()
+void Camera::SetPosition(float x, float y, float z)
+{
+	mPosition = XMFLOAT3(x, y, z);
+	viewDirty = true;
+}
+
+void Camera::SetLen(float fov, float aspectRatio, float nearZ, float farZ)
+{
+	mFovY = fov;
+	mAspect = aspectRatio;
+	mNearZ = nearZ;
+	mFarZ = farZ;
+
+	UpdateProjMat();
+}
+
+void Camera::UpdateViewMat()
+{
+	if (viewDirty)
+	{
+		XMVECTOR R = XMLoadFloat3(&mRight);
+		XMVECTOR U = XMLoadFloat3(&mUp);
+		XMVECTOR L = XMLoadFloat3(&mLook);
+		XMVECTOR P = XMLoadFloat3(&mPosition);
+
+		// keep camera's axes orthogonal to each other and of unit length
+		L = XMVector3Normalize(L);
+		U = XMVector3Normalize(XMVector3Cross(L, R));
+
+		R = XMVector3Cross(U, L);
+
+		float x = -XMVectorGetX(XMVector3Dot(P, R));
+		float y = -XMVectorGetX(XMVector3Dot(P, U));
+		float z = -XMVectorGetX(XMVector3Dot(P, L));
+		
+		XMStoreFloat3(&mRight, R);
+		XMStoreFloat3(&mUp, U);
+		XMStoreFloat3(&mLook, L);
+
+		m_ViewMat = XMMATRIX(
+			R,
+			U,
+			L,
+			XMVectorSet(x, y, z, 1.0f)
+		);
+	}
+
+	viewDirty = false;
+}
+
+void Camera::Pitch(float degrees)
+{
+	Rotate(XMLoadFloat3(&mRight), degrees);
+}
+
+void Camera::Roll(float degrees)
+{
+	Rotate(XMLoadFloat3(&mLook), degrees);
+}
+
+void Camera::Yaw(float degrees)
+{
+	Rotate(XMLoadFloat3(&mUp), -degrees);
+}
+
+void Camera::Rotate(XMVECTOR axis, float degrees)
+{
+	XMMATRIX R = XMMatrixRotationAxis(axis, XMConvertToRadians(degrees));
+
+	auto Look = XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&mLook), R));
+	auto Up = XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&mUp), R));
+	auto Right = XMVector3Normalize(XMVector3TransformNormal(XMLoadFloat3(&mRight), R));
+
+	XMStoreFloat3(&mRight, Right);
+	XMStoreFloat3(&mLook, Look);
+	XMStoreFloat3(&mUp, Up);
+
+	viewDirty = true;
+}
+
+void Camera::UpdateProjMat()
 {
 	//m_ProjMat = XMMatrixPerspectiveFovLH(m_VerticalFOV, m_AspectRatio, m_NearClip, m_FarClip);
 
-	float fovRadians = XMConvertToRadians(m_VerticalFOV);
-	float height = m_NearClip * tan(fovRadians / 2.0);
-	float width = height * m_AspectRatio;
+	float fovRadians = XMConvertToRadians(mFovY);
+	float height = mNearZ * tan(fovRadians / 2.0);
+	float width = height * mAspect;
 
-	XMVECTOR m0 = XMVectorSet(m_NearClip / width, 0, 0, 0);
-	XMVECTOR m1 = XMVectorSet(0, m_NearClip / height, 0, 0);
-	XMVECTOR m2 = XMVectorSet(0, 0, m_FarClip / (m_FarClip - m_NearClip), 1);
-	XMVECTOR m3 = XMVectorSet(0, 0, -(m_FarClip * m_NearClip) / (m_FarClip - m_NearClip), 0);
+	XMVECTOR m0 = XMVectorSet(mNearZ / width, 0, 0, 0);
+	XMVECTOR m1 = XMVectorSet(0, mNearZ / height, 0, 0);
+	XMVECTOR m2 = XMVectorSet(0, 0, mFarZ / (mFarZ - mNearZ), 1);
+	XMVECTOR m3 = XMVectorSet(0, 0, -(mFarZ * mNearZ) / (mFarZ - mNearZ), 0);
 
 	m_ProjMat.r[0] = m0;
 	m_ProjMat.r[1] = m1;
 	m_ProjMat.r[2] = m2;
 	m_ProjMat.r[3] = m3;
-
-	m_ViewProjMat = XMMatrixMultiply(m_ViewMat, m_ProjMat);
 }
 
 void Camera::SetEyeAtUp(DirectX::XMVECTOR eye, DirectX::XMVECTOR at, DirectX::XMVECTOR up)
 {
-	m_pos = eye;
-	m_look = at;
-	m_up = up;
-	m_ViewMat = XMMatrixLookAtLH(eye, at, up);
+	//m_ViewMat = XMMatrixLookAtLH(eye, at, up);
 }
 
-void Camera::SetLookAt(DirectX::XMVECTOR eye, DirectX::XMVECTOR at, DirectX::XMVECTOR vup)
+void Camera::SetLookAt(DirectX::XMVECTOR pos, DirectX::XMVECTOR target, DirectX::XMVECTOR vup)
 {
 	// based on left hand coordinate
 	// lookforward
-	m_pos = eye;
 
-	m_look = XMVector3Normalize(XMVectorSubtract(at, eye));
+	XMVECTOR lookat = XMVector3Normalize(XMVectorSubtract(target, pos));
+	XMVECTOR right = XMVector3Normalize(XMVector3Cross(vup, lookat));
+	XMVECTOR up = XMVector3Normalize(XMVector3Cross(lookat, right));
 
-	// right axis
-	m_right = XMVector3Normalize(XMVector3Cross(vup, m_look));
+	XMStoreFloat3(&mPosition, pos);
+	XMStoreFloat3(&mLook, lookat);
+	XMStoreFloat3(&mRight, right);
+	XMStoreFloat3(&mUp, up);
 
-	// up axis
-	m_up = XMVector3Normalize(XMVector3Cross(m_look, m_right));
-
-	UpadteViewMat();
+	viewDirty = true;
 }
 
-void Camera::SetProjMatrix(float fov, float aspectRatio, float nearZ, float farZ)
+void Camera::MoveCamera(float moveForward, float strafe, float vertical)
 {
-	m_VerticalFOV = fov;
-	m_AspectRatio = aspectRatio;
-	m_NearClip = nearZ;
-	m_FarClip = farZ;
+	XMVECTOR position = XMLoadFloat3(&mPosition);
+	XMVECTOR lookDirection = XMVector3Normalize(XMLoadFloat3(&mLook));
+	XMVECTOR rightDirection = XMVector3Normalize(XMLoadFloat3(&mRight));
+	XMVECTOR upDirection = XMVector3Normalize(XMLoadFloat3(&mUp));
 
-	UpadteProjMat();
+	position += lookDirection * moveForward;  // 前进/后退
+	position += rightDirection * strafe;     // 左右平移
+	position += upDirection * vertical;      // 上下移动
+
+	XMStoreFloat3(&mPosition, position);
 }
 
 void Camera::CamerImGui()
 {
-	bool rotDirty = false;
 	const auto dcheck = [](bool d, bool& carry) { carry = carry || d; };
 
+	bool moveDirty = false;
+	
+
+	bool projDirty = false;
+
+	
+	bool pitchDirty = false;
+	bool yawDirty = false;
+	bool rollDirty = false;
+
 	ImGui::Text("Camera Orientation");
-	dcheck(ImGui::SliderFloat("Position", &distance, -50.0f, 50.0f, "%.1f"), rotDirty);
-	dcheck(ImGui::SliderFloat("FOV", &m_VerticalFOV, 0.1f, 89.0f, "%.1f"), rotDirty);
-	dcheck(ImGui::SliderFloat("Pitch", &pitch, -45.0f, 45.0f, "%.1f"), rotDirty);
-	dcheck(ImGui::SliderFloat("Yaw", &yaw, -89.0f, 89.0f, "%.1f"), rotDirty);
-	dcheck(ImGui::SliderFloat("Roll", &roll, -180.0f, 180.0f, "%.1f"), rotDirty);
+	dcheck(ImGui::SliderFloat("FOV", &mFovY, 0.1f, 89.0f, "%.1f"), projDirty);
+	dcheck(ImGui::SliderFloat("X", &mPosition.x, -50.0f, 50.0f, "%.1f"), moveDirty);
+	dcheck(ImGui::SliderFloat("Y", &mPosition.y, -50.0f, 50.0f, "%.1f"), moveDirty);
+	dcheck(ImGui::SliderFloat("Z", &mPosition.z, -50.0f, 50.0f, "%.1f"), moveDirty);
+	
+	dcheck(ImGui::SliderFloat("Pitch", &pitch, -90.0f, 90.0f, "%.1f"), pitchDirty);
+	dcheck(ImGui::SliderFloat("Yaw", &yaw, -90.0f, 90.0f, "%.1f"), yawDirty);
+	dcheck(ImGui::SliderFloat("Roll", &roll, -180.0f, 180.0f, "%.1f"), rollDirty);
 
+
+	if (pitchDirty)
 	{
-		m_pos[2] += distance;
+		Pitch(pitch - lastPitch);
+		lastPitch = pitch;
+		pitchDirty = false;
+	}
+	if (yawDirty)
+	{
+		Yaw(yaw - lastYaw);
+		lastYaw = yaw;
+		yawDirty = false;
+	}
 
-		// Rotate up and look vector about the right vector.
-		XMMATRIX R = XMMatrixRotationAxis(m_look, XMConvertToRadians(-roll));
-		m_up = XMVector3TransformNormal(m_up, R);
-		m_right = XMVector3TransformNormal(m_right, R);
+	if (rollDirty)
+	{
+		Roll(roll - lastRoll);
+		lastRoll = roll;
+		rollDirty = false;
+	}
 
-		R = XMMatrixRotationAxis(m_up, XMConvertToRadians(-yaw));
-		m_right = XMVector3TransformNormal(m_right, R);
-		m_look = XMVector3TransformNormal(m_look, R);
+	if (moveDirty)
+	{
+		//MoveCamera(moveForward, moveRight, moveUp);
+		moveDirty = false;
+		viewDirty = true;
+	}
 
-		R = XMMatrixRotationAxis(m_right, XMConvertToRadians(pitch));
-		m_look = XMVector3TransformNormal(m_look, R);
-		m_up = XMVector3TransformNormal(m_up, R);
-
-		UpadteViewMat();
-
+	if (projDirty)
+	{
+		UpdateProjMat();
+		projDirty = false;
 	}
 }

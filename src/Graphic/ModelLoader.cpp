@@ -164,7 +164,7 @@ std::vector<TD3D12Texture> ModelLoader::loadMaterialTextures(aiMaterial* mat, ai
 			}
 		}
 		if (!skip) {   // If texture hasn't been loaded already, load it
-			TD3D12Texture texture(64, 64);
+			TD3D12Texture texture;
 
 			std::string filename = std::string(str.C_Str());
 			filename = m_directory + '/' + filename;
@@ -179,6 +179,7 @@ std::vector<TD3D12Texture> ModelLoader::loadMaterialTextures(aiMaterial* mat, ai
 				std::wstring filenames = std::wstring(filename.begin(), filename.end());
 				if (filename.find("dds") != std::string::npos)
 				{
+					texture.Create2D(64, 64, DXGI_FORMAT_R32G32B32_FLOAT);
 					texture.CreateDDSFromFile(filenames.c_str(), 0, false);
 				}
 				else if (filename.find("png") != std::string::npos || filename.find("jpg") != std::string::npos)
