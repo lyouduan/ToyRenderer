@@ -12,6 +12,12 @@
 
 class Mesh;
 
+__declspec(align(16))
+struct ObjCBuffer
+{
+	XMFLOAT4X4 ModelMat;
+};
+
 class ModelLoader
 {
 public:
@@ -26,6 +32,16 @@ public:
 
 	void Close();
 
+	void SetObjCBuffer(ObjCBuffer objCB)
+	{
+		m_objCB = objCB;
+	}
+
+	ObjCBuffer GetObjCBuffer() const
+	{
+		return m_objCB;
+	}
+
 private:
 	void processNode(aiNode* node, const aiScene* scene);
 	Mesh processMesh(aiMesh* mesh, const aiScene* scene);
@@ -34,5 +50,7 @@ private:
 	std::string m_directory;
 	std::vector<Mesh> m_meshes;
 	std::vector<TD3D12Texture> textures_loaded;
+
+	ObjCBuffer m_objCB;
 };
 

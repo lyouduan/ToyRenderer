@@ -13,11 +13,7 @@ using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
 
-__declspec(align(16))
-struct ObjCBuffer
-{
-	XMFLOAT4X4 ModelMat;
-};
+
 
 __declspec(align(16))
 struct PassCBuffer
@@ -39,6 +35,8 @@ public:
 
 private:
 
+	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader);
+
 	// pipleline objects
 	CD3DX12_VIEWPORT m_viewport;;
 	CD3DX12_RECT m_scissorRect;
@@ -53,7 +51,6 @@ private:
 	TD3D12ConstantBufferRef objCBufferRef;
 	TD3D12ConstantBufferRef passCBufferRef;
 
-	ModelLoader model;
 	//ComPtr<ID3D12Resource> m_Depth;
 
 	//ComPtr<ID3D12CommandAllocator> m_commandAllocator;
@@ -66,7 +63,6 @@ private:
 	//uint32_t m_rtvDescriptorSize;
 
 	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
-	std::unordered_map<std::string, D3D12_CPU_DESCRIPTOR_HANDLE> m_SrvMap;
 	//std::unique_ptr<TShader> m_shader = nullptr;
 
 	//std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;

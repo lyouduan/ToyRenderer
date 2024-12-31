@@ -51,7 +51,7 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float3 lightPos = float3(0.0, 100.0, -100.0);
+    float3 lightPos = float3(0, 200.0, -50.0);
     
     float3 eyePos = float3(0.0, 0.0, 1.0);
     

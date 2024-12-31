@@ -30,6 +30,7 @@ namespace TD3D12RHI
     // cache descriptor handle
     std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
 
+    D3D12_CPU_DESCRIPTOR_HANDLE NullDescriptor;
 
     void Initialze()
     {
@@ -41,6 +42,9 @@ namespace TD3D12RHI
         InitialzeBuffer();
 
         g_ImGuiSrvHeap = GetImGuiSRVHeapAllocator();
+
+        NullDescriptor = CreateNullDescriptor();
+
     }
 
     void InitialzeBuffer()

@@ -7,6 +7,8 @@
 #include <chrono>
 #include "ImGuiManager.h"
 #include "PSOManager.h"
+#include "ModelManager.h"
+#include "TextureManager.h"
 
 using namespace TD3D12RHI;
 using TD3D12RHI::g_CommandContext;
@@ -27,13 +29,12 @@ void GameCore::OnInit()
 	LoadPipeline();
 	LoadAssets();
 
-	// set camera
-	m_Camera.SetPosition(0, 2, -10);
+	
 }
 
 void GameCore::OnUpdate(const GameTimer& gt)
 {
-	XMMATRIX scalingMat = XMMatrixScaling(scale, scale, scale);
+	XMMATRIX scalingMat = XMMatrixScaling(scale * 0.5, scale* 0.5, scale * 0.5);
 
 	totalTime += gt.DeltaTime() * 0.01;
 	float rotate_angle = static_cast<float>(RotationY * 360  * totalTime);
@@ -53,13 +54,12 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 	ObjCBuffer objCB;
 	XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(m_ModelMatrix));
-	objCBufferRef = TD3D12RHI::CreateConstantBuffer(&objCB, sizeof(ObjCBuffer));
+	ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(objCB);
 
 	PassCBuffer passCB;
 	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_Camera.GetViewMat()));
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_Camera.GetProjMat()));
 
-	XMFLOAT3 pos;
 	passCB.EyePosition = m_Camera.GetPosition3f();
 	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 }
@@ -131,7 +131,35 @@ void GameCore::OnDestroy()
 	// destroy ImGui
 	ImGuiManager::DestroyImGui();
 
-	model.Close();
+	ModelManager::DestroyModel();
+
+	TextureManager::DestroyTexture();
+}
+
+void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader)
+{
+	auto obj = model.GetObjCBuffer();
+	objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+	auto meshes = model.GetMeshes();
+	for (UINT i = 0; i < meshes.size(); ++i)
+	{
+		shader.SetParameter("objCBuffer", objCBufferRef);
+		shader.SetParameter("passCBuffer", passCBufferRef);
+		// draw call
+		auto SRV = meshes[i].GetSRV();
+		if (!SRV.empty())
+			shader.SetParameter("diffuseMap", SRV[0]);
+		else
+		{
+			shader.SetParameter("diffuseMap", NullDescriptor);
+		}
+		//m_shader->SetParameter("specularMap", SRV[1]);
+		//m_shader->SetParameter("normalMap", SRV[2]);
+
+		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
+		shader.BindParameters();
+		meshes[i].DrawMesh(g_CommandContext);
+	}
 }
 
 void GameCore::LoadPipeline()
@@ -202,27 +230,17 @@ void GameCore::LoadPipeline()
 void GameCore::LoadAssets()
 {
 	// create PSO and rootSignature
-	{
-		PSOManager::InitializePSO();
-	}
+	PSOManager::InitializePSO();
+
+	// set camera
+	m_Camera.SetPosition(0, 2, -10);
 
 	// load model
-	{
-		if (!model.Load("./models/nanosuit/nanosuit.obj"))
-			assert(false);
+	ModelManager::LoadModel();
+	boxMeshes.CreateBox(2, 2, 2, 3);
 
-		TD3D12Texture tex;
-		tex.Create2D(64, 64);
-		tex.CreateDDSFromFile(L"./textures/Wood.dds", 0, false);
-		m_SrvMap["wood"] = tex.GetSRV();
-
-		TD3D12Texture skytex;
-		skytex.CreateCube(64, 64);
-		skytex.CreateDDSFromFile(L"./textures/cubeMap.dds", 0, false);
-		m_SrvMap["skybox"] = skytex.GetSRV();
-
-		boxMeshes.CreateBox(2,2,2,3);
-	}
+	// load Texture
+	TextureManager::LoadTexture();
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -253,25 +271,8 @@ void GameCore::PopulateCommandList()
 	// Record commands
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
-	
-	//model.Draw(g_CommandContext, m_shader.get(), cBufferRef);
-
-	auto meshes = model.GetMeshes();
-	for (auto& mesh : meshes)
-	{
-		m_shaderMap["modelShader"].SetParameter("objCBuffer", objCBufferRef);
-		m_shaderMap["modelShader"].SetParameter("passCBuffer", passCBufferRef);
-		// draw call
-		auto SRV = mesh.GetSRV();
-		m_shaderMap["modelShader"].SetParameter("diffuseMap", SRV[0]);
-		//m_shader->SetParameter("specularMap", SRV[1]);
-		//m_shader->SetParameter("normalMap", SRV[2]);
-
-		m_shaderMap["modelShader"].SetDescriptorCache(mesh.GetTD3D12DescriptorCache());
-		m_shaderMap["modelShader"].BindParameters();
-		mesh.DrawMesh(g_CommandContext);
-	}
-
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["modelShader"]);
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 	// sky box
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
@@ -279,7 +280,7 @@ void GameCore::PopulateCommandList()
 	
 	m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef);
 	m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
-	m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_SrvMap["skybox"]);
+	m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
 	m_shaderMap["skyboxShader"].SetDescriptorCache(boxMeshes.GetTD3D12DescriptorCache());
 	m_shaderMap["skyboxShader"].BindParameters();
 	boxMeshes.DrawMesh(g_CommandContext);
@@ -292,7 +293,6 @@ void GameCore::PopulateCommandList()
 	// indicate that the back buffer will now be used to present
 	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
-	
 }
 
 void GameCore::WaitForPreviousFrame()

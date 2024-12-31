@@ -40,6 +40,8 @@ public:
 	void Yaw(float degrees);
 	void Roll(float degrees);
 
+	void Reset();
+
 	void UpdateViewMat();
 	void UpdateProjMat();
 
@@ -52,6 +54,7 @@ private:
 	float mFovY = 0.0;
 
 	// camera coordinate system with coordinates relative to world space
+	DirectX::XMFLOAT3 homePosition = { 0.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT3 mPosition = { 0.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT3 mRight = { 1.0f, 0.0f, 0.0f };
 	DirectX::XMFLOAT3 mUp = { 0.0f, 1.0f, 0.0f };

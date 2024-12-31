@@ -269,17 +269,20 @@ void TD3D12RHI::UploadTextureData(TD3D12Resource TextureResource, const std::vec
     TD3D12RHI::g_CommandContext.ExecuteCommandLists();
 }
 
-D3D12_SHADER_RESOURCE_VIEW_DESC& TD3D12RHI::CreateNullDescriptor()
+D3D12_CPU_DESCRIPTOR_HANDLE& TD3D12RHI::CreateNullDescriptor()
 {
-    auto HeapHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    D3D12_CPU_DESCRIPTOR_HANDLE HeapHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
 
     D3D12_SHADER_RESOURCE_VIEW_DESC NullDescriptor;
     NullDescriptor.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     NullDescriptor.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
     NullDescriptor.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
     NullDescriptor.Texture2D.MipLevels = 0;
+    NullDescriptor.Texture2D.PlaneSlice = 0;
+    NullDescriptor.Texture2D.ResourceMinLODClamp = 0.0f;
+
 
     g_Device->CreateShaderResourceView(nullptr, &NullDescriptor, HeapHandle); // 绑定空资源
 
-    return NullDescriptor;
+    return HeapHandle;
 }

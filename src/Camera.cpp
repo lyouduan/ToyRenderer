@@ -9,7 +9,7 @@ using namespace DirectX;
 
 Camera::Camera()
 {
-	SetLen(45.0, 780.0 / 1280.0, 0.1f, 1000.0f);
+	SetLen(45.0, 1280.0/780.0 , 0.1f, 1000.0f);
 }
 
 Camera::~Camera()
@@ -18,6 +18,7 @@ Camera::~Camera()
 
 void Camera::SetPosition(float x, float y, float z)
 {
+	homePosition = XMFLOAT3(x, y, z);
 	mPosition = XMFLOAT3(x, y, z);
 	viewDirty = true;
 }
@@ -92,6 +93,25 @@ void Camera::Rotate(XMVECTOR axis, float degrees)
 	XMStoreFloat3(&mRight, Right);
 	XMStoreFloat3(&mLook, Look);
 	XMStoreFloat3(&mUp, Up);
+
+	viewDirty = true;
+}
+
+void Camera::Reset()
+{
+	mPosition = homePosition;
+	mRight = { 1.0f, 0.0f, 0.0f };
+	mUp = { 0.0f, 1.0f, 0.0f };
+	mLook = { 0.0f, 0.0f, 1.0f };
+
+	roll = 0.01;
+	pitch = 0.01;
+	yaw = 0.01;
+	lastRoll = 0.01;
+	lastPitch = 0.0;
+	lastYaw = 0.01;
+	
+	mFovY = 45.0;
 
 	viewDirty = true;
 }
@@ -172,9 +192,12 @@ void Camera::CamerImGui()
 	dcheck(ImGui::SliderFloat("Z", &mPosition.z, -50.0f, 50.0f, "%.1f"), moveDirty);
 	
 	dcheck(ImGui::SliderFloat("Pitch", &pitch, -90.0f, 90.0f, "%.1f"), pitchDirty);
-	dcheck(ImGui::SliderFloat("Yaw", &yaw, -90.0f, 90.0f, "%.1f"), yawDirty);
+	dcheck(ImGui::SliderFloat("Yaw", &yaw, -180.0f, 180.0f, "%.1f"), yawDirty);
 	dcheck(ImGui::SliderFloat("Roll", &roll, -180.0f, 180.0f, "%.1f"), rollDirty);
-
+	if (ImGui::Button("Reset"))
+	{
+		Reset();
+	}
 
 	if (pitchDirty)
 	{

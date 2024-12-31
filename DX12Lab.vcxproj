@@ -26,6 +26,7 @@
     <ClCompile Include="3rdParty\imgui\imgui_draw.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_tables.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\Graphic\ModelManager.cpp" />
     <ClCompile Include="src\Utils\GeometryGenerator.cpp" />
     <ClCompile Include="src\Graphic\Resource\PSOManager.cpp" />
     <ClCompile Include="src\Graphic\Resource\PSO.cpp" />
@@ -53,6 +54,7 @@
     <ClCompile Include="src\Win32Application.cpp" />
     <ClCompile Include="src\Graphic\D3D12CommandContext.cpp" />
     <ClCompile Include="src\Utils\WICTextureLoader.cpp" />
+    <ClCompile Include="src\Graphic\TextureManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="3rdParty\imgui\backends\imgui_impl_dx12.h" />
@@ -63,6 +65,7 @@
     <ClInclude Include="3rdParty\imgui\imstb_rectpack.h" />
     <ClInclude Include="3rdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="3rdParty\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Graphic\ModelManager.h" />
     <ClInclude Include="src\Utils\GeometryGenerator.h" />
     <ClInclude Include="src\Graphic\Resource\PSOManager.h" />
     <ClInclude Include="src\Utils\hash.h" />
@@ -97,6 +100,7 @@
     <ClInclude Include="src\Win32Application.h" />
     <ClInclude Include="src\Graphic\D3D12CommandContext.h" />
     <ClInclude Include="src\Utils\WICTextureLoader.h" />
+    <ClInclude Include="src\Graphic\TextureManager.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl">

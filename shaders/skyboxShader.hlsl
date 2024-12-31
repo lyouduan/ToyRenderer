@@ -40,10 +40,13 @@ SamplerState AnisotropicClampSampler : register(s5);
 PSInput VSMain(VSInput vin)
 {
     PSInput vout;
+    
+    // Use local vertex position as cubemap lookup vector.
     vout.positionW = vin.position.xyz;
     
     //float4 posW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
     
+    // Remove translation from the view matrix
     float4x4 View = ViewMat;
     View[3][0] = View[3][1] = View[3][2] = 0.0f;
     
