@@ -132,7 +132,7 @@ private:
 class D3D12CubeBuffer : public D3D12PixelBuffer
 {
 public:
-	D3D12CubeBuffer(DirectX::XMFLOAT4 ClearColor = { 1.0,0.0,0.0,0.0 })
+	D3D12CubeBuffer(DirectX::XMFLOAT4 ClearColor = { 0.0,0.0,0.0,0.0 })
 		: m_ClearColor(ClearColor), m_NumMipMaps(0), m_FragmentCount(1), m_SampleCount(1)
 	{
 		for(UINT i = 0; i < _countof(m_RTVHandle); i++)

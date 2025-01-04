@@ -63,53 +63,13 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 	passCB.EyePosition = m_Camera.GetPosition3f();
 	memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
+
+
 }
 
 void GameCore::OnRender()
 {
-	// Start the Dear ImGui frame
-	ImGui_ImplDX12_NewFrame();
-	ImGui_ImplWin32_NewFrame();
-	ImGui::NewFrame();
-
-	if (ImGuiManager::show_demo_window)
-		ImGui::ShowDemoWindow(&ImGuiManager::show_demo_window);
-
-	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
-	{
-		//static int counter = 0;
-		//static char buffer[1024];
-		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
-		               // Display some text (you can use a format strings too)
-		ImGui::Checkbox("Demo Window", &ImGuiManager::show_demo_window);      // Edit bools storing our window open/close state
-		//ImGui::Checkbox("Another Window", &show_another_window);
-		ImGui::Text("Model Control Parameters");
-		ImGui::SliderFloat("RotationY", &RotationY, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Model PositionX", &position.x, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Model PositionY", &position.y, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Model PositionZ", &position.z, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		
-		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
-
-		//if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-			//counter++;
-		//ImGui::SameLine();
-		//ImGui::Text("counter = %d", counter);
-
-		// Buffer
-		//ImGui::InputText("Butts", buffer, sizeof(buffer));
-
-		// camera control
-		m_Camera.CamerImGui();
-
-		ImGui::End();
-	}
-
-	// Rendering
-	ImGui::Render();
+	UpdateImGui();
 
 	// record all the commands we need to render the scene into the command list
 	PopulateCommandList();
@@ -137,6 +97,52 @@ void GameCore::OnDestroy()
 	TextureManager::DestroyTexture();
 }
 
+void GameCore::UpdateImGui()
+{
+	// Start the Dear ImGui frame
+	ImGuiManager::StartRenderImGui();
+	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
+	{
+		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+		// Display some text (you can use a format strings too)
+		ImGui::Checkbox("Demo Window", &ImGuiManager::show_demo_window);      // Edit bools storing our window open/close state
+		//ImGui::Checkbox("Another Window", &show_another_window);
+		ImGui::Text("Model Control Parameters");
+		ImGui::SliderFloat("RotationY", &RotationY, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model PositionX", &position.x, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model PositionY", &position.y, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model PositionZ", &position.z, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+
+		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
+
+		if(ImGui::Checkbox("EquirectangularMap", &ImGuiManager::useCubeMap))
+		{
+			if(ImGuiManager::useCubeMap)
+				m_RenderCubeMap->SetIsUseCubeMap(true);
+			else
+				m_RenderCubeMap->SetIsUseCubeMap(false);
+		}
+		//if (ImGui::Button("CubeMap"))                          // Buttons return true when clicked (most widgets return true when edited/activated)
+		//counter++;
+	//ImGui::SameLine();
+	//ImGui::Text("counter = %d", counter);
+
+	// Buffer
+	//ImGui::InputText("Butts", buffer, sizeof(buffer));
+
+	// camera control
+		m_Camera.CamerImGui();
+
+		ImGui::End();
+	}
+	// Rendering ImGui
+	ImGui::Render();
+
+}
+
 void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader)
 {
 	auto obj = model.GetObjCBuffer();
@@ -162,51 +168,6 @@ void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TS
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
 		meshes[i].DrawMesh(g_CommandContext);
 	}
-}
-
-void GameCore::DrawCubeMap(TD3D12CommandContext& gfxContext)
-{
-	// set necessary state
-	gfxContext.GetCommandList()->RSSetViewports(1, m_RenderCubeMap->GetViewport());
-	gfxContext.GetCommandList()->RSSetScissorRects(1, m_RenderCubeMap->GetScissorRect());
-
-	gfxContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["cubemapPSO"].GetRootSignature());
-	gfxContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["cubemapPSO"].GetPSO());
-
-	ObjCBuffer obj;
-	auto cubemapObjCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
-
-	// indicate that back buffer will be used as a render target
-	gfxContext.Transition(m_RenderCubeMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
-	gfxContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
-
-	PassCBuffer passcb;
-
-	for (UINT i = 0; i < 6; i++)
-	{
-		// indicate that back buffer will be used as a render target
-		float clearColor[4] = { 1.0,0.0,0.0,0.0 };
-		gfxContext.GetCommandList()->ClearRenderTargetView(m_RenderCubeMap->GetRTV(i), (FLOAT*)clearColor, 0, nullptr);
-		gfxContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
-		gfxContext.GetCommandList()->OMSetRenderTargets(1, &m_RenderCubeMap->GetRTV(i), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
-		XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(m_RenderCubeMap->GetCamera(i).GetProjMat()));
-		XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(m_RenderCubeMap->GetCamera(i).GetViewMat()));
-		//memcpy(cubemapPassCBufferRef->ResourceLocation.MappedAddress, &passcb, sizeof(PassCBuffer));
-		auto cubemapPassCBufferRef = CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
-
-		m_shaderMap["cubemapShader"].SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
-		m_shaderMap["cubemapShader"].SetParameter("passCBuffer", cubemapPassCBufferRef);
-		m_shaderMap["cubemapShader"].SetParameter("map", TextureManager::m_SrvMaps["wood"]);
-		m_shaderMap["cubemapShader"].SetParameter("equirectangularMap", TextureManager::m_SrvMaps["loft"]);
-
-		m_shaderMap["cubemapShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
-		m_shaderMap["cubemapShader"].BindParameters();
-		ModelManager::m_MeshMaps["box"].DrawMesh(gfxContext);
-	}
-
-	gfxContext.Transition(m_RenderCubeMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
-	gfxContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
-	
 }
 
 void GameCore::LoadPipeline()
@@ -332,8 +293,6 @@ void GameCore::LoadAssets()
 
 	// set camera
 	m_Camera.SetPosition(0, 5, -20);
-	m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-	m_RenderCubeMap->CreateCubeCamera({ 0, 0, 0 }, 0.1, 1000);
 
 	// load model
 	ModelManager::LoadModel();
@@ -343,6 +302,11 @@ void GameCore::LoadAssets()
 	TextureManager::LoadTexture();
 
 	passCBufferRef = TD3D12RHI::CreateConstantBuffer(nullptr, sizeof(PassCBuffer));
+
+	// Render equirectangularMap To CubeMap
+	m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_RenderCubeMap->CreateCubeCamera({ 0, 0, 0 }, 0.1, 1000);
+	m_RenderCubeMap->DrawEquirectangularMapToCubeMap(g_CommandContext);
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -354,9 +318,6 @@ void GameCore::PopulateCommandList()
 	// reset CommandAllocator and CommandList
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
-	
-	// draw cubemap
-	DrawCubeMap(g_CommandContext);
 
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
@@ -403,22 +364,24 @@ void GameCore::PopulateCommandList()
 
 		m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef); // don't need objCbuffer
 		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
-		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
-		m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_RenderCubeMap->GetSRV());
+
+		if (m_RenderCubeMap->GetIsUseCubeMap())
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_RenderCubeMap->GetSRV());
+		else
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
 
 		m_shaderMap["skyboxShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
 		m_shaderMap["skyboxShader"].BindParameters();
 		ModelManager::m_MeshMaps["box"].DrawMesh(g_CommandContext);
 	}
 
-	// ImGui
-	ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };
-	g_CommandContext.GetCommandList()->SetDescriptorHeaps(1, Heaps2);
-	ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), g_CommandContext.GetCommandList());
+	// Draw ImGui
+	ImGuiManager::EndRenderImGui(g_CommandContext);
 
 	// indicate that the back buffer will now be used to present
 	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
+
 }
 
 void GameCore::WaitForPreviousFrame()

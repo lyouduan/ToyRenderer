@@ -124,7 +124,7 @@ void TShader::BindParameters()
 	if (SRVCount>0)
 	{
 		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SrcDescriptors;
-		SrcDescriptors.resize(SRVParams.size());
+		SrcDescriptors.resize(SRVCount);
 
 		for (const TShaderSRVParameter& Param : SRVParams)
 		{
@@ -216,7 +216,7 @@ void TShader::GetShaderParameter(Microsoft::WRL::ComPtr<ID3DBlob> PassBlob, ESha
 
 			CBVParams.push_back(Param);
 		}
-		else if (ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_STRUCTURED || ResourceType == D3D_SHADER_INPUT_TYPE::D3D10_SIT_TEXTURE)
+		else if (ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_STRUCTURED || ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_TEXTURE)
 		{
 			TShaderSRVParameter Param;
 			Param.Name = ShaderVarName;

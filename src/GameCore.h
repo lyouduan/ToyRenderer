@@ -9,6 +9,7 @@
 #include "Mesh.h"
 #include "Shader.h"
 #include "SceneCaptureCube.h"
+#include "PSO.h"
 
 using namespace DirectX;
 
@@ -25,8 +26,9 @@ public:
 
 private:
 
+	void UpdateImGui();
+
 	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader);
-	void DrawCubeMap(TD3D12CommandContext& gfxContext);
 
 	// pipleline objects
 	CD3DX12_VIEWPORT m_viewport;;

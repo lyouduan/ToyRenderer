@@ -2,6 +2,11 @@
 #include "D3D12PixelBuffer.h"
 #include "Camera.h"
 
+class TD3D12CommandContext;
+class TShader;
+class GraphicsPSO;
+class Mesh;
+
 class SceneCaptureCube
 {
 public:
@@ -27,6 +32,11 @@ public:
 	
 	void CreateCubeCamera(XMFLOAT3 pos, float nearZ, float farZ);
 
+	void DrawEquirectangularMapToCubeMap(TD3D12CommandContext& gfxContext);
+
+	bool& GetIsUseCubeMap() { return bUseCubeMap; }
+	void SetIsUseCubeMap(bool IsUse) { bUseCubeMap = IsUse; }
+
 private:
 
 	void SetViewportAndScissorRect();
@@ -45,5 +55,8 @@ private:
 
 	// cubemap
 	D3D12CubeBuffer CubeMap;
+	D3D12DepthBuffer DepthBuffer;
+
+	bool bUseCubeMap = false;
 };
 

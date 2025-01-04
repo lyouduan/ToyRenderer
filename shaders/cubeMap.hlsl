@@ -27,8 +27,7 @@ struct PSInput
     float3 normal : NORMAL;
     float2 tex : TEXCOORD;
 };
-Texture2D map : register(t0);
-Texture2D equirectangularMap : register(t1);
+Texture2D equirectangularMap : register(t0);
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -69,11 +68,12 @@ float2 SphereToEquirectangular(float3 dir)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
+    pin.positionW += EyePosW;
     float2 uv = SphereToEquirectangular(normalize(pin.positionW));
     // dx坐标系在左上角， openGL在左下角
     //uv.y = 1.0 - uv.y;
     float3 color = float3(0, 0, 0);
-    float a = map.Sample(LinearWrapSampler, uv).a;
     color = equirectangularMap.Sample(LinearWrapSampler, uv).rgb;
-    return float4(color, a);
+
+    return float4(color, 1.0);
 }

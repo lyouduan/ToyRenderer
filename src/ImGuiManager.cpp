@@ -11,6 +11,7 @@ using namespace TD3D12RHI;
 namespace ImGuiManager
 {
 	bool show_demo_window = false;
+	bool useCubeMap = false;
 
 	void InitImGui()
 	{
@@ -37,6 +38,23 @@ namespace ImGuiManager
 
 		ImGui_ImplDX12_Init(g_Device, FrameCount, DXGI_FORMAT_R8G8B8A8_UNORM, g_ImGuiSrvHeap.Get(), cpuhandle, gpuhandle);
 	
+	}
+
+	void StartRenderImGui()
+	{
+		ImGui_ImplDX12_NewFrame();
+		ImGui_ImplWin32_NewFrame();
+		ImGui::NewFrame();
+
+		if (ImGuiManager::show_demo_window)
+			ImGui::ShowDemoWindow(&ImGuiManager::show_demo_window);
+	}
+
+	void EndRenderImGui(TD3D12CommandContext& gfxContext)
+	{
+		ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };
+		gfxContext.GetCommandList()->SetDescriptorHeaps(1, Heaps2);
+		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gfxContext.GetCommandList());
 	}
 
 	void DestroyImGui()

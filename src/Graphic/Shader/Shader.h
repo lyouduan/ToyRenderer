@@ -153,7 +153,7 @@ public:
 
 	int SRVSignatureBindSlot = -1;
 
-	UINT SRVCount = 1;
+	UINT SRVCount = 0;
 
 	int UAVSignatureBindSlot = -1;
 
