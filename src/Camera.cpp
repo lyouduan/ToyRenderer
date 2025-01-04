@@ -45,23 +45,36 @@ void Camera::UpdateViewMat()
 		// keep camera's axes orthogonal to each other and of unit length
 		L = XMVector3Normalize(L);
 		U = XMVector3Normalize(XMVector3Cross(L, R));
-
 		R = XMVector3Cross(U, L);
 
-		float x = -XMVectorGetX(XMVector3Dot(P, R));
-		float y = -XMVectorGetX(XMVector3Dot(P, U));
-		float z = -XMVectorGetX(XMVector3Dot(P, L));
-		
+		//float x = -XMVectorGetX(XMVector3Dot(P, R));
+		//float y = -XMVectorGetX(XMVector3Dot(P, U));
+		//float z = -XMVectorGetX(XMVector3Dot(P, L));
+
+		XMVECTOR NegEyePosition = XMVectorNegate(P);
+		XMVECTOR D0 = XMVector3Dot(R, NegEyePosition);
+		XMVECTOR D1 = XMVector3Dot(U, NegEyePosition);
+		XMVECTOR D2 = XMVector3Dot(L, NegEyePosition);
+
 		XMStoreFloat3(&mRight, R);
 		XMStoreFloat3(&mUp, U);
 		XMStoreFloat3(&mLook, L);
 
-		m_ViewMat = XMMATRIX(
-			R,
-			U,
-			L,
-			XMVectorSet(x, y, z, 1.0f)
-		);
+		XMMATRIX M;
+		M.r[0] = XMVectorSelect(D0, R, g_XMSelect1110.v);
+		M.r[1] = XMVectorSelect(D1, U, g_XMSelect1110.v);
+		M.r[2] = XMVectorSelect(D2, L, g_XMSelect1110.v);
+
+		M.r[3] = g_XMIdentityR3.v;
+		//XMMATRIX M = XMMATRIX(
+		//	R,
+		//	U,
+		//	L,
+		//	XMVectorSet(x, y, z, 1.0f)
+		//);
+
+		// 转成列优先
+		m_ViewMat = XMMatrixTranspose(M);
 	}
 
 	viewDirty = false;
@@ -110,10 +123,11 @@ void Camera::Reset()
 	lastRoll = 0.01;
 	lastPitch = 0.0;
 	lastYaw = 0.01;
-	
-	mFovY = 45.0;
 
 	viewDirty = true;
+
+	// reset projectMat
+	SetLen(45.0, 1280.0 / 780.0, 0.1f, 1000.0f);
 }
 
 void Camera::UpdateProjMat()
@@ -137,7 +151,7 @@ void Camera::UpdateProjMat()
 
 void Camera::SetEyeAtUp(DirectX::XMVECTOR eye, DirectX::XMVECTOR at, DirectX::XMVECTOR up)
 {
-	//m_ViewMat = XMMatrixLookAtLH(eye, at, up);
+	m_ViewMat = XMMatrixLookAtLH(eye, at, up);
 }
 
 void Camera::SetLookAt(DirectX::XMVECTOR pos, DirectX::XMVECTOR target, DirectX::XMVECTOR vup)
@@ -147,6 +161,7 @@ void Camera::SetLookAt(DirectX::XMVECTOR pos, DirectX::XMVECTOR target, DirectX:
 
 	XMVECTOR lookat = XMVector3Normalize(XMVectorSubtract(target, pos));
 	XMVECTOR right = XMVector3Normalize(XMVector3Cross(vup, lookat));
+
 	XMVECTOR up = XMVector3Normalize(XMVector3Cross(lookat, right));
 
 	XMStoreFloat3(&mPosition, pos);

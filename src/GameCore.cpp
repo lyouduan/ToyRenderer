@@ -9,6 +9,7 @@
 #include "PSOManager.h"
 #include "ModelManager.h"
 #include "TextureManager.h"
+#include "SceneCaptureCube.h"
 
 using namespace TD3D12RHI;
 using TD3D12RHI::g_CommandContext;
@@ -28,8 +29,6 @@ void GameCore::OnInit()
 {
 	LoadPipeline();
 	LoadAssets();
-
-	
 }
 
 void GameCore::OnUpdate(const GameTimer& gt)
@@ -44,6 +43,8 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
 	
+
+	// update camera
 	m_Camera.UpdateViewMat();
 	//m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
@@ -61,7 +62,7 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_Camera.GetProjMat()));
 
 	passCB.EyePosition = m_Camera.GetPosition3f();
-	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+	memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
 }
 
 void GameCore::OnRender()
@@ -139,7 +140,8 @@ void GameCore::OnDestroy()
 void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader)
 {
 	auto obj = model.GetObjCBuffer();
-	objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
 	auto meshes = model.GetMeshes();
 	for (UINT i = 0; i < meshes.size(); ++i)
 	{
@@ -157,24 +159,120 @@ void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TS
 		//m_shader->SetParameter("normalMap", SRV[2]);
 
 		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
-		shader.BindParameters();
+		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
 		meshes[i].DrawMesh(g_CommandContext);
 	}
 }
 
+void GameCore::DrawCubeMap(TD3D12CommandContext& gfxContext)
+{
+	// set necessary state
+	gfxContext.GetCommandList()->RSSetViewports(1, m_RenderCubeMap->GetViewport());
+	gfxContext.GetCommandList()->RSSetScissorRects(1, m_RenderCubeMap->GetScissorRect());
+
+	gfxContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["cubemapPSO"].GetRootSignature());
+	gfxContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["cubemapPSO"].GetPSO());
+
+	ObjCBuffer obj;
+	auto cubemapObjCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
+	// indicate that back buffer will be used as a render target
+	gfxContext.Transition(m_RenderCubeMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	gfxContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+	PassCBuffer passcb;
+
+	for (UINT i = 0; i < 6; i++)
+	{
+		// indicate that back buffer will be used as a render target
+		float clearColor[4] = { 1.0,0.0,0.0,0.0 };
+		gfxContext.GetCommandList()->ClearRenderTargetView(m_RenderCubeMap->GetRTV(i), (FLOAT*)clearColor, 0, nullptr);
+		gfxContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+		gfxContext.GetCommandList()->OMSetRenderTargets(1, &m_RenderCubeMap->GetRTV(i), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
+		XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(m_RenderCubeMap->GetCamera(i).GetProjMat()));
+		XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(m_RenderCubeMap->GetCamera(i).GetViewMat()));
+		//memcpy(cubemapPassCBufferRef->ResourceLocation.MappedAddress, &passcb, sizeof(PassCBuffer));
+		auto cubemapPassCBufferRef = CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
+
+		m_shaderMap["cubemapShader"].SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
+		m_shaderMap["cubemapShader"].SetParameter("passCBuffer", cubemapPassCBufferRef);
+		m_shaderMap["cubemapShader"].SetParameter("map", TextureManager::m_SrvMaps["wood"]);
+		m_shaderMap["cubemapShader"].SetParameter("equirectangularMap", TextureManager::m_SrvMaps["loft"]);
+
+		m_shaderMap["cubemapShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
+		m_shaderMap["cubemapShader"].BindParameters();
+		ModelManager::m_MeshMaps["box"].DrawMesh(gfxContext);
+	}
+
+	gfxContext.Transition(m_RenderCubeMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	gfxContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
+	
+}
+
 void GameCore::LoadPipeline()
 {
-	uint32_t dxgiFactoryFlags = 0;
-#if defined(_DEBUG)
-	{
-		ComPtr<ID3D12Debug> debugController;
-		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-		{
-			debugController->EnableDebugLayer();
-			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-		}
-	}
+//	uint32_t dxgiFactoryFlags = 0;
+//#if defined(_DEBUG)
+//	{
+//		ComPtr<ID3D12Debug> debugController;
+//		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
+//		{
+//			debugController->EnableDebugLayer();
+//			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
+//		}
+//	}
+//#endif
+
+	uint32_t useDebugLayers = 0;
+#if _DEBUG
+	// Default to true for debug builds
+	useDebugLayers = 1;
 #endif
+
+	DWORD dxgiFactoryFlags = 0;
+
+	if (useDebugLayers)
+	{
+		Microsoft::WRL::ComPtr<ID3D12Debug> debugInterface;
+		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugInterface))))
+		{
+			debugInterface->EnableDebugLayer();
+
+			uint32_t useGPUBasedValidation = 0;
+			if (useGPUBasedValidation)
+			{
+				Microsoft::WRL::ComPtr<ID3D12Debug1> debugInterface1;
+				if (SUCCEEDED((debugInterface->QueryInterface(IID_PPV_ARGS(&debugInterface1)))))
+				{
+					debugInterface1->SetEnableGPUBasedValidation(true);
+				}
+			}
+		}
+		else
+		{
+			OutputDebugStringA("WARNING:  Unable to enable D3D12 debug validation layer\n");
+		}
+
+#if _DEBUG
+		ComPtr<IDXGIInfoQueue> dxgiInfoQueue;
+		if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(dxgiInfoQueue.GetAddressOf()))))
+		{
+			dxgiFactoryFlags = DXGI_CREATE_FACTORY_DEBUG;
+
+			dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_ERROR, true);
+			dxgiInfoQueue->SetBreakOnSeverity(DXGI_DEBUG_ALL, DXGI_INFO_QUEUE_MESSAGE_SEVERITY_CORRUPTION, true);
+
+			DXGI_INFO_QUEUE_MESSAGE_ID hide[] =
+			{
+				80 /* IDXGISwapChain::GetContainingOutput: The swapchain's adapter does not control the output on which the swapchain's window resides. */,
+			};
+			DXGI_INFO_QUEUE_FILTER filter = {};
+			filter.DenyList.NumIDs = _countof(hide);
+			filter.DenyList.pIDList = hide;
+			dxgiInfoQueue->AddStorageFilterEntries(DXGI_DEBUG_DXGI, &filter);
+		}
+#endif
+	}
 
 	ComPtr<IDXGIFactory4> factory;
 	ThrowIfFailed(CreateDXGIFactory2(dxgiFactoryFlags, IID_PPV_ARGS(&factory)));
@@ -233,14 +331,18 @@ void GameCore::LoadAssets()
 	PSOManager::InitializePSO();
 
 	// set camera
-	m_Camera.SetPosition(0, 2, -10);
+	m_Camera.SetPosition(0, 5, -20);
+	m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	m_RenderCubeMap->CreateCubeCamera({ 0, 0, 0 }, 0.1, 1000);
 
 	// load model
 	ModelManager::LoadModel();
-	boxMeshes.CreateBox(2, 2, 2, 3);
+	ModelManager::LoadMesh();
 
 	// load Texture
 	TextureManager::LoadTexture();
+
+	passCBufferRef = TD3D12RHI::CreateConstantBuffer(nullptr, sizeof(PassCBuffer));
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -252,9 +354,11 @@ void GameCore::PopulateCommandList()
 	// reset CommandAllocator and CommandList
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
+	
+	// draw cubemap
+	DrawCubeMap(g_CommandContext);
 
 	// set necessary state
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
@@ -269,21 +373,43 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["modelShader"]);
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
+	// full quad
+	/*
+	{
+		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["quadPSO"].GetRootSignature());
+		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["quadPSO"].GetPSO());
+		ObjCBuffer obj;
+		objCBufferRef = CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
+
+		m_shaderMap["quadShader"].SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
+		auto depthSrv = g_DepthBuffer.GetSRV();
+		m_shaderMap["quadShader"].SetParameter("tex", depthSrv);
+		m_shaderMap["quadShader"].BindParameters();
+		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+	}
+	*/
+
 	// sky box
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
-	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["skyboxPSO"].GetPSO());
-	
-	m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef);
-	m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
-	m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
-	m_shaderMap["skyboxShader"].SetDescriptorCache(boxMeshes.GetTD3D12DescriptorCache());
-	m_shaderMap["skyboxShader"].BindParameters();
-	boxMeshes.DrawMesh(g_CommandContext);
+	{
+		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
+		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["skyboxPSO"].GetPSO());
+
+		m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef); // don't need objCbuffer
+		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
+		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
+		m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_RenderCubeMap->GetSRV());
+
+		m_shaderMap["skyboxShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
+		m_shaderMap["skyboxShader"].BindParameters();
+		ModelManager::m_MeshMaps["box"].DrawMesh(g_CommandContext);
+	}
 
 	// ImGui
 	ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };

@@ -123,6 +123,9 @@
     <ClCompile Include="src\Graphic\TextureManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Graphic\SceneCaptureCube.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -257,10 +260,15 @@
     <ClInclude Include="src\Graphic\TextureManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Graphic\SceneCaptureCube.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl" />
     <None Include="shaders\skyboxShader.hlsl" />
+    <None Include="shaders\quadShader.hlsl" />
+    <None Include="shaders\cubeMap.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

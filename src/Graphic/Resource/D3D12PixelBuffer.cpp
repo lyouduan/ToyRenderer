@@ -304,3 +304,67 @@ void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
     Device->CreateShaderResourceView(Resource, &SRVDesc, m_SRVHandle);
 }
 
+void D3D12CubeBuffer::Create(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t NumMips, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+{
+    NumMips = (NumMips == 0 ? ComputeNumMips(Width, Height) : NumMips);
+    D3D12_RESOURCE_FLAGS Flags = CombineResourceFlags();
+
+    D3D12_RESOURCE_DESC ResourceDesc = DescribeTex2D(Width, Height, 6, NumMips, Format, Flags);
+
+    ResourceDesc.SampleDesc.Count = m_FragmentCount;
+    ResourceDesc.SampleDesc.Quality = 0;
+
+    D3D12_CLEAR_VALUE ClearValue = {};
+    ClearValue.Format = Format;
+    ClearValue.Color[0] = m_ClearColor.x;
+    ClearValue.Color[1] = m_ClearColor.y;
+    ClearValue.Color[2] = m_ClearColor.z;
+    ClearValue.Color[3] = m_ClearColor.w;
+
+    // create Texture Resource
+    CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMemPtr);
+    // create view
+    CreateDerivedViews(g_Device, Format, 6, NumMips);
+
+    ResourceLocation.UnderlyingResource->D3DResource->SetName(name.c_str());
+}
+
+void D3D12CubeBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, uint32_t ArraySize, uint32_t NumMips)
+{
+    m_NumMipMaps = NumMips - 1;
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
+    SRVDesc.Format = Format;
+    SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURECUBE; // CubeMap
+    SRVDesc.TextureCube.MipLevels = NumMips;
+    SRVDesc.TextureCube.ResourceMinLODClamp = 0.0;
+    SRVDesc.TextureCube.MostDetailedMip = 0;
+    
+    if (m_SRVHandle.ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+    {
+        m_SRVHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    }
+
+    ID3D12Resource* Resource = ResourceLocation.UnderlyingResource->D3DResource.Get();
+
+    // create the shader resource view
+    Device->CreateShaderResourceView(Resource, &SRVDesc, m_SRVHandle);
+    
+    D3D12_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+    RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2DARRAY; // six faces
+    RTVDesc.Texture2DArray.ArraySize = 1; 
+    RTVDesc.Format = Format;
+    for (int mip = 0; mip < NumMips; ++mip)
+    {
+        RTVDesc.Texture2DArray.MipSlice = mip;
+        for (UINT i = 0; i < 6; ++i)
+        {
+            RTVDesc.Texture2DArray.FirstArraySlice = i;
+            if (m_RTVHandle[mip * 6 + i].ptr == D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN)
+                m_RTVHandle[mip * 6 + i] = RTVHeapSlotAllocator->AllocateHeapSlot().Handle;
+
+            Device->CreateRenderTargetView(Resource, &RTVDesc, m_RTVHandle[mip * 6 + i]);
+        }
+    }
+}

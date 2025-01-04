@@ -12,12 +12,6 @@
 
 class Mesh;
 
-__declspec(align(16))
-struct ObjCBuffer
-{
-	XMFLOAT4X4 ModelMat;
-};
-
 class ModelLoader
 {
 public:

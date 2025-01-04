@@ -28,8 +28,8 @@ TD3D12ConstantBufferRef TD3D12RHI::CreateConstantBuffer(const void* Contents, ui
     TD3D12ConstantBufferRef ConstantBufferRef = std::make_shared<TD3D12ConstantBuffer>();
 
     void* Mappedata = UploadBufferAllocator->AllocUploadResource(Size, UPLOAD_RESOURCE_ALIGNMENT, ConstantBufferRef->ResourceLocation);
-
-    memcpy(Mappedata, Contents, Size);
+    if(Contents!= nullptr)
+        memcpy(Mappedata, Contents, Size);
 
     ConstantBufferRef->CreateDerivedViews(Size);
 

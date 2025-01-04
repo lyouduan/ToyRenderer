@@ -8,21 +8,11 @@
 #include "ModelLoader.h"
 #include "Mesh.h"
 #include "Shader.h"
+#include "SceneCaptureCube.h"
 
 using namespace DirectX;
 
 using Microsoft::WRL::ComPtr;
-
-
-
-__declspec(align(16))
-struct PassCBuffer
-{
-	XMFLOAT4X4 ViewMat;
-	XMFLOAT4X4 ProjMat;
-	XMFLOAT3 EyePosition;
-	FLOAT Pad0 = 0.0;
-};
 
 class GameCore : public DXSample
 {
@@ -36,6 +26,7 @@ public:
 private:
 
 	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader);
+	void DrawCubeMap(TD3D12CommandContext& gfxContext);
 
 	// pipleline objects
 	CD3DX12_VIEWPORT m_viewport;;
@@ -79,6 +70,7 @@ private:
 	//uint64_t m_fenceValue;
 
 	Camera m_Camera;
+	std::shared_ptr<SceneCaptureCube> m_RenderCubeMap = nullptr;
 
 	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
 	float scale = 1.0;
@@ -86,7 +78,6 @@ private:
 	DirectX::XMMATRIX m_ModelMatrix;
 	//DirectX::XMMATRIX m_ViewMatrix;
 	//DirectX::XMMATRIX m_ProjectionMatrix;
-	Mesh boxMeshes;
 
 	float totalTime = 0;
 	float RotationY = 0.5;

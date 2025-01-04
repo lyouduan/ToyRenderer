@@ -125,7 +125,6 @@ void TD3D12Texture::Create2D(TextureInfo info)
 
 void TD3D12Texture::CreateCube(size_t Width, size_t Height, DXGI_FORMAT Format)
 {
-
     m_state = D3D12_RESOURCE_STATE_COPY_DEST;
 
     m_Width = (uint32_t)Width;

@@ -43,9 +43,16 @@ PSInput VSMain(VSInput vin)
 {
     PSInput vout;
     vout.positionW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
-    vout.position = mul(mul(float4(vout.positionW, 1.0f), ViewMat), ProjMat);
+    
+    float4x4 viewProj = mul(ViewMat, ProjMat);
+    vout.position = mul(float4(vout.positionW, 1.0), viewProj);
+    
     vout.tex = vin.tex;
-    vout.normal = vin.normal;
+    
+    // uniform scale
+    float3x3 NormalMatrix = (float3x3)ModelMat;
+    vout.normal = mul(vin.normal, NormalMatrix);
+    
     return vout;
 }
 
@@ -68,7 +75,7 @@ float4 PSMain(PSInput pin) : SV_Target
     //float3 reflected = reflect(lightDir, pin.normal);
     //float ks = max(dot(reflected, eyeDir), 0.0);
     
-    float3 ambient = diffuse * 0.2;
+    float3 ambient = diffuse * 0.4;
     
     float3 color = diffuse * NdotL + ambient;
     
