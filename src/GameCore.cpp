@@ -10,6 +10,7 @@
 #include "ModelManager.h"
 #include "TextureManager.h"
 #include "SceneCaptureCube.h"
+#include "RenderInfo.h"
 
 using namespace TD3D12RHI;
 using TD3D12RHI::g_CommandContext;
@@ -17,7 +18,6 @@ using namespace PSOManager;
 
 GameCore::GameCore(uint32_t width, uint32_t height, std::wstring name)
 	:DXSample(width, height, name),
-	m_frameIndex(0),
 	m_viewport(0.0f,0.0f, static_cast<float>(width), static_cast<float>(height)),
 	m_scissorRect(0,0, static_cast<LONG>(width), static_cast<LONG>(height))
 {
@@ -62,9 +62,8 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_Camera.GetProjMat()));
 
 	passCB.EyePosition = m_Camera.GetPosition3f();
-	memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
-
-
+	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+	//memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
 }
 
 void GameCore::OnRender()
@@ -272,7 +271,7 @@ void GameCore::LoadPipeline()
 	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
 	ThrowIfFailed(TD3D12RHI::g_SwapCHain.As(&m_swapChain));
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	g_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 	// create frame resources
 	{
@@ -301,7 +300,6 @@ void GameCore::LoadAssets()
 	// load Texture
 	TextureManager::LoadTexture();
 
-	passCBufferRef = TD3D12RHI::CreateConstantBuffer(nullptr, sizeof(PassCBuffer));
 
 	// Render equirectangularMap To CubeMap
 	m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -324,14 +322,14 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
 
 	// indicate that back buffer will be used as a render target
-	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// indicate that back buffer will be used as a render target
-	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[m_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
+	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[g_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
 	g_CommandContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
-	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[m_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
+	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
@@ -379,7 +377,7 @@ void GameCore::PopulateCommandList()
 	ImGuiManager::EndRenderImGui(g_CommandContext);
 
 	// indicate that the back buffer will now be used to present
-	g_CommandContext.Transition(m_renderTragetrs[m_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);
+	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_PRESENT);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_COMMON);
 
 }
@@ -390,5 +388,5 @@ void GameCore::WaitForPreviousFrame()
 	
 	DescriptorCache->Reset();
 
-	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
+	g_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }

@@ -37,7 +37,6 @@ private:
 	ComPtr<ID3D12Device> m_device;
 
 	//ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
-	D3D12ColorBuffer m_renderTragetrs[FrameCount];
 
 	//TD3D12IndexBufferRef indexBufferRef;
 	//TD3D12VertexBufferRef vertexBufferRef;
@@ -66,7 +65,7 @@ private:
 	//D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
 
 	// synchronization objects
-	uint32_t m_frameIndex;
+	//uint32_t m_frameIndex;
 	//HANDLE m_fenceEvent;
 	//ComPtr<ID3D12Fence> m_fence;
 	//uint64_t m_fenceValue;
@@ -83,7 +82,7 @@ private:
 
 	float totalTime = 0;
 	float RotationY = 0.5;
-	float clearColor[4] = {0.9, 0.9, 0.9, 1.0};
+	float clearColor[4] = { 0.9, 0.9, 0.9, 1.0 };
 
 	void LoadPipeline();
 	void LoadAssets();

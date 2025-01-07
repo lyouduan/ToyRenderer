@@ -11,6 +11,7 @@ namespace TD3D12RHI
     TD3D12CommandContext g_CommandContext;
     ComPtr<IDXGISwapChain1> g_SwapCHain;
     Microsoft::WRL::ComPtr<ID3D12DescriptorHeap> g_ImGuiSrvHeap;
+    D3D12ColorBuffer m_renderTragetrs[FrameCount];
 
     // buffer
     D3D12DepthBuffer g_DepthBuffer;

@@ -34,6 +34,13 @@ void TD3D12Resource::Map()
 	ThrowIfFailed(D3DResource->Map(0, nullptr, &MappedBaseAddress));
 }
 
+void TD3D12Resource::Destroy()
+{
+	D3DResource = nullptr;
+	GPUVirtualAddress = 0;
+	MappedBaseAddress = nullptr;
+}
+
 TD3D12ResourceLocation::TD3D12ResourceLocation()
 {
 }

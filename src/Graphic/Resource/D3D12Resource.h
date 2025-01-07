@@ -13,6 +13,8 @@ public:
 	// for upload buffer
 	void Map();
 
+	void Destroy();
+
 public:
 
 	Microsoft::WRL::ComPtr<ID3D12Resource> D3DResource = nullptr;

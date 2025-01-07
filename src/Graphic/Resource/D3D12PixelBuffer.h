@@ -59,6 +59,8 @@ public:
 
 	DirectX::XMFLOAT4 GetClearClolor() const { return m_ClearColor; }
 
+	void Destroy();
+
 private:
 
 	D3D12_RESOURCE_FLAGS CombineResourceFlags(void) const

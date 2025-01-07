@@ -142,6 +142,13 @@ void D3D12ColorBuffer::CreateArray(const std::wstring& Name, uint32_t Width, uin
     CreateDerivedViews(g_Device, Format, ArrayCount, 1);
 }
 
+void D3D12ColorBuffer::Destroy()
+{
+    m_RTVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+    m_SRVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+    ResourceLocation.UnderlyingResource->D3DResource = nullptr;
+}
+
 void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, uint32_t ArraySize, uint32_t NumMips)
 {
     m_NumMipMaps = NumMips - 1;

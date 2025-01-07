@@ -23,6 +23,7 @@ namespace TD3D12RHI
 	extern uint32_t g_DisplayHeight;
 
 	// Buffer
+	extern D3D12ColorBuffer m_renderTragetrs[FrameCount];
 	extern D3D12DepthBuffer g_DepthBuffer;
 
 	// memory allocator

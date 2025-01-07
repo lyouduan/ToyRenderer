@@ -1,7 +1,7 @@
 #include "Win32Application.h"
 #include "GameTimer.h"
 #include "D3D12RHI.h"
-
+#include "Display.h"
 #include "ImGuiManager.h"
 
 HWND Win32Application::m_hwnd = nullptr;
@@ -58,8 +58,6 @@ int Win32Application::Run(DXSample* pSample, HINSTANCE hInstance, int nCmdShow)
         {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
-
-            
         }
         // Otherwise, do animation/game stuff.
         else
@@ -105,6 +103,12 @@ LRESULT Win32Application::WindowProc(HWND hWnd, uint32_t message, WPARAM wParam,
         {
             pSample->OnUpdate(pSample->GetTimer());
             pSample->OnRender();
+        }
+        return 0;
+
+    case WM_SIZE:
+        {
+           // onResize()
         }
         return 0;
 

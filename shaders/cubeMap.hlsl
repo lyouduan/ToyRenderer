@@ -56,6 +56,14 @@ PSInput VSMain(VSInput vin)
 
 float2 SphereToEquirectangular(float3 dir)
 {
+    // phi = arctan2(z,w)
+    // theta = arccos(y)
+    // 将phi和theta表示成2D贴图
+    // phi   = [-PI, PI]
+    // theta = [0, PI]
+    // u = (phi + PI) / (2PI)
+    // v = theta / PI
+    
     float phi = atan2(dir.z, dir.x);
     float theta = acos(dir.y);
     

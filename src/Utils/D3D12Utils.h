@@ -30,19 +30,3 @@ namespace MATH
     };
 }
 
-
-// hlsl data struct
-__declspec(align(16))
-struct ObjCBuffer
-{
-    XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
-};
-
-__declspec(align(16))
-struct PassCBuffer
-{
-    XMFLOAT4X4 ViewMat = MATH::IdentityMatrix;
-    XMFLOAT4X4 ProjMat = MATH::IdentityMatrix;
-    XMFLOAT3 EyePosition = {0.0, 0.0 ,0.0};
-    FLOAT Pad0 = 0.0;
-};
