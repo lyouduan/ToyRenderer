@@ -1,4 +1,5 @@
 #include "ModelManager.h"
+#include "RenderInfo.h"
 
 namespace ModelManager
 {
@@ -37,7 +38,7 @@ namespace ModelManager
 		m_MeshMaps["box"] = box;
 
 		Mesh sphere;
-		sphere.CreateSphere(1, 3, 3);
+		sphere.CreateSphere(1, 20, 20);
 		m_MeshMaps["sphere"] = sphere;
 		
 		Mesh Fullquad;

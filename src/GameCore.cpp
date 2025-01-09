@@ -39,7 +39,7 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	float rotate_angle = static_cast<float>(RotationY * 360  * totalTime);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX rotationYMat = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
-	XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y, position.z);
+	XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y+5, position.z);
 
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
 	
@@ -52,6 +52,9 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	//float aspectRatio = GetWidth() / static_cast<float>(GetHeight());
 	//m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
 	//m_Camera.SetAspectRatio(aspectRatio);
+	ObjCBuffer obj;
+	XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(m_ModelMatrix));
+	objCBufferRef = CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
 
 	ObjCBuffer objCB;
 	XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(m_ModelMatrix));
@@ -61,9 +64,20 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_Camera.GetViewMat()));
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_Camera.GetProjMat()));
 
+
+	passCB.lightPos = lightPos;
 	passCB.EyePosition = m_Camera.GetPosition3f();
 	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 	//memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
+
+	XMMATRIX m_LightMatrix = XMMatrixTranslation(lightPos.x, lightPos.y, lightPos.z);
+	ObjCBuffer lightObj;
+	XMStoreFloat4x4(&lightObj.ModelMat, XMMatrixTranspose(m_LightMatrix));
+	lightObjCBufferRef = CreateConstantBuffer(&lightObj, sizeof(ObjCBuffer));
+
+
+	// mat CBuffer
+	matCBufferRef = TD3D12RHI::CreateConstantBuffer(&matCB, sizeof(MatCBuffer));
 }
 
 void GameCore::OnRender()
@@ -134,6 +148,16 @@ void GameCore::UpdateImGui()
 
 	// camera control
 		m_Camera.CamerImGui();
+
+		ImGui::NewLine();
+		ImGui::Text("Light Position");
+		ImGui::SliderFloat3("lightPos", (float*)&lightPos, -300, 300);
+		ImGui::NewLine();
+
+		ImGui::Text("Model PBR");
+		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
+		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.0f, 1.0f);
+		ImGui::SliderFloat("Metallic", &matCB.metallic, 0.0f, 1.0f);
 
 		ImGui::End();
 	}
@@ -335,8 +359,8 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
-	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["modelShader"]);
-	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
+	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["modelShader"]);
+	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 	// full quad
 	/*
@@ -354,6 +378,26 @@ void GameCore::PopulateCommandList()
 		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 	}
 	*/
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
+	
+
+	m_shaderMap["pbrShader"].SetParameter("objCBuffer", objCBufferRef);
+	m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
+	m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
+	m_shaderMap["pbrShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
+	m_shaderMap["pbrShader"].BindParameters();
+	ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+
+
+	// light 
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["lightPSO"].GetPSO());
+	m_shaderMap["lightShader"].SetParameter("objCBuffer", lightObjCBufferRef);
+	m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
+	m_shaderMap["lightShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
+	m_shaderMap["lightShader"].BindParameters();
+	ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
 
 	// sky box
 	{

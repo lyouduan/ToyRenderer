@@ -41,8 +41,12 @@ private:
 	//TD3D12IndexBufferRef indexBufferRef;
 	//TD3D12VertexBufferRef vertexBufferRef;
 	TD3D12ConstantBufferRef objCBufferRef;
+	TD3D12ConstantBufferRef lightObjCBufferRef;
 	TD3D12ConstantBufferRef passCBufferRef;
+	TD3D12ConstantBufferRef matCBufferRef;
+	MatCBuffer matCB;
 
+	XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
 	//ComPtr<ID3D12Resource> m_Depth;
 
 	//ComPtr<ID3D12CommandAllocator> m_commandAllocator;
@@ -77,6 +81,7 @@ private:
 	float scale = 1.0;
 
 	DirectX::XMMATRIX m_ModelMatrix;
+	DirectX::XMMATRIX m_LightMatrix;
 	//DirectX::XMMATRIX m_ViewMatrix;
 	//DirectX::XMMATRIX m_ProjectionMatrix;
 

@@ -121,8 +121,6 @@ void test()
 	}
 }
 
-
-
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR lpCmdLine, int nCmdShow)
 {
 	// detect GPU memory architecture

@@ -52,6 +52,26 @@ namespace PSOManager
 			cubemapInfo.PSEntryPoint = "PSMain";
 			TShader cubemapShader(cubemapInfo);
 			m_shaderMap["cubemapShader"] = cubemapShader;
+
+			TShaderInfo pbrInfo;
+			pbrInfo.FileName = "shaders/pbr";
+			pbrInfo.bCreateVS = true;
+			pbrInfo.bCreatePS = true;
+			pbrInfo.bCreateCS = false;
+			pbrInfo.VSEntryPoint = "VSMain";
+			pbrInfo.PSEntryPoint = "PSMain";
+			TShader pbrShader(pbrInfo);
+			m_shaderMap["pbrShader"] = pbrShader;
+
+			TShaderInfo lightInfo;
+			lightInfo.FileName = "shaders/light";
+			lightInfo.bCreateVS = true;
+			lightInfo.bCreatePS = true;
+			lightInfo.bCreateCS = false;
+			lightInfo.VSEntryPoint = "VSMain";
+			lightInfo.PSEntryPoint = "PSMain";
+			TShader lightShader(lightInfo);
+			m_shaderMap["lightShader"] = lightShader;
 		}
 
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -67,7 +87,6 @@ namespace PSOManager
 		pso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		pso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		pso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-
 		D3D12_DEPTH_STENCIL_DESC dsvDesc = {};
 		dsvDesc.DepthEnable = TRUE;
 		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
@@ -79,7 +98,6 @@ namespace PSOManager
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
 		pso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		pso.Finalize();
-
 		m_gfxPSOMap["pso"] = pso;
 
 		GraphicsPSO boxPso(L"skybox PSO");
@@ -96,7 +114,6 @@ namespace PSOManager
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
 		boxPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		boxPso.Finalize();
-
 		m_gfxPSOMap["skyboxPSO"] = boxPso;
 
 		GraphicsPSO quadPso(L"quad PSO");
@@ -111,9 +128,38 @@ namespace PSOManager
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
 		quadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		quadPso.Finalize();
-
 		m_gfxPSOMap["quadPSO"] = quadPso;
 
+		GraphicsPSO pbrPso(L"pbr PSO");
+		pbrPso.SetShader(&m_shaderMap["pbrShader"]);
+		pbrPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		pbrPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		pbrPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		pbrPso.SetDepthStencilState(dsvDesc);
+		pbrPso.SetSampleMask(UINT_MAX);
+		pbrPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		pbrPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		pbrPso.Finalize();
+		m_gfxPSOMap["pbrPSO"] = pbrPso;
+
+		GraphicsPSO lightPso(L"light PSO");
+		lightPso.SetShader(&m_shaderMap["lightShader"]);
+		lightPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		rasterizerDesc.CullMode = D3D12_CULL_MODE_BACK;
+		lightPso.SetRasterizerState(rasterizerDesc);
+		lightPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		lightPso.SetDepthStencilState(dsvDesc);
+		lightPso.SetSampleMask(UINT_MAX);
+		lightPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		lightPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		lightPso.Finalize();
+		m_gfxPSOMap["lightPSO"] = lightPso;
 
 		GraphicsPSO cubemapPso(L"cubemap PSO");
 		cubemapPso.SetShader(&m_shaderMap["cubemapShader"]);
@@ -129,8 +175,10 @@ namespace PSOManager
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
 		cubemapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		cubemapPso.Finalize();
-
 		m_gfxPSOMap["cubemapPSO"] = cubemapPso;
+
+
+		
 	}
 
 }

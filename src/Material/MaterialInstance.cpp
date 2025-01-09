@@ -27,7 +27,7 @@ void MaterialInstance::CreateMaterialConstantBuffer()
 	matConst.Roughness = Parameters.Roughness;
 	matConst.MatTransform = Parameters.MatTransform;
 	matConst.EmissiveColor = Parameters.EmissvieColor;
-	matConst.ShadingModel = (UINT)material->ShadingModel;
+	//matConst.metallic = (UINT)material->ShadingModel;
 
 	// create ConstantBuffer
 	MaterialConstantBuffer = TD3D12RHI::CreateConstantBuffer(&matConst, sizeof(MatCBuffer));

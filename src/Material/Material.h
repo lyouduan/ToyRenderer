@@ -5,9 +5,8 @@
 #include <d3d12.h>
 #include <memory>
 #include "D3D12Utils.h"
-//
-class TShader;
-class TShaderDefines;
+#include "Shader.h"
+
 
 enum class EShadingMode
 {
@@ -34,7 +33,6 @@ struct MaterialRenderState
 	D3D12_CULL_MODE CullMode = D3D12_CULL_MODE_BACK;
 
 	D3D12_COMPARISON_FUNC DepthFun = D3D12_COMPARISON_FUNC_LESS;
-
 };
 class Material
 {
@@ -45,6 +43,7 @@ public:
 
 public:
 	std::string Name;
+
 	EShadingMode ShadingModel = EShadingMode::DefaultLit;
 
 	MaterialParameters Parameters;

@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "Mesh.h"
 #include "Shader.h"
+#include "RenderInfo.h"
 
 #include "D3D12CommandContext.h"
 #include <unordered_map>

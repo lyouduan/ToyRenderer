@@ -26,6 +26,8 @@
     <ClCompile Include="3rdParty\imgui\imgui_draw.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_tables.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\Material\MaterialInstance.cpp" />
+    <ClCompile Include="src\Material\Material.cpp" />
     <ClCompile Include="src\Graphic\SceneCaptureCube.cpp" />
     <ClCompile Include="src\Graphic\ModelManager.cpp" />
     <ClCompile Include="src\Utils\GeometryGenerator.cpp" />
@@ -66,6 +68,9 @@
     <ClInclude Include="3rdParty\imgui\imstb_rectpack.h" />
     <ClInclude Include="3rdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="3rdParty\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Material\MaterialInstance.h" />
+    <ClInclude Include="src\RenderInfo.h" />
+    <ClInclude Include="src\Material\Material.h" />
     <ClInclude Include="src\Graphic\SceneCaptureCube.h" />
     <ClInclude Include="src\Graphic\ModelManager.h" />
     <ClInclude Include="src\Utils\GeometryGenerator.h" />
@@ -154,6 +159,24 @@
       <FileType>Document</FileType>
     </None>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\pbr.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\light.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -213,7 +236,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;./src/Material</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
@@ -231,7 +254,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;./src/Material</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
@@ -249,7 +272,7 @@
       <PreprocessorDefinitions>_DEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;./src/Material</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
@@ -267,7 +290,7 @@
       <PreprocessorDefinitions>NDEBUG;_WINDOWS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>./3rdParty/imgui;./3rdParty/imgui/backends;./src;./src/Utils;./shaders;./inc;./src/Graphic;./src/Graphic/Resource/;./src/Graphic/Shader/;./src/Material</AdditionalIncludeDirectories>
       <EnableEnhancedInstructionSet>AdvancedVectorExtensions2</EnableEnhancedInstructionSet>
     </ClCompile>
     <Link>
