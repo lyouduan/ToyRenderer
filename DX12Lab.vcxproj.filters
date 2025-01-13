@@ -132,6 +132,9 @@
     <ClCompile Include="src\Material\MaterialInstance.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Render.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -278,6 +281,9 @@
     <ClInclude Include="src\RenderInfo.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Render.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl" />
@@ -286,6 +292,8 @@
     <None Include="shaders\cubeMap.hlsl" />
     <None Include="shaders\pbr.hlsl" />
     <None Include="shaders\light.hlsl" />
+    <None Include="shaders\irradianceMap.hlsl" />
+    <None Include="shaders\sample.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

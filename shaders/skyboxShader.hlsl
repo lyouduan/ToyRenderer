@@ -57,5 +57,12 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    return float4(CubeMap.SampleLevel(LinearWrapSampler, pin.positionW, 0.0).rgb, 1.0);
+    float3 N = normalize(pin.positionW);
+    
+    float3 color = CubeMap.SampleLevel(LinearWrapSampler, N, 0.0).rgb;
+    
+    color = color / (color + float3(1.0, 1.0, 1.0));
+    color = pow(color, 1.0 / 2.2);
+    
+    return float4(color, 1.0);
 }

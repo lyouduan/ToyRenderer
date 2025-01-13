@@ -10,6 +10,7 @@
 #include "Shader.h"
 #include "SceneCaptureCube.h"
 #include "PSO.h"
+#include "Render.h"
 
 using namespace DirectX;
 
@@ -36,10 +37,6 @@ private:
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12Device> m_device;
 
-	//ComPtr<ID3D12Resource> m_renderTragetrs[FrameCount];
-
-	//TD3D12IndexBufferRef indexBufferRef;
-	//TD3D12VertexBufferRef vertexBufferRef;
 	TD3D12ConstantBufferRef objCBufferRef;
 	TD3D12ConstantBufferRef lightObjCBufferRef;
 	TD3D12ConstantBufferRef passCBufferRef;
@@ -47,43 +44,16 @@ private:
 	MatCBuffer matCB;
 
 	XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
-	//ComPtr<ID3D12Resource> m_Depth;
-
-	//ComPtr<ID3D12CommandAllocator> m_commandAllocator;
-	//ComPtr<ID3D12CommandQueue> m_commandQueue;
-	//ComPtr<ID3D12GraphicsCommandList> m_commandList;
-
-	//ComPtr<ID3D12RootSignature> m_rootSignature;
-	//ComPtr<ID3D12DescriptorHeap> m_rtvHeap;
-	//ComPtr<ID3D12PipelineState> m_pipelineState;
-	//uint32_t m_rtvDescriptorSize;
-
-	//std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> DsvDescriptors;
-	//std::unique_ptr<TShader> m_shader = nullptr;
-
-	//std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
-
-	// app resource
-	//ComPtr<ID3D12Resource> m_vertexBuffer;
-	//D3D12_VERTEX_BUFFER_VIEW m_vertexBufferView;
-	//D3D12_INDEX_BUFFER_VIEW m_indexBufferView;
-
-	// synchronization objects
-	//uint32_t m_frameIndex;
-	//HANDLE m_fenceEvent;
-	//ComPtr<ID3D12Fence> m_fence;
-	//uint64_t m_fenceValue;
 
 	Camera m_Camera;
-	std::shared_ptr<SceneCaptureCube> m_RenderCubeMap = nullptr;
+
+	std::unique_ptr<TRender> m_Render;
 
 	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
 	float scale = 1.0;
 
 	DirectX::XMMATRIX m_ModelMatrix;
 	DirectX::XMMATRIX m_LightMatrix;
-	//DirectX::XMMATRIX m_ViewMatrix;
-	//DirectX::XMMATRIX m_ProjectionMatrix;
 
 	float totalTime = 0;
 	float RotationY = 0.5;

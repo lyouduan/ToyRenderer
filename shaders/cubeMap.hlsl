@@ -76,12 +76,10 @@ float2 SphereToEquirectangular(float3 dir)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    pin.positionW += EyePosW;
     float2 uv = SphereToEquirectangular(normalize(pin.positionW));
     // dx坐标系在左上角， openGL在左下角
     //uv.y = 1.0 - uv.y;
-    float3 color = float3(0, 0, 0);
-    color = equirectangularMap.Sample(LinearWrapSampler, uv).rgb;
+    float3 color = equirectangularMap.Sample(LinearWrapSampler, uv).rgb;
 
     return float4(color, 1.0);
 }

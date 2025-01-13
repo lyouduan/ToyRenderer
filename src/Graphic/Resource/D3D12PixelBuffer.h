@@ -113,6 +113,8 @@ public:
 		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() const { return m_DSVHandle; }
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() { return m_DSVHandle; }
+
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_SRVHandle; }
 
 	float GetClearDepth() const { return m_ClearDepth; }

@@ -42,16 +42,10 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y+5, position.z);
 
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
-	
 
 	// update camera
 	m_Camera.UpdateViewMat();
-	//m_ViewMatrix = XMMatrixLookAtLH(eyePosition, focusPoint, upDirection);
 
-	// Update the projection matrix.
-	//float aspectRatio = GetWidth() / static_cast<float>(GetHeight());
-	//m_ProjectionMatrix = XMMatrixPerspectiveFovLH(XMConvertToRadians(45.0), aspectRatio, 0.1f, 100.0f);
-	//m_Camera.SetAspectRatio(aspectRatio);
 	ObjCBuffer obj;
 	XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(m_ModelMatrix));
 	objCBufferRef = CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
@@ -74,7 +68,6 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	ObjCBuffer lightObj;
 	XMStoreFloat4x4(&lightObj.ModelMat, XMMatrixTranspose(m_LightMatrix));
 	lightObjCBufferRef = CreateConstantBuffer(&lightObj, sizeof(ObjCBuffer));
-
 
 	// mat CBuffer
 	matCBufferRef = TD3D12RHI::CreateConstantBuffer(&matCB, sizeof(MatCBuffer));
@@ -131,13 +124,13 @@ void GameCore::UpdateImGui()
 
 		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
-		if(ImGui::Checkbox("EquirectangularMap", &ImGuiManager::useCubeMap))
-		{
-			if(ImGuiManager::useCubeMap)
-				m_RenderCubeMap->SetIsUseCubeMap(true);
-			else
-				m_RenderCubeMap->SetIsUseCubeMap(false);
-		}
+		//if(ImGui::Checkbox("EquirectangularMap", &ImGuiManager::useCubeMap))
+		//{
+		//	if(ImGuiManager::useCubeMap)
+		//		m_RenderCubeMap->SetIsUseCubeMap(true);
+		//	else
+		//		m_RenderCubeMap->SetIsUseCubeMap(false);
+		//}
 		//if (ImGui::Button("CubeMap"))                          // Buttons return true when clicked (most widgets return true when edited/activated)
 		//counter++;
 	//ImGui::SameLine();
@@ -326,9 +319,14 @@ void GameCore::LoadAssets()
 
 
 	// Render equirectangularMap To CubeMap
-	m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-	m_RenderCubeMap->CreateCubeCamera({ 0, 0, 0 }, 0.1, 1000);
-	m_RenderCubeMap->DrawEquirectangularMapToCubeMap(g_CommandContext);
+	//m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+	//m_RenderCubeMap->CreateCubeCamera({ 0, 0, 0 }, 0.1, 10);
+	//m_RenderCubeMap->DrawEquirectangularMapToCubeMap(g_CommandContext);
+	m_Render = std::make_unique<TRender>();
+	m_Render->Initalize();
+	
+	m_Render->CreateIBLEnvironmentMap();
+	m_Render->CreateIBLIrradianceMap();
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -340,6 +338,8 @@ void GameCore::PopulateCommandList()
 	// reset CommandAllocator and CommandList
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
+
+	//if(g_frameIndex == 0)
 
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
@@ -356,9 +356,8 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
-	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
-	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
-
+	//g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
+	//g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["modelShader"]);
 	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
@@ -381,14 +380,13 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
 	
-
 	m_shaderMap["pbrShader"].SetParameter("objCBuffer", objCBufferRef);
 	m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
 	m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
+	m_shaderMap["pbrShader"].SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
 	m_shaderMap["pbrShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
 	m_shaderMap["pbrShader"].BindParameters();
 	ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
-
 
 	// light 
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
@@ -407,10 +405,11 @@ void GameCore::PopulateCommandList()
 		m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef); // don't need objCbuffer
 		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
 
-		if (m_RenderCubeMap->GetIsUseCubeMap())
-			m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_RenderCubeMap->GetSRV());
-		else
-			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
+		//if (m_RenderCubeMap->GetIsUseCubeMap())
+		//	m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_RenderCubeMap->GetSRV());
+		//else
+		//	m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
+		m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
 
 		m_shaderMap["skyboxShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
 		m_shaderMap["skyboxShader"].BindParameters();

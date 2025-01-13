@@ -72,6 +72,16 @@ namespace PSOManager
 			lightInfo.PSEntryPoint = "PSMain";
 			TShader lightShader(lightInfo);
 			m_shaderMap["lightShader"] = lightShader;
+
+			TShaderInfo irradianceMapInfo;
+			irradianceMapInfo.FileName = "shaders/irradianceMap";
+			irradianceMapInfo.bCreateVS = true;
+			irradianceMapInfo.bCreatePS = true;
+			irradianceMapInfo.bCreateCS = false;
+			irradianceMapInfo.VSEntryPoint = "VSMain";
+			irradianceMapInfo.PSEntryPoint = "PSMain";
+			TShader irradianceMapShader(irradianceMapInfo);
+			m_shaderMap["irradianceMapShader"] = irradianceMapShader;
 		}
 
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -177,8 +187,21 @@ namespace PSOManager
 		cubemapPso.Finalize();
 		m_gfxPSOMap["cubemapPSO"] = cubemapPso;
 
-
-		
+		GraphicsPSO irradianceMapPso(L"irradianceMap PSO");
+		irradianceMapPso.SetShader(&m_shaderMap["irradianceMapShader"]);
+		irradianceMapPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // camere inside skybox
+		irradianceMapPso.SetRasterizerState(rasterizerDesc);
+		irradianceMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // depth = 1
+		irradianceMapPso.SetDepthStencilState(dsvDesc);
+		irradianceMapPso.SetSampleMask(UINT_MAX);
+		irradianceMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		irradianceMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		irradianceMapPso.Finalize();
+		m_gfxPSOMap["irradianceMapPSO"] = irradianceMapPso;
 	}
 
 }

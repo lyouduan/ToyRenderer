@@ -31,6 +31,7 @@ cbuffer matCBuffer : register(b2)
 Texture2D diffuseMap : register(t0);
 Texture2D specularMap : register(t1);
 Texture2D normalMap : register(t2);
+TextureCube IrradianceMap : register(t0);
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -172,8 +173,8 @@ float4 PSMain(PSInput pin) : SV_Target
         // attenuation
         float distance = length(gLightPos - pin.positionW);
         float attenuation = 1.0 / (distance * distance);
-        float3 radiance = gLightColor * attenuation;
-        
+        //float3 radiance = gLightColor * attenuation;
+        float3 radiance = IrradianceMap.Sample(LinearWrapSampler, N).rgb;
         // cook-torrance brdf
         //float3 fr = DefaultBRDF(L, N, V, gRoughness, gMetallic, gDiffuseAlbedo.rgb);
         
@@ -187,7 +188,7 @@ float4 PSMain(PSInput pin) : SV_Target
     
     float3 color = ambient + Lo;
     
-    // HDR and tone mapping
+    // HDR
     color = color /(color + float3(1.0, 1.0, 1.0));
     // gamma correct
     color = pow(color, 1.0 / 2.2);
