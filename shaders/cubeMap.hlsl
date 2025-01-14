@@ -79,7 +79,6 @@ float2 SphereToEquirectangular(float3 dir)
     return float2(u, v);
 }
 
-
 float4 PSMain(PSInput pin) : SV_Target
 {
     float2 uv = SphereToEquirectangular(normalize(pin.positionW));

@@ -42,7 +42,7 @@ namespace ModelManager
 		m_MeshMaps["sphere"] = sphere;
 		
 		Mesh Fullquad;
-		Fullquad.CreateQuad(0, 0, 1, 1, 0);
+		Fullquad.CreateQuad(-1, 1, 2, 2, 0);
 		m_MeshMaps["FullQuad"] = Fullquad;
 	}
 

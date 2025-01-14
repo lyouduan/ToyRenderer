@@ -45,6 +45,9 @@ void TD3D12CommandContext::DestroyCommandContext()
 
 void TD3D12CommandContext::Transition(TD3D12Resource* resource, D3D12_RESOURCE_STATES afterState)
 {
+	if (resource->CurrentState == afterState)
+		return;
+
 	auto barrier = CD3DX12_RESOURCE_BARRIER::Transition(
 		resource->D3DResource.Get(),
 		resource->CurrentState,

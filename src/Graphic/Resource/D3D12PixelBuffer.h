@@ -52,7 +52,11 @@ public:
 	void CreateArray(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t ArrayCount,
 		DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV(void) { return m_RTVHandle; }
+
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV(void) const { return m_RTVHandle; }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) { return m_SRVHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) const { return m_SRVHandle; }
 
 	void SetClearColor(DirectX::XMFLOAT4 ClearColor) { m_ClearColor = ClearColor; }
@@ -146,6 +150,7 @@ public:
 
 	void Create(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t NumMips, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 	
+
 	const D3D12_CPU_DESCRIPTOR_HANDLE* GetRTV() const { return m_RTVHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV(int i ) const { return m_RTVHandle[i]; }
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) { return m_SRVHandle; }

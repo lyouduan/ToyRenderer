@@ -43,6 +43,16 @@ namespace PSOManager
 			TShader quadShader(quadInfo);
 			m_shaderMap["quadShader"] = quadShader;
 
+			TShaderInfo brdfInfo;
+			brdfInfo.FileName = "shaders/brdf";
+			brdfInfo.bCreateVS = true;
+			brdfInfo.bCreatePS = true;
+			brdfInfo.bCreateCS = false;
+			brdfInfo.VSEntryPoint = "VSMain";
+			brdfInfo.PSEntryPoint = "PSMain";
+			TShader brdfShader(brdfInfo);
+			m_shaderMap["brdfShader"] = brdfShader;
+
 			TShaderInfo cubemapInfo;
 			cubemapInfo.FileName = "shaders/cubeMap";
 			cubemapInfo.bCreateVS = true;
@@ -141,7 +151,8 @@ namespace PSOManager
 		quadPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		quadPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		quadPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; 
+		dsvDesc.DepthEnable = TRUE; 
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 		quadPso.SetDepthStencilState(dsvDesc);
 		quadPso.SetSampleMask(UINT_MAX);
 		quadPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
@@ -149,6 +160,20 @@ namespace PSOManager
 		quadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		quadPso.Finalize();
 		m_gfxPSOMap["quadPSO"] = quadPso;
+
+		GraphicsPSO brdfPso(L"brdf PSO");
+		brdfPso.SetShader(&m_shaderMap["brdfShader"]);
+		brdfPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		brdfPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		brdfPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = FALSE;
+		brdfPso.SetDepthStencilState(dsvDesc);
+		brdfPso.SetSampleMask(UINT_MAX);
+		brdfPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		brdfPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8_UNORM, DXGI_FORMAT_UNKNOWN);
+		brdfPso.Finalize();
+		m_gfxPSOMap["brdfPSO"] = brdfPso;
 
 		GraphicsPSO pbrPso(L"pbr PSO");
 		pbrPso.SetShader(&m_shaderMap["pbrShader"]);

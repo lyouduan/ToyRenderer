@@ -3,6 +3,7 @@
 #include <memory>
 #include <vector>
 #include "SceneCaptureCube.h"
+#include "RenderTarget.h"
 
 class SceneCaptureCube;
 
@@ -17,6 +18,7 @@ public:
 	void CreateIBLEnvironmentMap();
 	void CreateIBLIrradianceMap();
 	void CreateIBLPrefilterMap();
+	void CreateIBLLUT2D();
 
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
@@ -28,6 +30,8 @@ public:
 		return IBLPrefilterMaps[i]; 
 	}
 	std::vector<std::unique_ptr<SceneCaptureCube>>& GetIBLPrefilterMaps() { return IBLPrefilterMaps; }
+
+	std::unique_ptr<RenderTarget2D>& GetIBLBrdfLUT2D() { return IBLBrdfLUT2D; }
 
 	bool GetEnableIBLEnvLighting() { return bEnableIBLEnvLighting; }
 	void SetEnableIBLEnvLighting(bool b) { bEnableIBLEnvLighting = b; }
@@ -44,6 +48,8 @@ private:
 	std::unique_ptr<SceneCaptureCube> IBLEnvironmentMap;
 	std::unique_ptr<SceneCaptureCube> IBLIrradianceMap;
 	std::vector<std::unique_ptr<SceneCaptureCube>> IBLPrefilterMaps;
+
+	std::unique_ptr<RenderTarget2D> IBLBrdfLUT2D;
 
 	bool bEnableIBLEnvLighting = false;
 };

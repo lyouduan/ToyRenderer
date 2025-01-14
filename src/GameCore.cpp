@@ -328,6 +328,7 @@ void GameCore::LoadAssets()
 	m_Render->CreateIBLEnvironmentMap();
 	m_Render->CreateIBLIrradianceMap();
 	m_Render->CreateIBLPrefilterMap();
+	m_Render->CreateIBLLUT2D();
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -363,7 +364,7 @@ void GameCore::PopulateCommandList()
 	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 	// full quad
-	/*
+	
 	{
 		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["quadPSO"].GetRootSignature());
 		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["quadPSO"].GetPSO());
@@ -372,12 +373,12 @@ void GameCore::PopulateCommandList()
 
 
 		m_shaderMap["quadShader"].SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
-		auto depthSrv = g_DepthBuffer.GetSRV();
+		auto depthSrv = m_Render->GetIBLBrdfLUT2D()->GetSRV();
 		m_shaderMap["quadShader"].SetParameter("tex", depthSrv);
 		m_shaderMap["quadShader"].BindParameters();
 		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 	}
-	*/
+
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
 	

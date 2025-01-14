@@ -33,6 +33,6 @@ SamplerState AnisotropicClampSampler : register(s5);
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float3 color = tex.Sample(LinearWrapSampler, pin.tex).rrr;
-    return float4(color, 1.0);
+    float2 color = tex.Sample(LinearClampSampler, pin.tex);
+    return float4(color, 0.0, 1.0);
 }

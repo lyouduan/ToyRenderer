@@ -152,6 +152,7 @@ void TRender::CreateIBLPrefilterMap()
 
 		ObjCBuffer obj;
 		PassCBuffer passcb;
+		passcb.Pad0 = (float)Mip / (float)(IBLPrefilterMaxMipLevel - 1);
 
 		for (UINT i = 0; i < 6; i++)
 		{
@@ -165,9 +166,7 @@ void TRender::CreateIBLPrefilterMap()
 				auto camera = IBLPrefilterMaps[Mip]->GetCamera(i);
 				XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(camera.GetViewMat()));
 				XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(camera.GetProjMat()));
-
 				// set roughness
-				passcb.Pad0 = (float)Mip / (float)(IBLPrefilterMaxMipLevel - 1);;
 			}
 
 			auto cubemapPassCBufferRef = TD3D12RHI::CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
@@ -187,6 +186,42 @@ void TRender::CreateIBLPrefilterMap()
 	g_CommandContext.ExecuteCommandLists();
 }
 
+void TRender::CreateIBLLUT2D()
+{
+	g_CommandContext.ResetCommandList();
+
+	auto shader = PSOManager::m_shaderMap["brdfShader"];
+	auto pso = PSOManager::m_gfxPSOMap["brdfPSO"];
+	auto fullQuadMesh = ModelManager::m_MeshMaps["FullQuad"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	g_CommandContext.Transition(IBLBrdfLUT2D->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	gfxCmdList->RSSetViewports(1, IBLBrdfLUT2D->GetViewport());
+	gfxCmdList->RSSetScissorRects(1, IBLBrdfLUT2D->GetScissorRect());
+
+	// set viewport and scirssor
+	// set RootSignature and PSO
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	{
+		float clearColor[4] = { 0.0,0.0,0.0,0.0 };
+		gfxCmdList->ClearRenderTargetView(IBLBrdfLUT2D->GetRTV(), (FLOAT*)clearColor, 0, nullptr);
+		//gfxCmdList->ClearDepthStencilView(IBLIrradianceMap->GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0, 0, 0, nullptr);
+		gfxCmdList->OMSetRenderTargets(1, &IBLBrdfLUT2D->GetRTV(), TRUE, nullptr);
+
+		shader.SetDescriptorCache(fullQuadMesh.GetTD3D12DescriptorCache());
+		shader.BindParameters();
+		fullQuadMesh.DrawMesh(g_CommandContext);
+	}
+
+	// transition buffer state
+	g_CommandContext.Transition(IBLIrradianceMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	g_CommandContext.ExecuteCommandLists();
+}
+
 void TRender::CreateSceneCaptureCube()
 {
 	IBLEnvironmentMap = std::make_unique<SceneCaptureCube>(L"IBL Environment Map", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -203,4 +238,6 @@ void TRender::CreateSceneCaptureCube()
 
 		IBLPrefilterMaps.push_back(std::move(PrefilterMap));
 	}
+
+	IBLBrdfLUT2D = std::make_unique<RenderTarget2D>(L"IBL BRDF LUT2D", 128, 128, 1, DXGI_FORMAT_R8G8_UNORM);
 }
