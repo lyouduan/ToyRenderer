@@ -6,10 +6,16 @@ cbuffer objCBuffer : register(b0)
 
 cbuffer passCBuffer : register(b1)
 {
-    float4x4 ViewMat;
-    float4x4 ProjMat;
+    float4x4 gViewMat;
+    float4x4 gProjMat;
+    
     float3 gEyePosW;
     float pad0;
+    
+    float3 gLightPos;
+    float pad1;
+    float3 gLightColor;
+    float pad2;
 }
 
 Texture2D diffuseMap : register(t0);
@@ -44,7 +50,7 @@ PSInput VSMain(VSInput vin)
     PSInput vout;
     vout.positionW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
     
-    float4x4 viewProj = mul(ViewMat, ProjMat);
+    float4x4 viewProj = mul(gViewMat, gProjMat);
     vout.position = mul(float4(vout.positionW, 1.0), viewProj);
     
     // uniform scale

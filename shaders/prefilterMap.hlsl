@@ -11,7 +11,7 @@ cbuffer passCBuffer : register(b1)
     float4x4 gProjMat;
     
     float3 gEyePosW;
-    float pad0;
+    float gRoughness;
     
     float3 gLightPos;
     float pad1;
@@ -35,7 +35,7 @@ struct PSInput
     float2 tex : TEXCOORD;
 };
 
-TextureCube EnvironmentMap : register(t0);
+TextureCube EnvironmentMap: register(t0);
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -43,7 +43,6 @@ SamplerState LinearWrapSampler : register(s2);
 SamplerState LinearClampSampler : register(s3);
 SamplerState AnisotropicWrapSampler : register(s4);
 SamplerState AnisotropicClampSampler : register(s5);
-
 
 PSInput VSMain(VSInput vin)
 {
@@ -63,36 +62,29 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float3 irradiance = float3(0, 0, 0);
-    
     float3 N = normalize(pin.positionW);
+    float3 R = N;
+    float3 V = R;
     
-    //float3 up = float3(0.0, 1.0, 0.0);
-    //float3 right = normalize(cross(up, N));
-    //up = normalize(cross(N, right));
-    //
-    //float sampleDelta = 0.25;
-    //float nrSamples = 0.0;
-    //for (float phi = 0.0; phi < 2.0 * PI; phi += sampleDelta)
-    //{
-    //    for (float theta = 0.0; theta < 0.5 * PI; theta += sampleDelta)
-    //    {
-    //        float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
-    //        float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
-    //        irradiance += EnvironmentMap.Sample(LinearWrapSampler, sampleVec).rgb * cos(theta) * sin(theta);
-    //        nrSamples++;
-    //    }
-    //}
-    //irradiance = PI * irradiance * (1 / (float) nrSamples);
-   
+    float3 prefilterColor = float3(0, 0, 0);
+    float TotalWeight = 0.0;
     const uint SAMPLE_NUM = 1024u;
+    
     for (uint i = 0u; i < SAMPLE_NUM; i++)
     {
-       float2 Xi = Hammersley(i, SAMPLE_NUM);
-       float3 L = CosOnHalfSphere(Xi, N);
-       irradiance += EnvironmentMap.Sample(LinearWrapSampler, L).rgb;
+        float2 Xi = Hammersley(i, SAMPLE_NUM);
+        float3 H = ImportanceSampleGGX(Xi, N, gRoughness);
+        float3 L = normalize(2.0 * dot(V, H) * H - V);
+        
+        float NoL = saturate(dot(N, L));
+        if(NoL> 0.0)
+        {
+            prefilterColor += EnvironmentMap.Sample(LinearWrapSampler, L).rgb * NoL;
+            TotalWeight += NoL;
+        }
     }
-    irradiance *= 1.0 / float(SAMPLE_NUM);
     
-    return float4(irradiance, 1.0);
+    prefilterColor /= TotalWeight;
+    
+    return float4(prefilterColor, 1.0);
 }

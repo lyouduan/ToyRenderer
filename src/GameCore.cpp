@@ -124,13 +124,13 @@ void GameCore::UpdateImGui()
 
 		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
-		//if(ImGui::Checkbox("EquirectangularMap", &ImGuiManager::useCubeMap))
-		//{
-		//	if(ImGuiManager::useCubeMap)
-		//		m_RenderCubeMap->SetIsUseCubeMap(true);
-		//	else
-		//		m_RenderCubeMap->SetIsUseCubeMap(false);
-		//}
+		if(ImGui::Checkbox("EquirectangularMap", &ImGuiManager::useCubeMap))
+		{
+			if(ImGuiManager::useCubeMap)
+				m_Render->SetEnableIBLEnvLighting(true);
+			else
+				m_Render->SetEnableIBLEnvLighting(false);
+		}
 		//if (ImGui::Button("CubeMap"))                          // Buttons return true when clicked (most widgets return true when edited/activated)
 		//counter++;
 	//ImGui::SameLine();
@@ -327,6 +327,7 @@ void GameCore::LoadAssets()
 	
 	m_Render->CreateIBLEnvironmentMap();
 	m_Render->CreateIBLIrradianceMap();
+	m_Render->CreateIBLPrefilterMap();
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -405,11 +406,11 @@ void GameCore::PopulateCommandList()
 		m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef); // don't need objCbuffer
 		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
 
-		//if (m_RenderCubeMap->GetIsUseCubeMap())
-		//	m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_RenderCubeMap->GetSRV());
-		//else
-		//	m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
-		m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+		if (m_Render->GetEnableIBLEnvLighting())
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLPrefilterMaps(0)->GetSRV());
+		else
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
+		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
 
 		m_shaderMap["skyboxShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
 		m_shaderMap["skyboxShader"].BindParameters();

@@ -82,6 +82,16 @@ namespace PSOManager
 			irradianceMapInfo.PSEntryPoint = "PSMain";
 			TShader irradianceMapShader(irradianceMapInfo);
 			m_shaderMap["irradianceMapShader"] = irradianceMapShader;
+
+			TShaderInfo prefilterMapInfo;
+			prefilterMapInfo.FileName = "shaders/prefilterMap";
+			prefilterMapInfo.bCreateVS = true;
+			prefilterMapInfo.bCreatePS = true;
+			prefilterMapInfo.bCreateCS = false;
+			prefilterMapInfo.VSEntryPoint = "VSMain";
+			prefilterMapInfo.PSEntryPoint = "PSMain";
+			TShader prefilterMapShader(prefilterMapInfo);
+			m_shaderMap["prefilterMapShader"] = prefilterMapShader;
 		}
 
 		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
@@ -177,13 +187,12 @@ namespace PSOManager
 		rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // camere inside skybox
 		cubemapPso.SetRasterizerState(rasterizerDesc);
 		cubemapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // depth = 1
+		dsvDesc.DepthEnable = FALSE;
 		cubemapPso.SetDepthStencilState(dsvDesc);
 		cubemapPso.SetSampleMask(UINT_MAX);
 		cubemapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
-		cubemapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		cubemapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN);
 		cubemapPso.Finalize();
 		m_gfxPSOMap["cubemapPSO"] = cubemapPso;
 
@@ -193,15 +202,29 @@ namespace PSOManager
 		rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // camere inside skybox
 		irradianceMapPso.SetRasterizerState(rasterizerDesc);
 		irradianceMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS; // depth = 1
+		dsvDesc.DepthEnable = FALSE;
 		irradianceMapPso.SetDepthStencilState(dsvDesc);
 		irradianceMapPso.SetSampleMask(UINT_MAX);
 		irradianceMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
-		irradianceMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		irradianceMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN);
 		irradianceMapPso.Finalize();
 		m_gfxPSOMap["irradianceMapPSO"] = irradianceMapPso;
+
+		GraphicsPSO prefilterMapPso(L"prefilterMap PSO");
+		prefilterMapPso.SetShader(&m_shaderMap["prefilterMapShader"]);
+		prefilterMapPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // camere inside skybox
+		prefilterMapPso.SetRasterizerState(rasterizerDesc);
+		prefilterMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = FALSE;
+		prefilterMapPso.SetDepthStencilState(dsvDesc);
+		prefilterMapPso.SetSampleMask(UINT_MAX);
+		prefilterMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		prefilterMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN);
+		prefilterMapPso.Finalize();
+		m_gfxPSOMap["prefilterMapPSO"] = prefilterMapPso;
 	}
 
 }

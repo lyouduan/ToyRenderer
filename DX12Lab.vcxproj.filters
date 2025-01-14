@@ -294,6 +294,7 @@
     <None Include="shaders\light.hlsl" />
     <None Include="shaders\irradianceMap.hlsl" />
     <None Include="shaders\sample.hlsl" />
+    <None Include="shaders\prefilterMap.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

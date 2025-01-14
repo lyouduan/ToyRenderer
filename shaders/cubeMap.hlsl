@@ -6,10 +6,16 @@ cbuffer objCBuffer : register(b0)
 
 cbuffer passCBuffer : register(b1)
 {
-    float4x4 ViewMat;
-    float4x4 ProjMat;
-    float3 EyePosW;
-    float padding;
+    float4x4 gViewMat;
+    float4x4 gProjMat;
+    
+    float3 gEyePosW;
+    float pad0;
+    
+    float3 gLightPos;
+    float pad1;
+    float3 gLightColor;
+    float pad2;
 }
 
 struct VSInput
@@ -46,7 +52,7 @@ PSInput VSMain(VSInput vin)
     //float4 posW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
     
     // Remove translation from the view matrix
-    float4x4 viewProj = mul(ViewMat, ProjMat);
+    float4x4 viewProj = mul(gViewMat, gProjMat);
     vout.position = mul(float4(vin.position.xyz, 1.0), viewProj);
     
     return vout;
@@ -79,7 +85,8 @@ float4 PSMain(PSInput pin) : SV_Target
     float2 uv = SphereToEquirectangular(normalize(pin.positionW));
     // dx坐标系在左上角， openGL在左下角
     //uv.y = 1.0 - uv.y;
-    float3 color = equirectangularMap.Sample(LinearWrapSampler, uv).rgb;
+    float3 color = float3(0, 0, 0);
+    color = equirectangularMap.Sample(LinearWrapSampler, uv).rgb;
 
     return float4(color, 1.0);
 }
