@@ -107,7 +107,6 @@ float4 PSMain(PSInput pin) : SV_Target
         //float NdotL = saturate(dot(N, L));
         //Lo += fr * radiance * NdotL;
         Lo = DirectLighting(radiance, L, N, V, gRoughness, gMetallic, gDiffuseAlbedo.rgb, 1);
-
     }
     
     // IBL ambient light

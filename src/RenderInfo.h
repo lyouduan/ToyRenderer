@@ -22,10 +22,10 @@ struct PassCBuffer
     XMFLOAT3 EyePosition = { 0.0, 0.0, 0.0 };
     FLOAT Pad0 = 0.0;
 
-    XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
+    XMFLOAT3 lightPos = { 0.0, 10.0, 25.0 };
     FLOAT Pad1 = 0.0;
 
-    XMFLOAT3 lightColor = { 150.0, 150.0, 150.0 };
+    XMFLOAT3 lightColor = { 1500.0, 1500.0, 1500.0 };
     FLOAT Pad2 = 0.0;
 };
 

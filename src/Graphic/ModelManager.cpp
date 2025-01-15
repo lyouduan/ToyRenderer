@@ -21,13 +21,25 @@ namespace ModelManager
 			assert(false);
 
 		float scale = 5;
-		XMMATRIX scalingMat1 = XMMatrixScaling(scale, scale, scale);
+		XMMATRIX scalingMat = XMMatrixScaling(scale, scale, scale);
 		const XMVECTOR rotationAxisX = XMVectorSet(1, 0, 0, 0);
 		XMMATRIX rotationMat = XMMatrixRotationAxis(rotationAxisX, XMConvertToRadians(90));
 		ObjCBuffer objCB;
-		XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(scalingMat1 * rotationMat));
+		XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(scalingMat * rotationMat));
 		wall.SetObjCBuffer(objCB);
 		m_ModelMaps["wall"] = wall;
+
+
+		ModelLoader Cerberus_LP;
+		if (!Cerberus_LP.Load("./models/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX"))
+			assert(false);
+
+		scalingMat = XMMatrixScaling(0.05, 0.05, 0.05);
+		auto rotationAxisY = XMVectorSet(0, 1, 0, 0);
+		auto rotationMatY = rotationMat *  XMMatrixRotationAxis(rotationAxisY, XMConvertToRadians(-45));
+		XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(rotationMatY * scalingMat));
+		Cerberus_LP.SetObjCBuffer(objCB);
+		m_ModelMaps["Cerberus_LP"] = Cerberus_LP;
 		
 	}
 

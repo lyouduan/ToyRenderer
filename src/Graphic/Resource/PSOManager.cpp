@@ -115,7 +115,8 @@ namespace PSOManager
 		GraphicsPSO pso(L"Normal PSO");
 		pso.SetShader(&m_shaderMap["modelShader"]);
 		pso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		pso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
+		pso.SetRasterizerState(rasterizerDesc);
 		pso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
 		D3D12_DEPTH_STENCIL_DESC dsvDesc = {};
 		dsvDesc.DepthEnable = TRUE;
@@ -133,7 +134,6 @@ namespace PSOManager
 		GraphicsPSO boxPso(L"skybox PSO");
 		boxPso.SetShader(&m_shaderMap["skyboxShader"]);
 		boxPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		D3D12_RASTERIZER_DESC rasterizerDesc = CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT);
 		rasterizerDesc.CullMode = D3D12_CULL_MODE_NONE; // camere inside skybox
 		boxPso.SetRasterizerState(rasterizerDesc);
 		boxPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));

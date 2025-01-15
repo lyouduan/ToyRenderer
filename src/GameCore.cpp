@@ -170,15 +170,31 @@ void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TS
 		shader.SetParameter("objCBuffer", objCBufferRef);
 		shader.SetParameter("passCBuffer", passCBufferRef);
 		// draw call
-		auto SRV = meshes[i].GetSRV();
-		if (!SRV.empty())
-			shader.SetParameter("diffuseMap", SRV[0]);
-		else
-		{
-			shader.SetParameter("diffuseMap", NullDescriptor);
-		}
+		//auto SRV = meshes[i].GetSRV();
+		//if (!SRV.empty())
+			//shader.SetParameter("diffuseMap", TextureManager::m_SrvMaps["Cerberus_A"]);
+		//else
+		//{
+			//shader.SetParameter("diffuseMap", NullDescriptor);
+		//}
 		//m_shader->SetParameter("specularMap", SRV[1]);
 		//m_shader->SetParameter("normalMap", SRV[2]);
+
+		// pbr Maps
+		shader.SetParameter("diffuseMap", TextureManager::m_SrvMaps["Cerberus_A"]);
+		shader.SetParameter("metallicMap", TextureManager::m_SrvMaps["Cerberus_M"]);
+		shader.SetParameter("normalMap", TextureManager::m_SrvMaps["Cerberus_N"]);
+		shader.SetParameter("roughnessMap", TextureManager::m_SrvMaps["Cerberus_R"]);
+
+		// IBL Maps
+		shader.SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+		for (UINT i = 0; i < m_Render->GetIBLPrefilterMaps().size(); ++i)
+		{
+			SRVHandleList.push_back(m_Render->GetIBLPrefilterMap(i)->GetSRV());
+		}
+		shader.SetParameter("PrefilterMap", SRVHandleList);
+		shader.SetParameter("BrdfLUT2D", m_Render->GetIBLBrdfLUT2D()->GetSRV());
 
 		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
@@ -358,9 +374,9 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
 	// Record commands
-	//g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
-	//g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
-	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["modelShader"]);
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cerberus_LP"], m_shaderMap["modelShader"]);
 	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 	// full quad
