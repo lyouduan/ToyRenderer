@@ -1,4 +1,6 @@
 #define PI 3.14159265359
+#define IBL_PREFILTER_ENVMAP_MIP_LEVEL 5
+
 static const float F0_DIELECTRIC = 0.04f;
 
 float pow4(float n)
@@ -30,6 +32,11 @@ float GGX(float a2, float NoH)
 float3 FresnelSchlick(float3 F0, float VoH)
 {
     return F0 + (1 - F0) * exp2((-5.55473 * VoH - 6.98316) * VoH);
+}
+
+float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness)
+{
+    return F0 + (max(float3(1.0 - roughness, 1.0 - roughness, 1.0 - roughness), F0) - F0) * pow5(saturate(1.0 - cosTheta));
 }
 
 // Schlick-GGX

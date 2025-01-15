@@ -1,6 +1,5 @@
 #include "PBRLighting.hlsl"
 
-
 cbuffer objCBuffer : register(b0)
 {
     float4x4 gModelMat;
@@ -31,10 +30,9 @@ cbuffer matCBuffer : register(b2)
     float gMetallic;
 }
 
-Texture2D diffuseMap : register(t0);
-Texture2D specularMap : register(t1);
-Texture2D normalMap : register(t2);
-TextureCube IrradianceMap : register(t0);
+TextureCube IrradianceMap;
+TextureCube PrefilterMap[IBL_PREFILTER_ENVMAP_MIP_LEVEL];
+Texture2D   BrdfLUT2D;
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -76,10 +74,24 @@ PSInput VSMain(VSInput vin)
     return vout;
 }
 
+float3 GetPrefilteredColor(float Roughness, float3 ReflectDir)
+{
+    float Level = Roughness * (IBL_PREFILTER_ENVMAP_MIP_LEVEL - 1);
+    int FloorLevel = floor(Level);
+    int CeilLevel = ceil(Level);
+
+    float3 FloorSample = PrefilterMap[FloorLevel].SampleLevel(LinearWrapSampler, ReflectDir, 0).rgb;
+    float3 CeilSample = PrefilterMap[CeilLevel].SampleLevel(LinearWrapSampler, ReflectDir, 0).rgb;
+	
+    float3 PrefilteredColor = lerp(FloorSample, CeilSample, (Level - FloorLevel));
+    return PrefilteredColor;
+}
+
 float4 PSMain(PSInput pin) : SV_Target
 {
     float3 N = normalize(pin.normal);
     float3 V = normalize(gEyePosW - pin.positionW);
+    float3 R = reflect(-V, N);
     
     float3 Lo = float3(0.0, 0.0, 0.0);
     {
@@ -88,8 +100,7 @@ float4 PSMain(PSInput pin) : SV_Target
         // attenuation
         float distance = length(gLightPos - pin.positionW);
         float attenuation = 1.0 / (distance * distance);
-        //float3 radiance = gLightColor * attenuation;
-        float3 radiance = IrradianceMap.Sample(LinearWrapSampler, N).rgb;
+        float3 radiance = gLightColor * attenuation;
         // cook-torrance brdf
         //float3 fr = DefaultBRDF(L, N, V, gRoughness, gMetallic, gDiffuseAlbedo.rgb);
         
@@ -99,7 +110,27 @@ float4 PSMain(PSInput pin) : SV_Target
 
     }
     
-    float3 ambient = 0.02 * gDiffuseAlbedo.rgb;
+    // IBL ambient light
+    float3 ambient = 0.0;
+    {
+        float3 F0 = lerp(F0_DIELECTRIC.rrr, gDiffuseAlbedo.rgb, gMetallic);
+        float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, gRoughness);
+        float3 kS = F;
+        float3 kD = 1.0 - kS;
+        kD *= 1.0 - gMetallic;
+        
+        float3 irradiance = IrradianceMap.Sample(LinearWrapSampler, N).rgb;
+        float3 diffuse = irradiance * gDiffuseAlbedo.rgb;
+    
+        // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
+        float3 prefilteredColor = GetPrefilteredColor(gRoughness, R);
+    
+        // LUT value
+        float NdotV = saturate(dot(N, V));
+        float2 brdf = BrdfLUT2D.Sample(LinearWrapSampler, float2(NdotV, gRoughness)).rg;
+        float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
+        ambient = kD * diffuse + specular;
+    }
     
     float3 color = ambient + Lo;
     

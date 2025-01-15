@@ -16,8 +16,15 @@ A toy  render written in C++ using DirectX 12.
 
 
 
+## Feature
+
+- [x] PBR and  IBL
+
+![IBL](.\screenshot\IBL.gif)
+
+
+
 ## TODO
 
-- [ ] PBR and  IBL
 - [ ] Shadows
 - [ ] Deferred Rendering

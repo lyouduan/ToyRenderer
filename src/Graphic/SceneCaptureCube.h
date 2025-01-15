@@ -37,8 +37,6 @@ public:
 	
 	void CreateCubeCamera(XMFLOAT3 pos, float nearZ, float farZ);
 
-	void DrawEquirectangularMapToCubeMap(TD3D12CommandContext& gfxContext);
-
 	bool& GetIsUseCubeMap() { return bUseCubeMap; }
 	void SetIsUseCubeMap(bool IsUse) { bUseCubeMap = IsUse; }
 

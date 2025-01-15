@@ -23,7 +23,7 @@ public:
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
-	std::unique_ptr<SceneCaptureCube>& GetIBLPrefilterMaps(int i) 
+	std::unique_ptr<SceneCaptureCube>& GetIBLPrefilterMap(int i) 
 	{ 
 		assert(i >= 0 && i < IBLPrefilterMaxMipLevel);
 

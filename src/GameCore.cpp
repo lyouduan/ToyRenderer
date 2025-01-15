@@ -149,7 +149,7 @@ void GameCore::UpdateImGui()
 
 		ImGui::Text("Model PBR");
 		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
-		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.0f, 1.0f);
+		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.001f, 1.0f);
 		ImGui::SliderFloat("Metallic", &matCB.metallic, 0.0f, 1.0f);
 
 		ImGui::End();
@@ -364,7 +364,7 @@ void GameCore::PopulateCommandList()
 	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 	// full quad
-	
+	/*
 	{
 		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["quadPSO"].GetRootSignature());
 		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["quadPSO"].GetPSO());
@@ -378,6 +378,7 @@ void GameCore::PopulateCommandList()
 		m_shaderMap["quadShader"].BindParameters();
 		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 	}
+	*/
 
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
@@ -386,6 +387,15 @@ void GameCore::PopulateCommandList()
 	m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
 	m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
 	m_shaderMap["pbrShader"].SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+	for (UINT i = 0; i < m_Render->GetIBLPrefilterMaps().size(); ++i)
+	{
+		SRVHandleList.push_back(m_Render->GetIBLPrefilterMap(i)->GetSRV());
+	}
+	m_shaderMap["pbrShader"].SetParameter("PrefilterMap", SRVHandleList);
+
+	m_shaderMap["pbrShader"].SetParameter("BrdfLUT2D", m_Render->GetIBLBrdfLUT2D()->GetSRV());
 	m_shaderMap["pbrShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
 	m_shaderMap["pbrShader"].BindParameters();
 	ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
@@ -408,7 +418,7 @@ void GameCore::PopulateCommandList()
 		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
 
 		if (m_Render->GetEnableIBLEnvLighting())
-			m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLPrefilterMaps(0)->GetSRV());
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLEnvironmemtMap()->GetSRV());
 		else
 			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
 		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
