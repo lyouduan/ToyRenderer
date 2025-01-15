@@ -21,8 +21,6 @@ A toy  render written in C++ using DirectX 12.
 - [x] PBR and  IBL
 
 ![IBL](./screenshot/IBL.gif)
-![IBL](https://github.com/lyouduan/ToyRenderer/blob/main/screenshot/IBL.gif)
-
 
 
 ## TODO
