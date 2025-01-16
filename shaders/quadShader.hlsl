@@ -24,6 +24,7 @@ PSInput VSMain(VSInput input)
 }
 
 Texture2D tex : register(t0);
+
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
 SamplerState LinearWrapSampler : register(s2);
@@ -33,6 +34,6 @@ SamplerState AnisotropicClampSampler : register(s5);
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float2 color = tex.Sample(LinearClampSampler, pin.tex);
-    return float4(color, 0.0, 1.0);
+    float3 color = tex.Sample(LinearClampSampler, pin.tex).rgb;
+    return float4(color, 1.0);
 }

@@ -4,6 +4,7 @@
 #include <vector>
 #include "SceneCaptureCube.h"
 #include "RenderTarget.h"
+#include "D3D12DescriptorCache.h"
 
 class SceneCaptureCube;
 
@@ -19,6 +20,10 @@ public:
 	void CreateIBLIrradianceMap();
 	void CreateIBLPrefilterMap();
 	void CreateIBLLUT2D();
+
+	// Deferred rendering
+	void GbuffersPass();
+	void LightingPass();
 
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
@@ -36,22 +41,40 @@ public:
 	bool GetEnableIBLEnvLighting() { return bEnableIBLEnvLighting; }
 	void SetEnableIBLEnvLighting(bool b) { bEnableIBLEnvLighting = b; }
 
+	bool GetbUseEquirectangularMap() { return bUseEquirectangularMap; }
+	void SetbUseEquirectangularMap(bool b) { bUseEquirectangularMap = b; }
+
+	std::unique_ptr<RenderTarget2D>& GetGBufferAlbedo() { return GBufferAlbedo; }
+	std::unique_ptr<RenderTarget2D>& GetGBufferSpecular() { return  GBufferSpecular; }
+	std::unique_ptr<RenderTarget2D>& GetGBufferWorldPos() { return GBufferWorldPos; }
+	std::unique_ptr<RenderTarget2D>& GetGBufferNormal() { return GBufferNormal; }
+
 private:
 
 	void CreateSceneCaptureCube();
 
+	void CreateGBuffers();
+
 private:
 
 	// PBR and IBL
+	bool bUseEquirectangularMap = false;
+	bool bEnableIBLEnvLighting = false;
+	
 	const static UINT IBLPrefilterMaxMipLevel = 5;
-
 	std::unique_ptr<SceneCaptureCube> IBLEnvironmentMap;
 	std::unique_ptr<SceneCaptureCube> IBLIrradianceMap;
 	std::vector<std::unique_ptr<SceneCaptureCube>> IBLPrefilterMaps;
-
 	std::unique_ptr<RenderTarget2D> IBLBrdfLUT2D;
 
-	bool bEnableIBLEnvLighting = false;
+	// Deferred Redenring
+	// GBuffer info
+	std::unique_ptr<RenderTarget2D> GBufferAlbedo;
+	std::unique_ptr<RenderTarget2D> GBufferSpecular;
+	std::unique_ptr<RenderTarget2D> GBufferWorldPos;
+	std::unique_ptr<RenderTarget2D> GBufferNormal;
+
+	std::unique_ptr<TD3D12DescriptorCache> GBufferDescriptorCache;
 };
 
  

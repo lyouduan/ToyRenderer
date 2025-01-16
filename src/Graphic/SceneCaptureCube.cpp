@@ -7,10 +7,9 @@
 #include "PSOManager.h"
 
 SceneCaptureCube::SceneCaptureCube(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t NumMips, DXGI_FORMAT Format)
-	: m_Wdith(Width), m_Height(Height), m_NumMips(NumMips), m_Format(Format)
+	: m_Width(Width), m_Height(Height), m_NumMips(NumMips), m_Format(Format)
 {
 	CubeMap.Create(name, Width, Height, NumMips, Format);
-	DepthBuffer.Create(L"Depth CubeMap", Width, Height, DXGI_FORMAT_D32_FLOAT);
 
 	SetViewportAndScissorRect();
 
@@ -18,7 +17,7 @@ SceneCaptureCube::SceneCaptureCube(const std::wstring& name, uint32_t Width, uin
 
 SceneCaptureCube::~SceneCaptureCube()
 {
-
+	DepthBuffer.Create(L"Depth CubeMap", m_Width, m_Height, DXGI_FORMAT_D32_FLOAT);
 }
 
 void SceneCaptureCube::CreateCubeCamera(XMFLOAT3 pos, float nearZ, float farZ)
@@ -63,6 +62,6 @@ void SceneCaptureCube::CreateCubeCamera(XMFLOAT3 pos, float nearZ, float farZ)
 
 void SceneCaptureCube::SetViewportAndScissorRect()
 {
-	m_Viewport = { 0.0, 0.0, (float)m_Wdith, (float)m_Height, 0.0, 1.0 };
+	m_Viewport = { 0.0, 0.0, (float)m_Width, (float)m_Height, 0.0, 1.0 };
 	m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
 }

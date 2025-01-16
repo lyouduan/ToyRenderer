@@ -33,7 +33,7 @@
     <ClCompile Include="src\Graphic\SceneCaptureCube.cpp" />
     <ClCompile Include="src\Graphic\ModelManager.cpp" />
     <ClCompile Include="src\Utils\GeometryGenerator.cpp" />
-    <ClCompile Include="src\Graphic\Resource\PSOManager.cpp" />
+    <ClCompile Include="src\Graphic\PSOManager.cpp" />
     <ClCompile Include="src\Graphic\Resource\PSO.cpp" />
     <ClCompile Include="src\Graphic\Mesh.cpp" />
     <ClCompile Include="src\Graphic\ModelLoader.cpp" />
@@ -78,7 +78,7 @@
     <ClInclude Include="src\Graphic\SceneCaptureCube.h" />
     <ClInclude Include="src\Graphic\ModelManager.h" />
     <ClInclude Include="src\Utils\GeometryGenerator.h" />
-    <ClInclude Include="src\Graphic\Resource\PSOManager.h" />
+    <ClInclude Include="src\Graphic\PSOManager.h" />
     <ClInclude Include="src\Utils\hash.h" />
     <ClInclude Include="src\Graphic\Resource\PSO.h" />
     <ClInclude Include="src\Utils\PlatformHelpers.h" />
@@ -221,6 +221,15 @@
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Pixel</ShaderType>
       <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Pixel</ShaderType>
+      <FileType>Document</FileType>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="shaders\GBuffersPass.hlsl">
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Vertex</ShaderType>
+      <ShaderType Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Vertex</ShaderType>
       <FileType>Document</FileType>
     </None>
   </ItemGroup>

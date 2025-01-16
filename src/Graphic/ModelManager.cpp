@@ -11,9 +11,7 @@ namespace ModelManager
 		ModelLoader nanosuit;
 		if (!nanosuit.Load("./models/nanosuit/nanosuit.obj"))
 			assert(false);
-
 		m_ModelMaps["nanosuit"] = nanosuit;
-
 
 
 		ModelLoader wall;

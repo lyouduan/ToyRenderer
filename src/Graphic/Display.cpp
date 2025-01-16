@@ -2,6 +2,7 @@
 #include "stdafx.h"
 #include "DXSample.h"
 #include "D3D12RHI.h"
+#include "Camera.h"
 
 using namespace Microsoft::WRL;
 using namespace TD3D12RHI;
@@ -11,7 +12,10 @@ namespace TD3D12RHI
 	uint32_t g_DisplayWidth;
 	uint32_t g_DisplayHeight;
 	uint32_t g_frameIndex = 0;
+
+	Camera g_Camera;
 }
+
 namespace Display
 {
 	void Initialize()

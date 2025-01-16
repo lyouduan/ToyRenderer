@@ -45,8 +45,6 @@ private:
 
 	XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
 
-	Camera m_Camera;
-
 	std::unique_ptr<TRender> m_Render;
 
 	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };

@@ -3,9 +3,10 @@
 #include "PSOManager.h"
 #include "TextureManager.h"
 #include "ModelManager.h"
+#include "Display.h"
 
 using namespace TD3D12RHI;
-
+using namespace PSOManager;
 TRender::TRender()
 {
 }
@@ -17,6 +18,8 @@ TRender::~TRender()
 void TRender::Initalize()
 {
 	CreateSceneCaptureCube();
+
+	CreateGBuffers();
 }
 
 void TRender::CreateIBLEnvironmentMap()
@@ -79,7 +82,7 @@ void TRender::CreateIBLIrradianceMap()
 	auto shader = PSOManager::m_shaderMap["irradianceMapShader"];
 	auto pso = PSOManager::m_gfxPSOMap["irradianceMapPSO"];
 	auto boxMesh = ModelManager::m_MeshMaps["box"];
-	auto texSRV = IBLEnvironmentMap->GetSRV();
+	auto texSRV = bUseEquirectangularMap ? IBLEnvironmentMap->GetSRV() : TextureManager::m_SrvMaps["skybox"];
 	auto gfxCmdList = g_CommandContext.GetCommandList();
 
 	g_CommandContext.Transition(IBLIrradianceMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
@@ -131,15 +134,14 @@ void TRender::CreateIBLIrradianceMap()
 void TRender::CreateIBLPrefilterMap()
 {
 	g_CommandContext.ResetCommandList();
+	auto shader = PSOManager::m_shaderMap["prefilterMapShader"];
+	auto pso = PSOManager::m_gfxPSOMap["prefilterMapPSO"];
+	auto boxMesh = ModelManager::m_MeshMaps["box"];
+	auto texSRV = bUseEquirectangularMap ? IBLEnvironmentMap->GetSRV() : TextureManager::m_SrvMaps["skybox"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
 
 	for (UINT Mip = 0; Mip < IBLPrefilterMaxMipLevel; Mip++)
 	{
-		auto shader = PSOManager::m_shaderMap["prefilterMapShader"];
-		auto pso = PSOManager::m_gfxPSOMap["prefilterMapPSO"];
-		auto boxMesh = ModelManager::m_MeshMaps["box"];
-		auto texSRV = IBLEnvironmentMap->GetSRV();
-		auto gfxCmdList = g_CommandContext.GetCommandList();
-
 		g_CommandContext.Transition(IBLPrefilterMaps[Mip]->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 
 		gfxCmdList->RSSetViewports(1, IBLPrefilterMaps[Mip]->GetViewport());
@@ -222,6 +224,88 @@ void TRender::CreateIBLLUT2D()
 	g_CommandContext.ExecuteCommandLists();
 }
 
+void TRender::GbuffersPass()
+{
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	gfxCmdList->RSSetViewports(1, GBufferAlbedo->GetViewport());
+	gfxCmdList->RSSetScissorRects(1, GBufferAlbedo->GetScissorRect());
+
+	g_CommandContext.Transition(GBufferAlbedo->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(GBufferSpecular->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(GBufferWorldPos->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+	// clear renderTargets
+	float clearColor[4] = { GBufferAlbedo->GetClearColor().x,GBufferAlbedo->GetClearColor().y,GBufferAlbedo->GetClearColor().z,GBufferAlbedo->GetClearColor().w };
+	gfxCmdList->ClearRenderTargetView(GBufferAlbedo->GetRTV(), (float*)&clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferNormal->GetRTV(), (float*)&clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferSpecular->GetRTV(),  (float*)&clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferWorldPos->GetRTV(),  (float*)&clearColor, 0, nullptr);
+
+	gfxCmdList->ClearDepthStencilView(g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
+
+	// copy CPU descriptor to GPU
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> RtvDescriptors;
+	RtvDescriptors.push_back(GBufferAlbedo->GetRTV());
+	RtvDescriptors.push_back(GBufferSpecular->GetRTV());
+	RtvDescriptors.push_back(GBufferWorldPos->GetRTV());
+	RtvDescriptors.push_back(GBufferNormal->GetRTV());
+
+	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
+	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
+	GBufferDescriptorCache->AppendRtvDescriptors(RtvDescriptors, GpuHandle, CpuHandle);
+
+	gfxCmdList->OMSetRenderTargets(RtvDescriptors.size(), &CpuHandle, true, &g_DepthBuffer.GetDSV());
+	
+	gfxCmdList->SetGraphicsRootSignature(m_gfxPSOMap["GBuffersPso"].GetRootSignature());
+	gfxCmdList->SetPipelineState(m_gfxPSOMap["GBuffersPso"].GetPSO());
+
+	// draw all mesh
+	auto meshes = ModelManager::m_ModelMaps["nanosuit"].GetMeshes();
+	auto shader = m_shaderMap["GBuffersPassShader"];
+
+	auto objCBuffer = ModelManager::m_ModelMaps["nanosuit"].GetObjCBuffer();
+	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&objCBuffer, sizeof(ObjCBuffer));
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	for (UINT i = 0; i < meshes.size(); ++i)
+	{
+		shader.SetParameter("objCBuffer", objCBufferRef);
+		shader.SetParameter("passCBuffer", passCBufferRef);
+		// draw call
+		auto SRV = meshes[i].GetSRV();
+		if (!SRV.empty())
+			shader.SetParameter("diffuseMap", SRV[0]);
+		else
+		{
+			shader.SetParameter("diffuseMap", NullDescriptor);
+		}
+
+		// pbr Maps
+		shader.SetParameter("metallicMap", TextureManager::m_SrvMaps["Cerberus_M"]);
+		
+		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
+		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
+		meshes[i].DrawMesh(g_CommandContext);
+	}
+
+	// transit to generic read state
+	g_CommandContext.Transition(GBufferAlbedo->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(GBufferSpecular->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(GBufferWorldPos->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	GBufferDescriptorCache->Reset();
+}
+
 void TRender::CreateSceneCaptureCube()
 {
 	IBLEnvironmentMap = std::make_unique<SceneCaptureCube>(L"IBL Environment Map", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -239,5 +323,51 @@ void TRender::CreateSceneCaptureCube()
 		IBLPrefilterMaps.push_back(std::move(PrefilterMap));
 	}
 
-	IBLBrdfLUT2D = std::make_unique<RenderTarget2D>(L"IBL BRDF LUT2D", 128, 128, 1, DXGI_FORMAT_R8G8_UNORM);
+	IBLBrdfLUT2D = std::make_unique<RenderTarget2D>(L"IBL BRDF LUT2D", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8_UNORM);
+}
+
+void TRender::CreateGBuffers()
+{
+	GBufferAlbedo = std::make_unique<RenderTarget2D>(L"Gbuffer Albedo", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	GBufferSpecular = std::make_unique<RenderTarget2D>(L"Gbuffer Specular", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	GBufferWorldPos = std::make_unique<RenderTarget2D>(L"Gbuffer WorldPosition", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	GBufferNormal = std::make_unique<RenderTarget2D>(L"Gbuffer Normal", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+
+	GBufferDescriptorCache = std::make_unique<TD3D12DescriptorCache>(TD3D12RHI::g_Device);
+
+
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+	};
+
+	GraphicsPSO GBuffersPso(L"GBuffers PSO");
+	GBuffersPso.SetShader(&m_shaderMap["GBuffersPassShader"]);
+	GBuffersPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	GBuffersPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	GBuffersPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	CD3DX12_DEPTH_STENCIL_DESC dsvDesc;
+	dsvDesc.DepthEnable = TRUE;
+	dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+	dsvDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+	dsvDesc.StencilEnable = FALSE;
+	GBuffersPso.SetDepthStencilState(dsvDesc);
+	GBuffersPso.SetSampleMask(UINT_MAX);
+	GBuffersPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+
+	DXGI_FORMAT GBuffersFormat[] =
+	{
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		DXGI_FORMAT_R16G16B16A16_FLOAT
+	};
+
+	GBuffersPso.SetRenderTargetFormats(_countof(GBuffersFormat), GBuffersFormat, g_DepthBuffer.GetFormat());
+	GBuffersPso.Finalize();
+	m_gfxPSOMap["GBuffersPso"] = GBuffersPso;
 }

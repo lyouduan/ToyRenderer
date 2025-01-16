@@ -36,6 +36,7 @@ public:
 	const Camera& GetCamera(UINT i) const { return m_Camera[i]; }
 	
 	void CreateCubeCamera(XMFLOAT3 pos, float nearZ, float farZ);
+	void CreateDepthBuffer();
 
 	bool& GetIsUseCubeMap() { return bUseCubeMap; }
 	void SetIsUseCubeMap(bool IsUse) { bUseCubeMap = IsUse; }
@@ -44,7 +45,7 @@ private:
 
 	void SetViewportAndScissorRect();
 
-	uint32_t m_Wdith;
+	uint32_t m_Width;
 	uint32_t m_Height;
 	uint32_t m_NumMips;
 	DXGI_FORMAT m_Format;

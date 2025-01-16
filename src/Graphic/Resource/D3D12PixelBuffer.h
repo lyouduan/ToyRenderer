@@ -61,7 +61,7 @@ public:
 
 	void SetClearColor(DirectX::XMFLOAT4 ClearColor) { m_ClearColor = ClearColor; }
 
-	DirectX::XMFLOAT4 GetClearClolor() const { return m_ClearColor; }
+	DirectX::XMFLOAT4 GetClearColor() { return m_ClearColor; }
 
 	void Destroy();
 

@@ -5,13 +5,17 @@ RenderTarget2D::RenderTarget2D(const std::wstring& name, uint32_t Width, uint32_
 {
 
 	RenderMap.Create(name, Width, Height, NumMips, Format);
-	DepthBuffer.Create(L"Depth buffer", Width, Height, DXGI_FORMAT_D32_FLOAT);
 
 	SetViewportAndScissorRect();
 }
 
 RenderTarget2D::~RenderTarget2D()
 {
+}
+
+void RenderTarget2D::CreateDepthBuffer()
+{
+	DepthBuffer.Create(L"Depth buffer", m_Width, m_Height, DXGI_FORMAT_D32_FLOAT);
 }
 
 void RenderTarget2D::SetViewportAndScissorRect()

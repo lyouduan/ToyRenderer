@@ -44,7 +44,7 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
 
 	// update camera
-	m_Camera.UpdateViewMat();
+	g_Camera.UpdateViewMat();
 
 	ObjCBuffer obj;
 	XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(m_ModelMatrix));
@@ -55,12 +55,12 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(objCB);
 
 	PassCBuffer passCB;
-	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_Camera.GetViewMat()));
-	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_Camera.GetProjMat()));
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
 
 
 	passCB.lightPos = lightPos;
-	passCB.EyePosition = m_Camera.GetPosition3f();
+	passCB.EyePosition = g_Camera.GetPosition3f();
 	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 	//memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
 
@@ -71,6 +71,7 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 	// mat CBuffer
 	matCBufferRef = TD3D12RHI::CreateConstantBuffer(&matCB, sizeof(MatCBuffer));
+
 }
 
 void GameCore::OnRender()
@@ -124,12 +125,22 @@ void GameCore::UpdateImGui()
 
 		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
 
-		if(ImGui::Checkbox("EquirectangularMap", &ImGuiManager::useCubeMap))
+		if(ImGui::Checkbox("UseEquirectangularMap", &ImGuiManager::useCubeMap))
 		{
-			if(ImGuiManager::useCubeMap)
-				m_Render->SetEnableIBLEnvLighting(true);
+			if (ImGuiManager::useCubeMap)
+			{
+				m_Render->SetbUseEquirectangularMap(true);
+				m_Render->CreateIBLIrradianceMap();
+				m_Render->CreateIBLPrefilterMap();
+			}
 			else
-				m_Render->SetEnableIBLEnvLighting(false);
+			{
+				m_Render->SetbUseEquirectangularMap(false);
+				m_Render->CreateIBLIrradianceMap();
+				m_Render->CreateIBLPrefilterMap();
+			}
+
+
 		}
 		//if (ImGui::Button("CubeMap"))                          // Buttons return true when clicked (most widgets return true when edited/activated)
 		//counter++;
@@ -140,7 +151,7 @@ void GameCore::UpdateImGui()
 	//ImGui::InputText("Butts", buffer, sizeof(buffer));
 
 	// camera control
-		m_Camera.CamerImGui();
+		g_Camera.CamerImGui();
 
 		ImGui::NewLine();
 		ImGui::Text("Light Position");
@@ -324,7 +335,7 @@ void GameCore::LoadAssets()
 	PSOManager::InitializePSO();
 
 	// set camera
-	m_Camera.SetPosition(0, 5, -20);
+	g_Camera.SetPosition(0, 5, -20);
 
 	// load model
 	ModelManager::LoadModel();
@@ -357,7 +368,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
-	//if(g_frameIndex == 0)
+	m_Render->GbuffersPass();
 
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
@@ -380,7 +391,6 @@ void GameCore::PopulateCommandList()
 	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 	// full quad
-	/*
 	{
 		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["quadPSO"].GetRootSignature());
 		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["quadPSO"].GetPSO());
@@ -389,12 +399,12 @@ void GameCore::PopulateCommandList()
 
 
 		m_shaderMap["quadShader"].SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
-		auto depthSrv = m_Render->GetIBLBrdfLUT2D()->GetSRV();
-		m_shaderMap["quadShader"].SetParameter("tex", depthSrv);
+		auto Srv = m_Render->GetGBufferNormal()->GetSRV();
+		m_shaderMap["quadShader"].SetParameter("tex", Srv);
 		m_shaderMap["quadShader"].BindParameters();
 		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 	}
-	*/
+	
 
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
@@ -433,7 +443,7 @@ void GameCore::PopulateCommandList()
 		m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef); // don't need objCbuffer
 		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
 
-		if (m_Render->GetEnableIBLEnvLighting())
+		if (m_Render->GetbUseEquirectangularMap())
 			m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLEnvironmemtMap()->GetSRV());
 		else
 			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);

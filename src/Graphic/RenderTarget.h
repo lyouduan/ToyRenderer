@@ -22,7 +22,7 @@ public:
 	TD3D12Resource* GetD3D12Resource() { return RenderMap.GetD3D12Resource(); }
 	TD3D12Resource* GetD3D12DepthBuffer() { return DepthBuffer.GetD3D12Resource(); }
 
-	const D3D12ColorBuffer GetCubeBuffer() const { return RenderMap; }
+	const D3D12ColorBuffer GetColorBuffer() const { return RenderMap; }
 	const D3D12DepthBuffer GetDepthBuffer() const { return DepthBuffer; }
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV() const { return RenderMap.GetRTV(); }
@@ -34,6 +34,9 @@ public:
 
 	const Camera& GetCamera() const { return m_Camera; }
 
+	void CreateDepthBuffer();
+
+	DirectX::XMFLOAT4 GetClearColor() { return RenderMap.GetClearColor(); }
 private:
 
 	void SetViewportAndScissorRect();
