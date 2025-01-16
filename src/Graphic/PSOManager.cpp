@@ -111,6 +111,17 @@ namespace PSOManager
 		GBuffersPassInfo.PSEntryPoint = "PSMain";
 		TShader GBuffersPassShader(GBuffersPassInfo);
 		m_shaderMap["GBuffersPassShader"] = GBuffersPassShader;
+
+		TShaderInfo DeferredShadingInfo;
+		DeferredShadingInfo.FileName = "shaders/DeferredShading";
+		DeferredShadingInfo.bCreateVS = true;
+		DeferredShadingInfo.bCreatePS = true;
+		DeferredShadingInfo.bCreateCS = false;
+		DeferredShadingInfo.VSEntryPoint = "VSMain";
+		DeferredShadingInfo.PSEntryPoint = "PSMain";
+		TShader DeferredShadingShader(DeferredShadingInfo);
+		m_shaderMap["DeferredShadingShader"] = DeferredShadingShader;
+
 	}
 
 	void InitializePSO()

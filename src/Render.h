@@ -23,7 +23,7 @@ public:
 
 	// Deferred rendering
 	void GbuffersPass();
-	void LightingPass();
+	void DeferredShadingPass();
 
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
@@ -49,6 +49,8 @@ public:
 	std::unique_ptr<RenderTarget2D>& GetGBufferWorldPos() { return GBufferWorldPos; }
 	std::unique_ptr<RenderTarget2D>& GetGBufferNormal() { return GBufferNormal; }
 
+	bool GetEnableDeferredRendering() { return bEnableDeferredRendering; }
+	void SetEnableDeferredRendering(bool b) { bEnableDeferredRendering = b; }
 private:
 
 	void CreateSceneCaptureCube();
@@ -69,6 +71,7 @@ private:
 
 	// Deferred Redenring
 	// GBuffer info
+	bool bEnableDeferredRendering = false;
 	std::unique_ptr<RenderTarget2D> GBufferAlbedo;
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;

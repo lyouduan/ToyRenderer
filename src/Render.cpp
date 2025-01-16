@@ -4,6 +4,7 @@
 #include "TextureManager.h"
 #include "ModelManager.h"
 #include "Display.h"
+#include "ImGuiManager.h"
 
 using namespace TD3D12RHI;
 using namespace PSOManager;
@@ -273,6 +274,8 @@ void TRender::GbuffersPass()
 	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
 	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+
 	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
 	for (UINT i = 0; i < meshes.size(); ++i)
@@ -282,14 +285,24 @@ void TRender::GbuffersPass()
 		// draw call
 		auto SRV = meshes[i].GetSRV();
 		if (!SRV.empty())
+		{
 			shader.SetParameter("diffuseMap", SRV[0]);
+			if (SRV.size() == 2)
+			{
+				shader.SetParameter("metallicMap", SRV[1]);
+			}
+			else
+			{
+				// pbr Maps
+				shader.SetParameter("metallicMap", NullDescriptor);
+			}
+		}
 		else
 		{
 			shader.SetParameter("diffuseMap", NullDescriptor);
+			shader.SetParameter("metallicMap", NullDescriptor);
 		}
-
-		// pbr Maps
-		shader.SetParameter("metallicMap", TextureManager::m_SrvMaps["Cerberus_M"]);
+		
 		
 		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
@@ -304,6 +317,32 @@ void TRender::GbuffersPass()
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 
 	GBufferDescriptorCache->Reset();
+}
+
+void TRender::DeferredShadingPass()
+{
+	auto shader = m_shaderMap["DeferredShadingShader"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	gfxCmdList->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["DeferredShadingPso"].GetRootSignature());
+	gfxCmdList->SetPipelineState(PSOManager::m_gfxPSOMap["DeferredShadingPso"].GetPSO());
+
+	shader.SetParameter("passCBuffer", passCBufferRef);
+	shader.SetParameter("GBufferAlbedoMap", GBufferAlbedo->GetSRV());
+	shader.SetParameter("GBufferWorldPosMap", GBufferWorldPos->GetSRV());
+	shader.SetParameter("GBufferNormalMap", GBufferNormal->GetSRV());
+	shader.SetParameter("GBufferSpecularMap", GBufferSpecular->GetSRV());
+
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
+	shader.BindParameters();
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 }
 
 void TRender::CreateSceneCaptureCube()
@@ -358,7 +397,6 @@ void TRender::CreateGBuffers()
 	GBuffersPso.SetSampleMask(UINT_MAX);
 	GBuffersPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 	//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
-
 	DXGI_FORMAT GBuffersFormat[] =
 	{
 		DXGI_FORMAT_R16G16B16A16_FLOAT,
@@ -366,8 +404,20 @@ void TRender::CreateGBuffers()
 		DXGI_FORMAT_R16G16B16A16_FLOAT,
 		DXGI_FORMAT_R16G16B16A16_FLOAT
 	};
-
 	GBuffersPso.SetRenderTargetFormats(_countof(GBuffersFormat), GBuffersFormat, g_DepthBuffer.GetFormat());
 	GBuffersPso.Finalize();
 	m_gfxPSOMap["GBuffersPso"] = GBuffersPso;
+
+
+	GraphicsPSO DeferredShadingPso(L"DeferredShading PSO");
+	DeferredShadingPso.SetShader(&m_shaderMap["DeferredShadingShader"]);
+	DeferredShadingPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	DeferredShadingPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	DeferredShadingPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	DeferredShadingPso.SetDepthStencilState(dsvDesc);
+	DeferredShadingPso.SetSampleMask(UINT_MAX);
+	DeferredShadingPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	DeferredShadingPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+	DeferredShadingPso.Finalize();
+	m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
 }

@@ -12,6 +12,9 @@ namespace ImGuiManager
 {
 	bool show_demo_window = false;
 	bool useCubeMap = false;
+	bool bEnableDeferredRendering = false;
+
+	DirectX::XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
 
 	void InitImGui()
 	{

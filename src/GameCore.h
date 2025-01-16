@@ -43,7 +43,6 @@ private:
 	TD3D12ConstantBufferRef matCBufferRef;
 	MatCBuffer matCB;
 
-	XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
 
 	std::unique_ptr<TRender> m_Render;
 
