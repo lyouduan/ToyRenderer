@@ -33,13 +33,13 @@ void GameCore::OnInit()
 
 void GameCore::OnUpdate(const GameTimer& gt)
 {
-	XMMATRIX scalingMat = XMMatrixScaling(scale * 0.5, scale* 0.5, scale * 0.5);
+	XMMATRIX scalingMat = XMMatrixScaling(ImGuiManager::scale * 0.5, ImGuiManager::scale * 0.5, ImGuiManager::scale * 0.5);
 
 	totalTime += gt.DeltaTime() * 0.01;
-	float rotate_angle = static_cast<float>(RotationY * 360  * totalTime);
+	float rotate_angle = static_cast<float>(ImGuiManager::RotationY * 360  * totalTime);
 	const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
 	XMMATRIX rotationYMat = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
-	XMMATRIX translationMatrix = XMMatrixTranslation(position.x, position.y+5, position.z);
+	XMMATRIX translationMatrix = XMMatrixTranslation(ImGuiManager::modelPosition.x, ImGuiManager::modelPosition.y, ImGuiManager::modelPosition.z);
 
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
 
@@ -58,9 +58,11 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
 
-
 	passCB.lightPos = ImGuiManager::lightPos;
 	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightColor = ImGuiManager::lightColor;
+	passCB.Intensity = ImGuiManager::Intensity;
+
 	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 	//memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
 
@@ -110,20 +112,14 @@ void GameCore::UpdateImGui()
 	ImGuiManager::StartRenderImGui();
 	// 2. Show a simple window that we create ourselves. We use a Begin/End pair to create a named window.
 	{
-		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+		// model and light 
+		ImGuiManager::RenderAllItem();
 
-		// Display some text (you can use a format strings too)
-		ImGui::Checkbox("Demo Window", &ImGuiManager::show_demo_window);      // Edit bools storing our window open/close state
-		//ImGui::Checkbox("Another Window", &show_another_window);
-		ImGui::Text("Model Control Parameters");
-		ImGui::SliderFloat("RotationY", &RotationY, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Model PositionX", &position.x, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Model PositionY", &position.y, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-		ImGui::SliderFloat("Model PositionZ", &position.z, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-
-		ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
+		ImGui::NewLine();
+		ImGui::Text("Model PBR");
+		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
+		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.001f, 1.0f);
+		ImGui::SliderFloat("Metallic", &matCB.metallic, 0.0f, 1.0f);
 
 		if(ImGui::Checkbox("UseEquirectangularMap", &ImGuiManager::useCubeMap))
 		{
@@ -141,37 +137,32 @@ void GameCore::UpdateImGui()
 			}
 		}
 
+		// GBuffer ImGui
 		if (ImGui::Checkbox("EnableDeferredRendering", &ImGuiManager::bEnableDeferredRendering))
 		{
 			if (ImGuiManager::bEnableDeferredRendering)
-			{
 				m_Render->SetEnableDeferredRendering(true);
-			}
 			else
-			{
 				m_Render->SetEnableDeferredRendering(false);
+		}
+
+		if (ImGuiManager::bEnableDeferredRendering)
+		{
+			if (ImGui::Checkbox("Debug GBuffers", &ImGuiManager::bDebugGBuffers))
+			{
+				if (ImGuiManager::bDebugGBuffers)
+					m_Render->SetbDebugGBuffers(true);
+				else
+					m_Render->SetbDebugGBuffers(false);
 			}
 		}
-		//if (ImGui::Button("CubeMap"))                          // Buttons return true when clicked (most widgets return true when edited/activated)
-		//counter++;
-	//ImGui::SameLine();
-	//ImGui::Text("counter = %d", counter);
+			
+		if(ImGuiManager::bDebugGBuffers)
+			ImGuiManager::RenderCombo();
 
-	// Buffer
-	//ImGui::InputText("Butts", buffer, sizeof(buffer));
 
-	// camera control
+		// camera control
 		g_Camera.CamerImGui();
-
-		ImGui::NewLine();
-		ImGui::Text("Light Position");
-		ImGui::SliderFloat3("lightPos", (float*)&ImGuiManager::lightPos, -300, 300);
-		ImGui::NewLine();
-
-		ImGui::Text("Model PBR");
-		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
-		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.001f, 1.0f);
-		ImGui::SliderFloat("Metallic", &matCB.metallic, 0.0f, 1.0f);
 
 		ImGui::End();
 	}
@@ -378,7 +369,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
-	if(m_Render->GetEnableDeferredRendering())
+	if(m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 		m_Render->GbuffersPass();
 	
 	// set necessary state
@@ -390,7 +381,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// indicate that back buffer will be used as a render target
-	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[g_frameIndex].GetRTV(), (FLOAT*)clearColor, 0, nullptr);
+	g_CommandContext.GetCommandList()->ClearRenderTargetView(m_renderTragetrs[g_frameIndex].GetRTV(), (FLOAT*)ImGuiManager::clearColor, 0, nullptr);
 	g_CommandContext.GetCommandList()->ClearDepthStencilView(TD3D12RHI::g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
 
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
@@ -398,7 +389,14 @@ void GameCore::PopulateCommandList()
 	// full quad
 	if (m_Render->GetEnableDeferredRendering())
 	{
-		m_Render->DeferredShadingPass();
+		if (m_Render->GetbDebugGBuffers())
+		{
+			m_Render->GbuffersDebugPass();
+		}
+		else
+		{
+			m_Render->DeferredShadingPass();
+		}
 		// debug full quad
 		/*
 		{

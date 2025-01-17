@@ -293,7 +293,7 @@ void TRender::GbuffersPass()
 			}
 			else
 			{
-				// pbr Maps
+				// binding NullDescriptor
 				shader.SetParameter("metallicMap", NullDescriptor);
 			}
 		}
@@ -321,6 +321,7 @@ void TRender::GbuffersPass()
 
 void TRender::DeferredShadingPass()
 {
+	auto pso = PSOManager::m_gfxPSOMap["DeferredShadingPso"];
 	auto shader = m_shaderMap["DeferredShadingShader"];
 	auto gfxCmdList = g_CommandContext.GetCommandList();
 
@@ -329,10 +330,12 @@ void TRender::DeferredShadingPass()
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
 	passCB.EyePosition = g_Camera.GetPosition3f();
 	passCB.lightPos = ImGuiManager::lightPos;
+	passCB.lightColor = ImGuiManager::lightColor;
+	passCB.Intensity = ImGuiManager::Intensity;
 	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
-	gfxCmdList->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["DeferredShadingPso"].GetRootSignature());
-	gfxCmdList->SetPipelineState(PSOManager::m_gfxPSOMap["DeferredShadingPso"].GetPSO());
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
 
 	shader.SetParameter("passCBuffer", passCBufferRef);
 	shader.SetParameter("GBufferAlbedoMap", GBufferAlbedo->GetSRV());
@@ -343,6 +346,42 @@ void TRender::DeferredShadingPass()
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+}
+
+void TRender::GbuffersDebugPass()
+{
+	auto pso = PSOManager::m_gfxPSOMap["quadPSO"];
+	auto shader = m_shaderMap["quadShader"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	D3D12_CPU_DESCRIPTOR_HANDLE texSRV;
+	switch ((GBufferType)ImGuiManager::GbufferType)
+	{
+	case GBufferType::Position:
+		texSRV = GBufferWorldPos->GetSRV();
+		break;
+	case GBufferType::Normal:
+		texSRV = GBufferNormal->GetSRV();
+		break;
+	case GBufferType::Albedo:
+		texSRV = GBufferAlbedo->GetSRV();
+		break;
+	case GBufferType::Specular:
+		texSRV = GBufferSpecular->GetSRV();
+		break;
+	default:
+		texSRV = NullDescriptor;
+		break;
+	}
+	shader.SetParameter("tex", texSRV);
+	
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
+	shader.BindParameters();
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+
 }
 
 void TRender::CreateSceneCaptureCube()

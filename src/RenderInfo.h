@@ -25,8 +25,8 @@ struct PassCBuffer
     XMFLOAT3 lightPos = { 0.0, 10.0, 25.0 };
     FLOAT Pad1 = 0.0;
 
-    XMFLOAT3 lightColor = { 1500.0, 1500.0, 1500.0 };
-    FLOAT Pad2 = 0.0;
+    XMFLOAT3 lightColor = { 1.0, 1.0, 1.0 };
+    FLOAT Intensity = 100.0;
 };
 
 __declspec(align(16))

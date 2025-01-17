@@ -15,7 +15,7 @@ cbuffer passCBuffer : register(b1)
     float3 gLightPos;
     float pad1;
     float3 gLightColor;
-    float pad2;
+    float gIntensity;
 }
 
 cbuffer matCBuffer : register(b2)

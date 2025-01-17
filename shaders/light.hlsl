@@ -60,5 +60,5 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    return float4(1.0, 1.0, 1.0, 1.0);
+    return float4(gLightColor, 1.0);
 }

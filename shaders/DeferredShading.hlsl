@@ -9,7 +9,7 @@ cbuffer passCBuffer
     float3 gLightPos;
     float pad1;
     float3 gLightColor;
-    float pad2;
+    float gIntensity;
 }
 
 struct VSInput
@@ -72,7 +72,7 @@ float4 PSMain(PSInput pin) : SV_Target
         // attenuation
         float distance = length(gLightPos - worldPos);
         float attenuation = 1.0 / (distance * distance);
-        float3 radiance = gLightColor * attenuation;
+        float3 radiance = gIntensity * gLightColor * attenuation;
         
         // bllin-phong shading
         float3 diffuse = saturate(dot(N, L)) * radiance * albedo;

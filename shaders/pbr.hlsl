@@ -16,7 +16,7 @@ cbuffer passCBuffer : register(b1)
     float3 gLightPos;
     float pad1;
     float3 gLightColor;
-    float pad2;
+    float gIntensity;
 }
 
 cbuffer matCBuffer : register(b2)
@@ -100,7 +100,7 @@ float4 PSMain(PSInput pin) : SV_Target
         // attenuation
         float distance = length(gLightPos - pin.positionW);
         float attenuation = 1.0 / (distance * distance);
-        float3 radiance = gLightColor * attenuation;
+        float3 radiance = gIntensity * gLightColor * attenuation;
         // cook-torrance brdf
         //float3 fr = DefaultBRDF(L, N, V, gRoughness, gMetallic, gDiffuseAlbedo.rgb);
         

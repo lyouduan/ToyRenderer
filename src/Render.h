@@ -24,7 +24,7 @@ public:
 	// Deferred rendering
 	void GbuffersPass();
 	void DeferredShadingPass();
-
+	void GbuffersDebugPass();
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
@@ -44,6 +44,9 @@ public:
 	bool GetbUseEquirectangularMap() { return bUseEquirectangularMap; }
 	void SetbUseEquirectangularMap(bool b) { bUseEquirectangularMap = b; }
 
+	bool GetbDebugGBuffers() { return bDebugGBuffers; }
+	void SetbDebugGBuffers(bool b) { bDebugGBuffers = b; }
+
 	std::unique_ptr<RenderTarget2D>& GetGBufferAlbedo() { return GBufferAlbedo; }
 	std::unique_ptr<RenderTarget2D>& GetGBufferSpecular() { return  GBufferSpecular; }
 	std::unique_ptr<RenderTarget2D>& GetGBufferWorldPos() { return GBufferWorldPos; }
@@ -62,6 +65,7 @@ private:
 	// PBR and IBL
 	bool bUseEquirectangularMap = false;
 	bool bEnableIBLEnvLighting = false;
+	bool bDebugGBuffers = false;
 	
 	const static UINT IBLPrefilterMaxMipLevel = 5;
 	std::unique_ptr<SceneCaptureCube> IBLEnvironmentMap;

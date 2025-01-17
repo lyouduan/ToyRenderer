@@ -13,8 +13,18 @@ namespace ImGuiManager
 	bool show_demo_window = false;
 	bool useCubeMap = false;
 	bool bEnableDeferredRendering = false;
+	bool bDebugGBuffers = false;
+	int  GbufferType = 0;
+	DirectX::XMFLOAT3 lightPos = { 0.0, 10.0, -5.0 };
+	DirectX::XMFLOAT3 lightColor = { 1.0, 1.0, 1.0 };
+	float Intensity = 100;
 
-	DirectX::XMFLOAT3 lightPos = { 0.0, 30.0, 25.0 };
+	DirectX::XMFLOAT3 modelPosition = { 0.0f, 5.0f, 0.0f };
+
+	float RotationY = 0.5;
+	float scale = 1.0;
+
+	float clearColor[4] = { 0.9, 0.9, 0.9, 1.0 };
 
 	void InitImGui()
 	{
@@ -51,6 +61,8 @@ namespace ImGuiManager
 
 		if (ImGuiManager::show_demo_window)
 			ImGui::ShowDemoWindow(&ImGuiManager::show_demo_window);
+
+
 	}
 
 	void EndRenderImGui(TD3D12CommandContext& gfxContext)
@@ -58,6 +70,59 @@ namespace ImGuiManager
 		ID3D12DescriptorHeap* Heaps2[] = { g_ImGuiSrvHeap.Get() };
 		gfxContext.GetCommandList()->SetDescriptorHeaps(1, Heaps2);
 		ImGui_ImplDX12_RenderDrawData(ImGui::GetDrawData(), gfxContext.GetCommandList());
+	}
+
+	void RenderAllItem()
+	{
+		RenderModelItem();
+		RenderLightItem();
+
+		
+	}
+
+	void RenderModelItem()
+	{
+		ImGui::Begin("ImGui!");                          // Create a window called "ImGui!" and append into it.
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
+		// Display some text (you can use a format strings too)
+		ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+		//ImGui::Checkbox("Another Window", &show_another_window);
+		ImGui::Text("Model Control Parameters");
+		ImGui::SliderFloat("RotationY", &RotationY, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Scale", &scale, 0.0f, 10.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model X", &modelPosition.x, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model Y", &modelPosition.y, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+		ImGui::SliderFloat("Model Z", &modelPosition.z, -20.0f, 20.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+	}
+
+	void RenderLightItem()
+	{
+		//ImGui::ColorEdit3("clear color", (float*)&clearColor); // Edit 3 floats representing a color
+		ImGui::NewLine();
+		ImGui::Text("Light Info");
+		ImGui::SliderFloat("light intensity", (float*)&Intensity, 0, 1000); // Edit 3 floats representing a color
+		ImGui::SliderFloat3("light Position", (float*)&lightPos, -300, 300);
+		ImGui::ColorEdit3("light color", (float*)&lightColor); // Edit 3 floats representing a color
+	}
+
+	void RenderCombo()
+	{
+		const char* items[] = { "Albedo", "Position", "Normal", "Specular" };
+
+		// 创建选择框
+		if (ImGui::BeginCombo("Select an option", items[GbufferType])) {
+			// 遍历选项
+			for (int i = 0; i < IM_ARRAYSIZE(items); i++) {
+				bool is_selected = (GbufferType == i); // 判断是否为当前选中项
+				if (ImGui::Selectable(items[i], is_selected)) {
+					GbufferType = i; // 更新当前选项
+				}
+				
+			}
+			ImGui::EndCombo();
+		}
+
 	}
 
 	void DestroyImGui()

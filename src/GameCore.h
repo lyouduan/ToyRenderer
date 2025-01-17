@@ -32,7 +32,7 @@ private:
 	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader);
 
 	// pipleline objects
-	CD3DX12_VIEWPORT m_viewport;;
+	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
 	ComPtr<IDXGISwapChain3> m_swapChain;
 	ComPtr<ID3D12Device> m_device;
@@ -43,18 +43,13 @@ private:
 	TD3D12ConstantBufferRef matCBufferRef;
 	MatCBuffer matCB;
 
-
 	std::unique_ptr<TRender> m_Render;
 
-	XMFLOAT3 position = { 0.0f, 0.0f, 0.0f };
-	float scale = 1.0;
 
 	DirectX::XMMATRIX m_ModelMatrix;
 	DirectX::XMMATRIX m_LightMatrix;
 
 	float totalTime = 0;
-	float RotationY = 0.5;
-	float clearColor[4] = { 0.9, 0.9, 0.9, 1.0 };
 
 	void LoadPipeline();
 	void LoadAssets();
