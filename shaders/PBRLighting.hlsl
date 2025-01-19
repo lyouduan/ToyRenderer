@@ -1,3 +1,6 @@
+#ifndef PBRLighting_H
+#define PBRLighting_H
+
 #define PI 3.14159265359
 #define IBL_PREFILTER_ENVMAP_MIP_LEVEL 5
 
@@ -93,3 +96,5 @@ float3 DirectLighting(float3 Radiance, float3 LightDir, float3 Normal, float3 Vi
     
     return Radiance * BRDF * NoL * ShadowFactor;
 }
+
+#endif // !PBRLighting_H

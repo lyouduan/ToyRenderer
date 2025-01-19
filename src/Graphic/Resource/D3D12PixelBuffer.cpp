@@ -364,6 +364,7 @@ void D3D12CubeBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Forma
     RTVDesc.Format = Format;
     for (int mip = 0; mip < NumMips; ++mip)
     {
+
         RTVDesc.Texture2DArray.MipSlice = mip;
         for (UINT i = 0; i < 6; ++i)
         {

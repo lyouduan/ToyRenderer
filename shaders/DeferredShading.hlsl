@@ -52,15 +52,15 @@ PSInput VSMain(VSInput input)
 float4 PSMain(PSInput pin) : SV_Target
 {
     // retrieve data from gbuffer
-    float3 albedo = GBufferAlbedoMap.Sample(LinearClampSampler, pin.tex).rgb;
+    float3 albedo = GBufferAlbedoMap.Sample(LinearWrapSampler, pin.tex).rgb;
     albedo = pow(albedo, 2.2);
-    float3 worldPos = GBufferWorldPosMap.Sample(LinearClampSampler, pin.tex).rgb;
-    float3 normal = GBufferNormalMap.Sample(LinearClampSampler, pin.tex).rgb;
-    float Specular = GBufferSpecularMap.Sample(LinearClampSampler, pin.tex).r;
+    float3 worldPos = GBufferWorldPosMap.Sample(LinearWrapSampler, pin.tex).rgb;
+    float3 normal = GBufferNormalMap.Sample(LinearWrapSampler, pin.tex).rgb;
+    float Specular = GBufferSpecularMap.Sample(LinearWrapSampler, pin.tex).r;
     
     // calculate lighting
     
-    float3 lightingColor = float3(0.0, 0.0, 0.0);
+    float3 color = float3(0.0, 0.0, 0.0);
     
     {
         float3 N = normalize(normal);
@@ -72,7 +72,7 @@ float4 PSMain(PSInput pin) : SV_Target
         // attenuation
         float distance = length(gLightPos - worldPos);
         float attenuation = 1.0 / (distance * distance);
-        float3 radiance = gIntensity * gLightColor * attenuation;
+        float3 radiance = gIntensity * gLightColor;
         
         // bllin-phong shading
         float3 diffuse = saturate(dot(N, L)) * radiance * albedo;
@@ -83,13 +83,13 @@ float4 PSMain(PSInput pin) : SV_Target
         
         float3 ambient = diffuse * 0.2;
         
-        lightingColor += diffuse + specular + ambient;
+        color += diffuse + specular + ambient;
     }
     
     // HDR
-    lightingColor = lightingColor / (lightingColor + float3(1.0, 1.0, 1.0));
+    color = color / (color + float3(1.0, 1.0, 1.0));
     // gamma correct
-    lightingColor = pow(lightingColor, 1.0 / 2.2);
+    color = pow(color, 1.0 / 2.2);
     
-    return float4(lightingColor, 1.0);
+    return float4(color, 1.0);
 }

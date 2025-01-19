@@ -5,6 +5,7 @@
 #include "SceneCaptureCube.h"
 #include "RenderTarget.h"
 #include "D3D12DescriptorCache.h"
+#include "ModelLoader.h"
 
 class SceneCaptureCube;
 
@@ -15,6 +16,7 @@ public:
 	~TRender();
 
 	void Initalize();
+	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef);
 
 	void CreateIBLEnvironmentMap();
 	void CreateIBLIrradianceMap();

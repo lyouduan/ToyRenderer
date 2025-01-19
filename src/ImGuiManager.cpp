@@ -107,8 +107,16 @@ namespace ImGuiManager
 	}
 
 	void RenderCombo()
-	{
-		const char* items[] = { "Albedo", "Position", "Normal", "Specular" };
+	{	/*
+		enum class GBufferType
+		{
+			Position,
+			Normal,
+			Albedo,
+			Specular,
+			Count,
+		};*/
+		const char* items[] = { "Position", "Normal", "Albedo", "Specular" };
 
 		// 创建选择框
 		if (ImGui::BeginCombo("Select an option", items[GbufferType])) {

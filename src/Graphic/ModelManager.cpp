@@ -6,19 +6,56 @@ namespace ModelManager
 	std::unordered_map<std::string, ModelLoader> m_ModelMaps;
 	std::unordered_map<std::string, Mesh> m_MeshMaps;
 
+	void LoadMesh()
+	{
+		Mesh box;
+		box.CreateBox(1, 1, 1, 3);
+		m_MeshMaps["box"] = box;
+
+		ModelLoader boxModel;
+		boxModel.SetMesh(m_MeshMaps["box"]);
+		m_ModelMaps["box"] = std::move(boxModel);
+
+
+		Mesh sphere;
+		sphere.CreateSphere(1, 20, 20);
+		m_MeshMaps["sphere"] = sphere;
+
+		ModelLoader sphereModel;
+		sphereModel.SetMesh(m_MeshMaps["sphere"]);
+		m_ModelMaps["sphere"] = std::move(sphereModel);
+
+		Mesh Fullquad;
+		Fullquad.CreateQuad(-1, 1, 2, 2, 0);
+		m_MeshMaps["FullQuad"] = Fullquad;
+
+		ModelLoader FullquadModel;
+		FullquadModel.SetMesh(m_MeshMaps["FullQuad"]);
+		m_ModelMaps["FullQuad"] = std::move(FullquadModel);
+
+		Mesh Cylinder;
+		Cylinder.CreateCylinder(1, 1, 5, 10, 10);
+		m_MeshMaps["Cylinder"] = Cylinder;
+
+		ModelLoader CylinderModel;
+		CylinderModel.SetMesh(m_MeshMaps["Cylinder"]);
+		m_ModelMaps["Cylinder"] = std::move(CylinderModel);
+	}
+
 	void LoadModel()
 	{
+		LoadMesh();
+
 		ModelLoader nanosuit;
 		if (!nanosuit.Load("./models/nanosuit/nanosuit.obj"))
 			assert(false);
 		m_ModelMaps["nanosuit"] = nanosuit;
 
-
 		ModelLoader wall;
 		if (!wall.Load("./models/brick_wall/brick_wall.obj"))
 			assert(false);
 
-		float scale = 5;
+		float scale = 10;
 		XMMATRIX scalingMat = XMMatrixScaling(scale, scale, scale);
 		const XMVECTOR rotationAxisX = XMVectorSet(1, 0, 0, 0);
 		XMMATRIX rotationMat = XMMatrixRotationAxis(rotationAxisX, XMConvertToRadians(90));
@@ -38,23 +75,9 @@ namespace ModelManager
 		XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(rotationMatY * scalingMat));
 		Cerberus_LP.SetObjCBuffer(objCB);
 		m_ModelMaps["Cerberus_LP"] = Cerberus_LP;
-		
 	}
 
-	void LoadMesh()
-	{
-		Mesh box;
-		box.CreateBox(1, 1, 1, 3);
-		m_MeshMaps["box"] = box;
-
-		Mesh sphere;
-		sphere.CreateSphere(1, 20, 20);
-		m_MeshMaps["sphere"] = sphere;
-		
-		Mesh Fullquad;
-		Fullquad.CreateQuad(-1, 1, 2, 2, 0);
-		m_MeshMaps["FullQuad"] = Fullquad;
-	}
+	
 
 	void DestroyModel()
 	{

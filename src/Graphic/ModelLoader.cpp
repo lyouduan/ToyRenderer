@@ -54,6 +54,16 @@ void ModelLoader::Close()
 	}
 }
 
+void ModelLoader::SetMesh(Mesh& mesh)
+{
+	m_meshes.push_back(mesh);
+}
+
+void ModelLoader::SetMeshes(std::vector<Mesh>& meshes)
+{
+	m_meshes.assign(meshes.begin(), meshes.end());
+}
+
 void ModelLoader::processNode(aiNode* node, const aiScene* scene)
 {
 	for (UINT i = 0; i < node->mNumMeshes; i++) {

@@ -21,21 +21,15 @@ public:
 
 	bool Load(std::string fileName);
 	void Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef);
-
-	const std::vector<Mesh>& GetMeshes() const { return m_meshes; }
-	// for binding shader
-
 	void Close();
 
-	void SetObjCBuffer(ObjCBuffer objCB)
-	{
-		m_objCB = objCB;
-	}
+	void SetMesh(Mesh& mesh);
+	void SetMeshes(std::vector<Mesh>& meshes);
 
-	ObjCBuffer GetObjCBuffer() const
-	{
-		return m_objCB;
-	}
+	void SetObjCBuffer(ObjCBuffer objCB) { m_objCB = objCB; }
+	ObjCBuffer GetObjCBuffer() const { return m_objCB; }
+	
+	const std::vector<Mesh>& GetMeshes() const { return m_meshes; }
 
 private:
 	void processNode(aiNode* node, const aiScene* scene);

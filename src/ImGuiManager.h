@@ -11,6 +11,7 @@ enum class GBufferType
 	Specular,
 	Count,
 };
+
 namespace ImGuiManager
 {
 	extern bool show_demo_window;

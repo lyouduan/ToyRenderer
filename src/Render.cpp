@@ -23,6 +23,45 @@ void TRender::Initalize()
 	CreateGBuffers();
 }
 
+void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
+{
+	auto obj = model.GetObjCBuffer();
+	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
+
+	
+	auto meshes = model.GetMeshes();
+	for (UINT i = 0; i < meshes.size(); ++i)
+	{
+		shader.SetParameter("objCBuffer", objCBufferRef);
+		shader.SetParameter("passCBuffer", passRef);
+		// draw call
+		auto SRV = meshes[i].GetSRV();
+		if (!SRV.empty())
+		{
+			shader.SetParameter("diffuseMap", SRV[0]);
+			if (SRV.size() == 2)
+			{
+				shader.SetParameter("metallicMap", SRV[1]);
+			}
+			else
+			{
+				// binding NullDescriptor
+				shader.SetParameter("metallicMap", NullDescriptor);
+			}
+		}
+		else
+		{
+			shader.SetParameter("diffuseMap", NullDescriptor);
+			shader.SetParameter("metallicMap", NullDescriptor);
+		}
+
+		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
+		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
+		meshes[i].DrawMesh(gfxContext);
+	}
+}
+
 void TRender::CreateIBLEnvironmentMap()
 {
 	g_CommandContext.ResetCommandList();
@@ -48,21 +87,21 @@ void TRender::CreateIBLEnvironmentMap()
 
 	for (UINT i = 0; i < 6; i++)
 	{
-		float clearColor[4] = { 0.0,0.0,0.0,0.0 };
+		float clearColor[4] = { 0.0, 0.0, 0.0, 0.0 };
 		gfxCmdList->ClearRenderTargetView(IBLEnvironmentMap->GetRTV(i), (FLOAT*)clearColor, 0, nullptr);
 		//gfxCmdList->ClearDepthStencilView(IBLIrradianceMap->GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0, 0, 0, nullptr);
 		gfxCmdList->OMSetRenderTargets(1, &IBLEnvironmentMap->GetRTV(i), TRUE, nullptr);
 
 		// update CBuffer
 		{
-			auto camera = IBLIrradianceMap->GetCamera(i);
+			auto camera = IBLEnvironmentMap->GetCamera(i);
 			XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(camera.GetViewMat()));
 			XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(camera.GetProjMat()));
 		}
 		auto cubemapPassCBufferRef = TD3D12RHI::CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
 		auto cubemapObjCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
 
-		shader.SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
+		//shader.SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
 		shader.SetParameter("passCBuffer", cubemapPassCBufferRef);
 		shader.SetParameter("equirectangularMap", texSRV);
 		shader.SetDescriptorCache(boxMesh.GetTD3D12DescriptorCache());
@@ -263,52 +302,30 @@ void TRender::GbuffersPass()
 	gfxCmdList->SetGraphicsRootSignature(m_gfxPSOMap["GBuffersPso"].GetRootSignature());
 	gfxCmdList->SetPipelineState(m_gfxPSOMap["GBuffersPso"].GetPSO());
 
-	// draw all mesh
-	auto meshes = ModelManager::m_ModelMaps["nanosuit"].GetMeshes();
-	auto shader = m_shaderMap["GBuffersPassShader"];
-
-	auto objCBuffer = ModelManager::m_ModelMaps["nanosuit"].GetObjCBuffer();
-	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&objCBuffer, sizeof(ObjCBuffer));
 
 	PassCBuffer passCB;
 	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
 	passCB.EyePosition = g_Camera.GetPosition3f();
 	passCB.lightPos = ImGuiManager::lightPos;
-
 	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
-	for (UINT i = 0; i < meshes.size(); ++i)
+	// draw all mesh
+	for (int i = 0; i < 3; i++)
 	{
-		shader.SetParameter("objCBuffer", objCBufferRef);
-		shader.SetParameter("passCBuffer", passCBufferRef);
-		// draw call
-		auto SRV = meshes[i].GetSRV();
-		if (!SRV.empty())
+		for (int j = 0; j < 3; j++)
 		{
-			shader.SetParameter("diffuseMap", SRV[0]);
-			if (SRV.size() == 2)
-			{
-				shader.SetParameter("metallicMap", SRV[1]);
-			}
-			else
-			{
-				// binding NullDescriptor
-				shader.SetParameter("metallicMap", NullDescriptor);
-			}
+			ObjCBuffer obj;
+			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i*10, 0, j*10);
+			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+			ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
+
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
 		}
-		else
-		{
-			shader.SetParameter("diffuseMap", NullDescriptor);
-			shader.SetParameter("metallicMap", NullDescriptor);
-		}
-		
-		
-		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
-		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
-		meshes[i].DrawMesh(g_CommandContext);
 	}
 
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
+	
 	// transit to generic read state
 	g_CommandContext.Transition(GBufferAlbedo->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);

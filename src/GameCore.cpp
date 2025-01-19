@@ -340,7 +340,6 @@ void GameCore::LoadAssets()
 
 	// load model
 	ModelManager::LoadModel();
-	ModelManager::LoadMesh();
 
 	// load Texture
 	TextureManager::LoadTexture();
@@ -397,6 +396,7 @@ void GameCore::PopulateCommandList()
 		{
 			m_Render->DeferredShadingPass();
 		}
+
 		// debug full quad
 		/*
 		{
@@ -420,39 +420,64 @@ void GameCore::PopulateCommandList()
 		// Record commands
 		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
 		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
-		DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cerberus_LP"], m_shaderMap["modelShader"]);
+
+		for (int i = 0; i < 3; i++)
+		{
+			for (int j = 0; j < 3; j++)
+			{
+				ObjCBuffer obj;
+				const XMVECTOR rotationAxisX = XMVectorSet(1, 0, 0, 0);
+				XMMATRIX rotationMat = XMMatrixRotationAxis(rotationAxisX, XMConvertToRadians(90));
+				auto scalingMat = XMMatrixScaling(0.05, 0.05, 0.05);
+				auto rotationAxisY = XMVectorSet(0, 1, 0, 0);
+				auto rotationMatY = rotationMat * XMMatrixRotationAxis(rotationAxisY, XMConvertToRadians(-45));
+
+				XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
+				XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(rotationMatY * scalingMat * translationMatrix));
+				ModelManager::m_ModelMaps["Cerberus_LP"].SetObjCBuffer(obj);
+
+				DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cerberus_LP"], m_shaderMap["modelShader"]);
+			}
+		}
+		
 		//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
 
 
-
-		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
-		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
-
-		m_shaderMap["pbrShader"].SetParameter("objCBuffer", objCBufferRef);
-		m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
-		m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
-		m_shaderMap["pbrShader"].SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
-
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
-		for (UINT i = 0; i < m_Render->GetIBLPrefilterMaps().size(); ++i)
+		// pbr sphere 
 		{
-			SRVHandleList.push_back(m_Render->GetIBLPrefilterMap(i)->GetSRV());
-		}
-		m_shaderMap["pbrShader"].SetParameter("PrefilterMap", SRVHandleList);
+			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
+			g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
 
-		m_shaderMap["pbrShader"].SetParameter("BrdfLUT2D", m_Render->GetIBLBrdfLUT2D()->GetSRV());
-		m_shaderMap["pbrShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
-		m_shaderMap["pbrShader"].BindParameters();
-		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+			m_shaderMap["pbrShader"].SetParameter("objCBuffer", objCBufferRef);
+			m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
+			m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
+
+			// IBL SRV
+			m_shaderMap["pbrShader"].SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+			for (UINT i = 0; i < m_Render->GetIBLPrefilterMaps().size(); ++i)
+			{
+				SRVHandleList.push_back(m_Render->GetIBLPrefilterMap(i)->GetSRV());
+			}
+			m_shaderMap["pbrShader"].SetParameter("PrefilterMap", SRVHandleList);
+			m_shaderMap["pbrShader"].SetParameter("BrdfLUT2D", m_Render->GetIBLBrdfLUT2D()->GetSRV());
+
+			m_shaderMap["pbrShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
+			m_shaderMap["pbrShader"].BindParameters();
+			ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+		}
 
 		// light 
-		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
-		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["lightPSO"].GetPSO());
-		m_shaderMap["lightShader"].SetParameter("objCBuffer", lightObjCBufferRef);
-		m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
-		m_shaderMap["lightShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
-		m_shaderMap["lightShader"].BindParameters();
-		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+		{
+			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
+			g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["lightPSO"].GetPSO());
+			m_shaderMap["lightShader"].SetParameter("objCBuffer", lightObjCBufferRef);
+			m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
+			m_shaderMap["lightShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
+			m_shaderMap["lightShader"].BindParameters();
+			ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+		}
+		
 
 		// sky box
 		{
@@ -466,8 +491,8 @@ void GameCore::PopulateCommandList()
 				m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLEnvironmemtMap()->GetSRV());
 			else
 				m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
-			//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
 
+			//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
 			m_shaderMap["skyboxShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
 			m_shaderMap["skyboxShader"].BindParameters();
 			ModelManager::m_MeshMaps["box"].DrawMesh(g_CommandContext);

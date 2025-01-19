@@ -111,9 +111,6 @@
     <ClCompile Include="src\Graphic\Resource\PSO.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Graphic\Resource\PSOManager.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\Utils\GeometryGenerator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -136,6 +133,9 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\Graphic\RenderTarget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\Graphic\PSOManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -260,9 +260,6 @@
     <ClInclude Include="src\Utils\hash.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\Graphic\Resource\PSOManager.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\Utils\GeometryGenerator.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -290,6 +287,9 @@
     <ClInclude Include="src\Graphic\RenderTarget.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Graphic\PSOManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl" />
@@ -303,6 +303,9 @@
     <None Include="shaders\prefilterMap.hlsl" />
     <None Include="shaders\brdf.hlsl" />
     <None Include="shaders\PBRLighting.hlsl" />
+    <None Include="shaders\GBuffersPass.hlsl" />
+    <None Include="shaders\DeferredShading.hlsl" />
+    <None Include="shaders\lightInfo.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

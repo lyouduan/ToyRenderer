@@ -33,7 +33,8 @@ struct PSInput
     float3 normal : NORMAL;
     float2 tex : TEXCOORD;
 };
-Texture2D equirectangularMap : register(t0);
+
+Texture2D equirectangularMap;
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
