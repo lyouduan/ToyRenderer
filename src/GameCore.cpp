@@ -388,15 +388,12 @@ void GameCore::PopulateCommandList()
 	// full quad
 	if (m_Render->GetEnableDeferredRendering())
 	{
+		m_Render->DeferredShadingPass();
+
 		if (m_Render->GetbDebugGBuffers())
 		{
 			m_Render->GbuffersDebugPass();
 		}
-		else
-		{
-			m_Render->DeferredShadingPass();
-		}
-
 		// debug full quad
 		/*
 		{

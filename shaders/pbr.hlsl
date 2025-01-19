@@ -95,10 +95,10 @@ float4 PSMain(PSInput pin) : SV_Target
     
     float3 Lo = float3(0.0, 0.0, 0.0);
     {
-        float3 L = normalize(gLightPos - pin.positionW);
+        float3 L = gLightPos - pin.positionW;
+        float distance = length(L);
+        L = L / distance;
         
-        // attenuation
-        float distance = length(gLightPos - pin.positionW);
         float attenuation = 1.0 / (distance * distance);
         float3 radiance = gIntensity * gLightColor * attenuation;
         // cook-torrance brdf

@@ -67,10 +67,10 @@ float4 PSMain(PSInput pin) : SV_Target
         float3 V = normalize(gEyePosW - worldPos);
         float3 R = reflect(-V, N);
     
-        float3 L = normalize(gLightPos - worldPos);
+        float3 L = gLightPos - worldPos;
+        float distance = length(L);
+        L = L / distance;
         
-        // attenuation
-        float distance = length(gLightPos - worldPos);
         float attenuation = 1.0 / (distance * distance);
         float3 radiance = gIntensity * gLightColor;
         

@@ -140,9 +140,10 @@ float4 PSMain(PSInput pin) : SV_Target
     // lighting
     float3 Lo = float3(0.0, 0.0, 0.0);
     {
-        float3 L = normalize(gLightPos - pin.positionW);
-        // attenuation
-        float distance = length(gLightPos - pin.positionW);
+        float3 L = gLightPos - pin.positionW;
+        float distance = length(L);
+        L = L / distance;
+        
         float attenuation = max(1.0 / max(distance * distance, 0.01), 1 / max(gIntensity, 0.01));
         float3 radiance = gIntensity * gLightColor * attenuation;
        

@@ -94,6 +94,34 @@ bool TShader::SetParameter(std::string ParamName, std::vector<D3D12_CPU_DESCRIPT
 	return FindParam;
 }
 
+bool TShader::SetParameterUAV(std::string ParamName, D3D12_CPU_DESCRIPTOR_HANDLE& UAVHandle)
+{
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> UAVList;
+	UAVList.push_back(UAVHandle);
+
+	return SetParameterUAV(ParamName, UAVList);
+	return false;
+}
+
+bool TShader::SetParameterUAV(std::string ParamName, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& UAVHandleList)
+{
+	bool FindParam = false;
+
+	for (TShaderUAVParameter& Param : UAVParams)
+	{
+		if (Param.Name == ParamName)
+		{
+			assert(UAVHandleList.size() == Param.BindCount);
+
+			Param.UAVList = UAVHandleList;
+
+			FindParam = true;
+		}
+	}
+
+	return FindParam;
+}
+
 void TShader::BindParameters()
 {
 	auto CommandList = TD3D12RHI::g_CommandContext.GetCommandList();
@@ -155,6 +183,36 @@ void TShader::BindParameters()
 	// TODO
 	// ...
 	
+	if (UAVCount > 0)
+	{
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SrcDescriptors;
+		SrcDescriptors.resize(UAVCount);
+
+		for (const TShaderUAVParameter& Param : UAVParams)
+		{
+			for (UINT i = 0; i < Param.UAVList.size(); ++i)
+			{
+				UINT Index = Param.BindPoint + i;
+				SrcDescriptors[Index] = Param.UAVList[i];
+			}
+		}
+
+		UINT RootParamIdx = UAVSignatureBindSlot;
+		auto GpuDescriptorHanle = descriptorCache->AppendCbvSrvUavDescriptors(SrcDescriptors);
+
+		ID3D12DescriptorHeap* Heaps[] = { descriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get() };
+		CommandList->SetDescriptorHeaps(1, Heaps);
+
+		if (bComputeShader)
+		{
+			CommandList->SetComputeRootDescriptorTable(RootParamIdx, GpuDescriptorHanle);
+		}
+		else
+		{
+			assert(0);
+		}
+	}
+
 	ClearBindings();
 }
 
@@ -227,6 +285,18 @@ void TShader::GetShaderParameter(Microsoft::WRL::ComPtr<ID3DBlob> PassBlob, ESha
 
 			SRVParams.push_back(Param);
 		}
+		else if (ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_UAV_RWSTRUCTURED || ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_UAV_RWTYPED)
+		{
+			assert(ShaderType == EShaderType::COMPUTE_SHADER);
+			TShaderUAVParameter Param;
+			Param.Name = ShaderVarName;
+			Param.ShaderType = ShaderType;
+			Param.BindPoint = BindPoint;
+			Param.BindCount = BindCount;
+			Param.RegisterSpace = RegisterSpace;
+
+			UAVParams.push_back(Param);
+		}
 		else if (ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_SAMPLER)
 		{
 			assert(ShaderType == EShaderType::PIXEL_SHADER);
@@ -239,10 +309,7 @@ void TShader::GetShaderParameter(Microsoft::WRL::ComPtr<ID3DBlob> PassBlob, ESha
 
 			SamplerParams.push_back(Param);
 		}
-		//else if (ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_UAV_RWSTRUCTURED || ResourceType ==		//3D_SHADER_INPUT_TYPE::D3D_SIT_UAV_RWTYPED)
-		//{
-		//
-		//}
+		
 	}
 }
 
@@ -369,7 +436,25 @@ void TShader::CreateRootSignature()
 	}
 
 	// UAV
-	// todo
+	{
+		for (const TShaderUAVParameter& Param : UAVParams)
+		{
+			UAVCount += Param.BindCount;
+		}
+
+		if (UAVCount > 0)
+		{
+			UAVSignatureBindSlot = (UINT)SlotRootParameter.size();
+
+			CD3DX12_DESCRIPTOR_RANGE UAVTable;
+			UAVTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_UAV, UAVCount, 0, 0);
+
+			CD3DX12_ROOT_PARAMETER RootParam;
+			D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
+			RootParam.InitAsDescriptorTable(1, &UAVTable, ShaderVisibility);
+			SlotRootParameter.push_back(RootParam);
+		}
+	}
 
 	// Sampler
 	auto StaticSamplers = CreateStaticSamplers();
@@ -404,6 +489,11 @@ void TShader::CheckBindings()
 		assert(Param.SRVList.size() > 0);
 	}
 
+	for (TShaderUAVParameter& Param : UAVParams)
+	{
+		assert(Param.UAVList.size() > 0);
+	}
+
 	if (descriptorCache == nullptr)
 	{
 		assert(false && "descriptorCache is null!");
@@ -420,6 +510,11 @@ void TShader::ClearBindings()
 	for (TShaderSRVParameter& Param : SRVParams)
 	{
 		Param.SRVList.clear();
+	}
+
+	for (TShaderUAVParameter& Param : UAVParams)
+	{
+		Param.UAVList.clear();
 	}
 
 	descriptorCache->Reset();

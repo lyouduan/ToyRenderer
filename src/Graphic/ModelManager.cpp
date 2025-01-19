@@ -33,6 +33,14 @@ namespace ModelManager
 		FullquadModel.SetMesh(m_MeshMaps["FullQuad"]);
 		m_ModelMaps["FullQuad"] = std::move(FullquadModel);
 
+		Mesh DebugQuad;
+		DebugQuad.CreateQuad(0.5, -0.5, 0.5, 0.5, 0);
+		m_MeshMaps["DebugQuad"] = DebugQuad;
+
+		ModelLoader DebugQuadquadModel;
+		DebugQuadquadModel.SetMesh(m_MeshMaps["DebugQuad"]);
+		m_ModelMaps["DebugQuad"] = std::move(DebugQuadquadModel);
+
 		Mesh Cylinder;
 		Cylinder.CreateCylinder(1, 1, 5, 10, 10);
 		m_MeshMaps["Cylinder"] = Cylinder;

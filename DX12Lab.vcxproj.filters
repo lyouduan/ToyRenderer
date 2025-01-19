@@ -306,6 +306,8 @@
     <None Include="shaders\GBuffersPass.hlsl" />
     <None Include="shaders\DeferredShading.hlsl" />
     <None Include="shaders\lightInfo.hlsl" />
+    <None Include="shaders\CullLightingCommon.hlsl" />
+    <None Include="shaders\ForwardPulsRendering.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

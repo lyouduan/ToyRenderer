@@ -9,6 +9,7 @@ namespace PSOManager
 	std::unordered_map<std::string, TShader> m_shaderMap;
 
 	std::unordered_map<std::string, GraphicsPSO> m_gfxPSOMap;
+	std::unordered_map<std::string, ComputePSO> m_ComputePSOMap;
 
 	void InitializeShader()
 	{
@@ -41,6 +42,16 @@ namespace PSOManager
 		quadInfo.PSEntryPoint = "PSMain";
 		TShader quadShader(quadInfo);
 		m_shaderMap["quadShader"] = quadShader;
+
+		TShaderInfo DebugQuadInfo;
+		DebugQuadInfo.FileName = "shaders/quadShader";
+		DebugQuadInfo.bCreateVS = true;
+		DebugQuadInfo.bCreatePS = true;
+		DebugQuadInfo.bCreateCS = false;
+		DebugQuadInfo.VSEntryPoint = "VSMain";
+		DebugQuadInfo.PSEntryPoint = "PSMain";
+		TShader DebugQuadShader(DebugQuadInfo);
+		m_shaderMap["DebugQuadShader"] = DebugQuadShader;
 
 		TShaderInfo brdfInfo;
 		brdfInfo.FileName = "shaders/brdf";
@@ -122,6 +133,25 @@ namespace PSOManager
 		TShader DeferredShadingShader(DeferredShadingInfo);
 		m_shaderMap["DeferredShadingShader"] = DeferredShadingShader;
 
+
+		InitializeComputeShader();
+	}
+
+	void InitializeComputeShader()
+	{
+		TShaderInfo ForwardPlusInfo;
+		ForwardPlusInfo.FileName = "shaders/ForwardPulsRendering";
+		ForwardPlusInfo.bCreateVS = false;
+		ForwardPlusInfo.bCreatePS = false;
+		ForwardPlusInfo.bCreateCS = true;
+		ForwardPlusInfo.CSEntryPoint = "CS_ComputeFrustums";
+		TShader ForwardPulsRenderingShader(ForwardPlusInfo);
+		m_shaderMap["ForwardPuls"] = ForwardPulsRenderingShader;
+
+		ComputePSO forwardPulsPSO;
+		forwardPulsPSO.SetShader(&m_shaderMap["ForwardPuls"]);
+		forwardPulsPSO.Finalize();
+		m_ComputePSOMap["ForwardPuls"] = std::move(forwardPulsPSO);
 	}
 
 	void InitializePSO()
@@ -185,6 +215,22 @@ namespace PSOManager
 		quadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		quadPso.Finalize();
 		m_gfxPSOMap["quadPSO"] = quadPso;
+
+		GraphicsPSO DebugQuadPso(L"DebugQuad PSO");
+		DebugQuadPso.SetShader(&m_shaderMap["DebugQuadShader"]);
+		DebugQuadPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		DebugQuadPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		DebugQuadPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
+		DebugQuadPso.SetDepthStencilState(dsvDesc);
+		DebugQuadPso.SetSampleMask(UINT_MAX);
+		DebugQuadPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		DebugQuadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		DebugQuadPso.Finalize();
+		m_gfxPSOMap["DebugQuadPSO"] = DebugQuadPso;
+
 
 		GraphicsPSO brdfPso(L"brdf PSO");
 		brdfPso.SetShader(&m_shaderMap["brdfShader"]);

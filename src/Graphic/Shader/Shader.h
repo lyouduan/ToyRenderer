@@ -74,7 +74,9 @@ struct TShaderSRVParameter : TShaderParameter
 
 struct TShaderUAVParameter : TShaderParameter
 {
+	UINT BindCount;
 
+	std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> UAVList;
 };
 
 struct TShaderSamplerParameter : TShaderParameter
@@ -119,6 +121,9 @@ public:
 	bool SetParameter(std::string ParamName, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& SRVHandleList);
 	// UAV
 	// ...
+	bool SetParameterUAV(std::string ParamName, D3D12_CPU_DESCRIPTOR_HANDLE& UAVHandle);
+
+	bool SetParameterUAV(std::string ParamName, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& UAVHandleList);
 
 	void BindParameters();
 
@@ -143,7 +148,11 @@ public:
 	TShaderInfo ShaderInfo;
 
 	std::vector<TShaderCBVParameter> CBVParams;
+
 	std::vector<TShaderSRVParameter> SRVParams;
+
+	std::vector<TShaderUAVParameter> UAVParams;
+
 	std::vector<TShaderSamplerParameter> SamplerParams;
 
 	//std::vector<TShaderUAVParameter> UAVParams;

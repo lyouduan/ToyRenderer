@@ -12,6 +12,12 @@ public:
 
     static void DestroyAll(void);
 
+    void SetShader(TShader* shader)
+    {
+        m_Shader = shader;
+        m_RootSignature = m_Shader->RootSignature.Get();
+    }
+
     void SetRootSignature(ID3D12RootSignature& BindMappings)
     {
         m_RootSignature = &BindMappings;
@@ -29,6 +35,8 @@ protected:
 
     const wchar_t* m_Name;
 
+    TShader* m_Shader = nullptr;
+
     ID3D12RootSignature* m_RootSignature;
 
     ID3D12PipelineState* m_PSO;
@@ -38,8 +46,6 @@ class GraphicsPSO : public PSO
 {
 public:
     GraphicsPSO(const wchar_t* Name = L"Unnamed Graphics PSO");
-
-    void SetShader(TShader* shader);
 
     void SetBlendState(const D3D12_BLEND_DESC& BlendDesc);
 
@@ -69,9 +75,20 @@ public:
 
 private:
 
-    TShader* m_Shader = nullptr;
-
     D3D12_GRAPHICS_PIPELINE_STATE_DESC m_PSODesc;
 
     std::shared_ptr<const D3D12_INPUT_ELEMENT_DESC> m_InputLayouts;
 };
+
+class ComputePSO : public PSO
+{
+public:
+    ComputePSO(const wchar_t* Name = L"Unnamed Compute PSO");
+
+    void Finalize();
+
+private:
+
+    D3D12_COMPUTE_PIPELINE_STATE_DESC m_PSODesc;
+};
+

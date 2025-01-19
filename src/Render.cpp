@@ -367,8 +367,8 @@ void TRender::DeferredShadingPass()
 
 void TRender::GbuffersDebugPass()
 {
-	auto pso = PSOManager::m_gfxPSOMap["quadPSO"];
-	auto shader = m_shaderMap["quadShader"];
+	auto pso = PSOManager::m_gfxPSOMap["DebugQuadPSO"];
+	auto shader = m_shaderMap["DebugQuadShader"];
 	auto gfxCmdList = g_CommandContext.GetCommandList();
 
 	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
@@ -395,10 +395,15 @@ void TRender::GbuffersDebugPass()
 	}
 	shader.SetParameter("tex", texSRV);
 	
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
-	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 
+}
+
+void TRender::ComputeTileFrustums()
+{
+	
 }
 
 void TRender::CreateSceneCaptureCube()

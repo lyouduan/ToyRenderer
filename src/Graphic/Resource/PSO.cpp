@@ -19,17 +19,6 @@ GraphicsPSO::GraphicsPSO(const wchar_t* Name)
     m_PSODesc.InputLayout.NumElements = 0;
 }
 
-void GraphicsPSO::SetShader(TShader* shader)
-{
-	m_Shader = shader;
-    m_PSODesc.VS = D3D12_SHADER_BYTECODE{ shader->ShaderPass.at("VS")->GetBufferPointer(), shader->ShaderPass.at("VS")->GetBufferSize() };
-    m_PSODesc.PS = D3D12_SHADER_BYTECODE{ shader->ShaderPass.at("PS")->GetBufferPointer(), shader->ShaderPass.at("PS")->GetBufferSize() };
-
-    m_PSODesc.pRootSignature = shader->RootSignature.Get();
-
-    m_RootSignature = shader->RootSignature.Get();
-}
-
 void GraphicsPSO::SetBlendState(const D3D12_BLEND_DESC& BlendDesc)
 {
 	m_PSODesc.BlendState = BlendDesc;
@@ -98,7 +87,13 @@ void GraphicsPSO::SetInputLayout(UINT NumElements, const D3D12_INPUT_ELEMENT_DES
 
 void GraphicsPSO::Finalize()
 {
+    m_PSODesc.VS = D3D12_SHADER_BYTECODE{ m_Shader->ShaderPass.at("VS")->GetBufferPointer(), m_Shader->ShaderPass.at("VS")->GetBufferSize() };
+    m_PSODesc.PS = D3D12_SHADER_BYTECODE{ m_Shader->ShaderPass.at("PS")->GetBufferPointer(), m_Shader->ShaderPass.at("PS")->GetBufferSize() };
+
+    m_PSODesc.pRootSignature = m_Shader->RootSignature.Get();
+
     // Make sure the root signature is finalized first
+    assert(m_RootSignature != nullptr);
     assert(m_PSODesc.pRootSignature != nullptr);
 
     m_PSODesc.InputLayout.pInputElementDescs = nullptr;
@@ -137,3 +132,56 @@ void GraphicsPSO::Finalize()
         m_PSO = *PSORef;
     }
 }
+
+ComputePSO::ComputePSO(const wchar_t* Name)
+    : PSO(Name)
+{
+    ZeroMemory(&m_PSODesc, sizeof(m_PSODesc));
+    m_PSODesc.NodeMask = 1;
+}
+
+void ComputePSO::Finalize()
+{
+    // make sure the root signature is finalized first
+    m_PSODesc.CS = D3D12_SHADER_BYTECODE{ m_Shader->ShaderPass.at("CS")->GetBufferPointer(), m_Shader->ShaderPass.at("CS")->GetBufferSize() };
+
+    m_PSODesc.pRootSignature = m_Shader->RootSignature.Get();
+
+    assert(m_PSODesc.pRootSignature != nullptr);
+    assert(m_RootSignature != nullptr);
+
+    size_t HashCode = Utility::HashState(&m_PSODesc);
+
+    ID3D12PipelineState** PSORef = nullptr;
+    bool firstCompile = false;
+    {
+        static std::mutex s_HashMapMutex;
+        std::lock_guard<std::mutex> CS(s_HashMapMutex);
+
+        auto iter = s_ComputePSOHashMap.find(HashCode);
+        // Reserve space so  the next inquiry will find that someone got here first
+        if (iter == s_ComputePSOHashMap.end())
+        {
+            firstCompile = true;
+            PSORef = s_ComputePSOHashMap[HashCode].GetAddressOf();
+        }
+        else
+        {
+            PSORef = iter->second.GetAddressOf();
+        }
+    }
+
+    if (firstCompile)
+    {
+        ThrowIfFailed(TD3D12RHI::g_Device->CreateComputePipelineState(&m_PSODesc, IID_PPV_ARGS(&m_PSO)));
+        s_ComputePSOHashMap[HashCode].Attach(m_PSO);
+        m_PSO->SetName(m_Name);
+    }
+    else
+    {
+        while (*PSORef == nullptr)
+            std::this_thread::yield();
+        m_PSO = *PSORef;
+    }
+}
+
