@@ -63,6 +63,7 @@ struct PSOutput
     float4 GBufferSpecular : SV_Target1;
     float4 GBufferWorldPos : SV_Target2;
     float4 GBufferNormal : SV_Target3;
+   // float4 GBufferDepth: SV_Target4;
 };
 
 

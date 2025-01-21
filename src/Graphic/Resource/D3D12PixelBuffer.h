@@ -27,6 +27,7 @@ protected:
 		D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
 	DXGI_FORMAT GetDepthFormat(DXGI_FORMAT defaultFormat);
+	DXGI_FORMAT GetUAVFormat(DXGI_FORMAT defaultFormat);
 
 	uint32_t m_Width;
 	uint32_t m_Height;
@@ -43,6 +44,7 @@ public:
 	{
 		m_RTVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
 		m_SRVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+		m_UAVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
 	}
 
 	void CreateFromSwapChain(const std::wstring& name, ID3D12Resource* BaseResource);
@@ -53,11 +55,13 @@ public:
 		DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV(void) { return m_RTVHandle; }
-
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetRTV(void) const { return m_RTVHandle; }
 
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) { return m_SRVHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) const { return m_SRVHandle; }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV(void) { return m_UAVHandle; }
+	const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV(void) const { return m_UAVHandle; }
 
 	void SetClearColor(DirectX::XMFLOAT4 ClearColor) { m_ClearColor = ClearColor; }
 
@@ -94,6 +98,7 @@ private:
 
 	D3D12_CPU_DESCRIPTOR_HANDLE m_RTVHandle;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_SRVHandle;
+	D3D12_CPU_DESCRIPTOR_HANDLE m_UAVHandle;
 	uint32_t m_NumMipMaps; // number of texture sublevels
 	uint32_t m_FragmentCount;
 	uint32_t m_SampleCount;

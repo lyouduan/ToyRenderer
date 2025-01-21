@@ -11,6 +11,7 @@
 #include "TextureManager.h"
 #include "SceneCaptureCube.h"
 #include "RenderInfo.h"
+#include "Light.h"
 
 using namespace TD3D12RHI;
 using TD3D12RHI::g_CommandContext;
@@ -344,6 +345,8 @@ void GameCore::LoadAssets()
 	// load Texture
 	TextureManager::LoadTexture();
 
+	// Load Lights
+	LightManager::InitialzeLights();
 
 	// Render equirectangularMap To CubeMap
 	//m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -357,6 +360,9 @@ void GameCore::LoadAssets()
 	m_Render->CreateIBLPrefilterMap();
 	m_Render->CreateIBLLUT2D();
 
+	// Build Tile Frustums
+	m_Render->BuildTileFrustums();
+
 	g_CommandContext.FlushCommandQueue();
 }
 
@@ -368,9 +374,16 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
-	if(m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
+	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
+	{
 		m_Render->GbuffersPass();
+
+		m_Render->PrePassDepthBuffer();
+		m_Render->CullingLightPass();
+	}
 	
+	
+
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
@@ -394,22 +407,6 @@ void GameCore::PopulateCommandList()
 		{
 			m_Render->GbuffersDebugPass();
 		}
-		// debug full quad
-		/*
-		{
-			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["quadPSO"].GetRootSignature());
-			g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["quadPSO"].GetPSO());
-			ObjCBuffer obj;
-			objCBufferRef = CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
-
-
-			m_shaderMap["quadShader"].SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
-			auto Srv = m_Render->GetGBufferAlbedo()->GetSRV();
-			m_shaderMap["quadShader"].SetParameter("tex", Srv);
-			m_shaderMap["quadShader"].BindParameters();
-			ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
-		}
-		*/
 	}
 	else
 	{

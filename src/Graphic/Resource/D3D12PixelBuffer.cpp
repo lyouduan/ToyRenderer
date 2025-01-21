@@ -76,6 +76,49 @@ DXGI_FORMAT D3D12PixelBuffer::GetDepthFormat(DXGI_FORMAT defaultFormat)
     }
 }
 
+DXGI_FORMAT D3D12PixelBuffer::GetUAVFormat(DXGI_FORMAT defaultFormat)
+{
+    switch (defaultFormat)
+    {
+    case DXGI_FORMAT_R8G8B8A8_TYPELESS:
+    case DXGI_FORMAT_R8G8B8A8_UNORM:
+    case DXGI_FORMAT_R8G8B8A8_UNORM_SRGB:
+        return DXGI_FORMAT_R8G8B8A8_UNORM;
+
+    case DXGI_FORMAT_B8G8R8A8_TYPELESS:
+    case DXGI_FORMAT_B8G8R8A8_UNORM:
+    case DXGI_FORMAT_B8G8R8A8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8A8_UNORM;
+
+    case DXGI_FORMAT_B8G8R8X8_TYPELESS:
+    case DXGI_FORMAT_B8G8R8X8_UNORM:
+    case DXGI_FORMAT_B8G8R8X8_UNORM_SRGB:
+        return DXGI_FORMAT_B8G8R8X8_UNORM;
+
+    case DXGI_FORMAT_R32_TYPELESS:
+    case DXGI_FORMAT_R32_FLOAT:
+        return DXGI_FORMAT_R32_FLOAT;
+
+#ifdef _DEBUG
+    case DXGI_FORMAT_R32G8X24_TYPELESS:
+    case DXGI_FORMAT_D32_FLOAT_S8X24_UINT:
+    case DXGI_FORMAT_R32_FLOAT_X8X24_TYPELESS:
+    case DXGI_FORMAT_X32_TYPELESS_G8X24_UINT:
+    case DXGI_FORMAT_D32_FLOAT:
+    case DXGI_FORMAT_R24G8_TYPELESS:
+    case DXGI_FORMAT_D24_UNORM_S8_UINT:
+    case DXGI_FORMAT_R24_UNORM_X8_TYPELESS:
+    case DXGI_FORMAT_X24_TYPELESS_G8_UINT:
+    case DXGI_FORMAT_D16_UNORM:
+
+        assert(false && "Requested a UAV Format for a depth stencil Format.");
+#endif
+
+    default:
+        return defaultFormat;
+    }
+}
+
 void D3D12PixelBuffer::CreateTextureResource(D3D12_RESOURCE_STATES State, const D3D12_RESOURCE_DESC& ResourceDesc, D3D12_CLEAR_VALUE ClearValue, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
 {
     (void)VidMemPtr;
@@ -154,11 +197,14 @@ void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
     m_NumMipMaps = NumMips - 1;
 
     D3D12_RENDER_TARGET_VIEW_DESC RTVDesc = {};
+    D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
 
     RTVDesc.Format = Format;
+    UAVDesc.Format = GetUAVFormat(Format);
     SRVDesc.Format = Format;
     SRVDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+
 
     // TEXTURE2DArray
     if (ArraySize > 1)
@@ -167,6 +213,11 @@ void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
         RTVDesc.Texture2DArray.MipSlice = 0;
         RTVDesc.Texture2DArray.FirstArraySlice = 0;
         RTVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
+
+        UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2DARRAY;
+        UAVDesc.Texture2DArray.MipSlice = 0;
+        UAVDesc.Texture2DArray.FirstArraySlice = 0;
+        UAVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
 
         SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
         SRVDesc.Texture2DArray.MipLevels = NumMips;
@@ -185,6 +236,9 @@ void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
         RTVDesc.ViewDimension = D3D12_RTV_DIMENSION_TEXTURE2D;
         RTVDesc.Texture2D.MipSlice = 0;
 
+        UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_TEXTURE2D;
+        UAVDesc.Texture2D.MipSlice = 0;
+
         SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         SRVDesc.Texture2D.MipLevels = NumMips;
         SRVDesc.Texture2D.MostDetailedMip = 0;
@@ -195,6 +249,7 @@ void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
     {
         m_RTVHandle = RTVHeapSlotAllocator->AllocateHeapSlot().Handle;
         m_SRVHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+        m_UAVHandle = SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
     }
 
     ID3D12Resource* Resource = ResourceLocation.UnderlyingResource->D3DResource.Get();
@@ -204,6 +259,8 @@ void D3D12ColorBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
 
     // create the shader resource view
     Device->CreateShaderResourceView(Resource, &SRVDesc, m_SRVHandle);
+
+    Device->CreateUnorderedAccessView(Resource, nullptr, &UAVDesc, m_UAVHandle);
 }
 
 void D3D12DepthBuffer::Create(const std::wstring& name, uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)

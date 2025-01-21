@@ -32,8 +32,16 @@ SamplerState LinearClampSampler : register(s3);
 SamplerState AnisotropicWrapSampler : register(s4);
 SamplerState AnisotropicClampSampler : register(s5);
 
+float GetActualDepth(float depth, float zNear, float zFar)
+{
+    // 计算实际深度
+    float actualDepth = zNear * zFar / (zFar - depth * (zFar - zNear));
+    return actualDepth;
+}
+
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float3 color = tex.Sample(LinearClampSampler, pin.tex).rgb;
+    float3 color = tex.Sample(PointClampSampler, pin.tex).rgb;
+
     return float4(color, 1.0);
 }

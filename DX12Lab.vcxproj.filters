@@ -138,6 +138,9 @@
     <ClCompile Include="src\Graphic\PSOManager.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Material\Light.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -290,6 +293,9 @@
     <ClInclude Include="src\Graphic\PSOManager.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Material\Light.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl" />
@@ -308,6 +314,7 @@
     <None Include="shaders\lightInfo.hlsl" />
     <None Include="shaders\CullLightingCommon.hlsl" />
     <None Include="shaders\ForwardPulsRendering.hlsl" />
+    <None Include="shaders\preDepthPass.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

@@ -27,13 +27,43 @@ TD3D12ConstantBufferRef TD3D12RHI::CreateConstantBuffer(const void* Contents, ui
 {
     TD3D12ConstantBufferRef ConstantBufferRef = std::make_shared<TD3D12ConstantBuffer>();
 
-    void* Mappedata = UploadBufferAllocator->AllocUploadResource(Size, UPLOAD_RESOURCE_ALIGNMENT, ConstantBufferRef->ResourceLocation);
+    void* MappedData = UploadBufferAllocator->AllocUploadResource(Size, UPLOAD_RESOURCE_ALIGNMENT, ConstantBufferRef->ResourceLocation);
     if(Contents!= nullptr)
-        memcpy(Mappedata, Contents, Size);
+        memcpy(MappedData, Contents, Size);
 
     ConstantBufferRef->CreateDerivedViews(Size);
 
     return ConstantBufferRef;
+}
+
+TD3D12StructuredBufferRef TD3D12RHI::CreateStructuredBuffer(const void* Contents, uint32_t Elementsize, uint32_t ElementCount)
+{
+    assert(Contents != nullptr && Elementsize > 0 && ElementCount > 0);
+
+    TD3D12StructuredBufferRef StructuredBufferRef = std::make_shared<TD3D12StructuredBuffer>();
+
+    uint32_t DataSize = Elementsize * ElementCount;
+    // Align to ElemenSize;
+    void* MappedData = UploadBufferAllocator->AllocUploadResource(DataSize, Elementsize, StructuredBufferRef->ResourceLocation);
+
+    memcpy(MappedData, Contents, DataSize);
+
+    StructuredBufferRef->CreateDerivedView(Elementsize, ElementCount);
+
+    return StructuredBufferRef;
+}
+
+TD3D12RWStructuredBufferRef TD3D12RHI::CreateRWStructuredBuffer(uint32_t Elementsize, uint32_t ElementCount)
+{
+    TD3D12RWStructuredBufferRef RWStructuredBufferRef = std::make_shared<TD3D12RWStructuredBuffer>();
+
+    uint32_t DataSize = Elementsize * ElementCount;
+    // Align to ElementSize
+    CreateDefaultBuffer(DataSize, Elementsize, D3D12_RESOURCE_FLAG_ALLOW_UNORDERED_ACCESS, RWStructuredBufferRef->ResourceLocation);
+
+    RWStructuredBufferRef->CreateDerivedViews(Elementsize, ElementCount);
+
+    return RWStructuredBufferRef;
 }
 
 void TD3D12RHI::CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation)
@@ -101,4 +131,54 @@ void TD3D12ConstantBuffer::CreateDerivedViews(uint32_t Size)
     auto HeapHandle = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
 
     TD3D12RHI::g_Device->CreateConstantBufferView(&CBV_Desc, HeapHandle);
+}
+
+void TD3D12StructuredBuffer::CreateDerivedView(uint32_t Elementsize, uint32_t ElementCount)
+{
+    TD3D12ResourceLocation& Location = this->ResourceLocation;
+    const uint64_t Offset = Location.OffsetFromBaseOfResource;
+    ID3D12Resource* BufferResource = Location.UnderlyingResource->D3DResource.Get();
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
+    SrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    SrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    SrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    SrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+    SrvDesc.Buffer.StructureByteStride = Elementsize;
+    SrvDesc.Buffer.NumElements = ElementCount;
+    SrvDesc.Buffer.FirstElement = Offset / Elementsize;
+
+    SRV = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    TD3D12RHI::g_Device->CreateShaderResourceView(BufferResource, &SrvDesc, SRV);
+}
+
+void TD3D12RWStructuredBuffer::CreateDerivedViews(uint32_t Elementsize, uint32_t ElementCount)
+{
+    TD3D12ResourceLocation& Location = this->ResourceLocation;
+    const uint64_t Offset = Location.OffsetFromBaseOfResource;
+    ID3D12Resource* BufferResource = Location.UnderlyingResource->D3DResource.Get();
+
+    D3D12_SHADER_RESOURCE_VIEW_DESC SrvDesc = {};
+    SrvDesc.Shader4ComponentMapping = D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING;
+    SrvDesc.Format = DXGI_FORMAT_UNKNOWN;
+    SrvDesc.ViewDimension = D3D12_SRV_DIMENSION_BUFFER;
+    SrvDesc.Buffer.Flags = D3D12_BUFFER_SRV_FLAG_NONE;
+    SrvDesc.Buffer.StructureByteStride = Elementsize;
+    SrvDesc.Buffer.NumElements = ElementCount;
+    SrvDesc.Buffer.FirstElement = Offset / Elementsize;
+
+    SRV = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    TD3D12RHI::g_Device->CreateShaderResourceView(BufferResource, &SrvDesc, SRV);
+
+    D3D12_UNORDERED_ACCESS_VIEW_DESC UAVDesc = {};
+    UAVDesc.Format = DXGI_FORMAT_UNKNOWN;
+    UAVDesc.ViewDimension = D3D12_UAV_DIMENSION_BUFFER;
+    UAVDesc.Buffer.Flags = D3D12_BUFFER_UAV_FLAG_NONE;
+    UAVDesc.Buffer.StructureByteStride = Elementsize;
+    UAVDesc.Buffer.NumElements = ElementCount;
+    UAVDesc.Buffer.FirstElement = Offset / Elementsize;
+    UAVDesc.Buffer.CounterOffsetInBytes = 0;
+
+    UAV = TD3D12RHI::SRVHeapSlotAllocator->AllocateHeapSlot().Handle;
+    TD3D12RHI::g_Device->CreateUnorderedAccessView(BufferResource, nullptr, &UAVDesc, UAV);
 }

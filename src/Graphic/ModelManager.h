@@ -11,6 +11,5 @@ namespace ModelManager
 	void LoadMesh();
 
 	void DestroyModel();
-
 };
 

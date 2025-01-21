@@ -43,7 +43,6 @@ typedef std::shared_ptr<TD3D12IndexBuffer> TD3D12IndexBufferRef;
 
 class TD3D12ConstantBuffer : public TD3D12Buffer
 {
-
 public:
 	void CreateDerivedViews(uint32_t Size);
 
@@ -52,3 +51,50 @@ private:
 };
 
 typedef std::shared_ptr<TD3D12ConstantBuffer> TD3D12ConstantBufferRef;
+
+class TD3D12StructuredBuffer : public TD3D12Buffer
+{
+public:
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV()
+	{
+		return SRV;
+	}
+
+	void CreateDerivedView(uint32_t Elementsize, uint32_t ElementCount);
+
+private:
+
+	D3D12_CPU_DESCRIPTOR_HANDLE SRV;
+};
+
+typedef std::shared_ptr<TD3D12StructuredBuffer> TD3D12StructuredBufferRef;
+
+
+class TD3D12RWStructuredBuffer : public TD3D12Buffer
+{
+public:
+	
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV()
+	{
+		return SRV;
+	}
+
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV()
+	{
+		return UAV;
+	}
+
+	void CreateDerivedViews(uint32_t Elementsize, uint32_t ElementCount);
+
+private:
+	D3D12_CPU_DESCRIPTOR_HANDLE SRV;
+	D3D12_CPU_DESCRIPTOR_HANDLE UAV;
+};
+typedef std::shared_ptr<TD3D12RWStructuredBuffer> TD3D12RWStructuredBufferRef;
+
+
+class TD3D12ReadBackBuffer : public TD3D12Buffer
+{
+
+};
+typedef std::shared_ptr<TD3D12ReadBackBuffer> TD3D12ReadBackBufferRef;

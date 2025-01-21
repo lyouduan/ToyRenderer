@@ -25,6 +25,7 @@ namespace TD3D12RHI
 	// Buffer
 	extern D3D12ColorBuffer m_renderTragetrs[FrameCount];
 	extern D3D12DepthBuffer g_DepthBuffer;
+	extern D3D12DepthBuffer g_PreDepthPassBuffer;
 
 	// memory allocator
 	extern std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator;
@@ -51,6 +52,10 @@ namespace TD3D12RHI
 	TD3D12IndexBufferRef CreateIndexBuffer(const void* Contents, uint32_t Size, DXGI_FORMAT Format);
 
 	TD3D12ConstantBufferRef CreateConstantBuffer(const void* Contents, uint32_t Size);
+
+	TD3D12StructuredBufferRef CreateStructuredBuffer(const void* Contents, uint32_t Elementsize, uint32_t ElementCount);
+
+	TD3D12RWStructuredBufferRef CreateRWStructuredBuffer(uint32_t Elementsize, uint32_t ElementCount);
 
 	void CreateDefaultBuffer(uint32_t Size, uint32_t Alignment, D3D12_RESOURCE_FLAGS Flags, TD3D12ResourceLocation& ResourceLocation);
 

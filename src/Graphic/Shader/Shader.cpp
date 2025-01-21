@@ -38,10 +38,13 @@ void TShader::Initialize()
 		auto CSBlob = CompileShader(FilePath, ShaderMacros.data(), ShaderInfo.CSEntryPoint, "cs_5_1");
 		ShaderPass["CS"] = CSBlob;
 		GetShaderParameter(CSBlob, EShaderType::COMPUTE_SHADER);
+
+		descriptorCache = std::make_unique<TD3D12DescriptorCache>(TD3D12RHI::g_Device);
 	}
 
 	// create rootSignature
 	CreateRootSignature();
+
 }
 
 bool TShader::SetDescriptorCache(std::shared_ptr<TD3D12DescriptorCache> InDescriptorCache)

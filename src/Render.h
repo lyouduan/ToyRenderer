@@ -29,7 +29,9 @@ public:
 	void GbuffersDebugPass();
 
 	// ForwardPuls Rendering
-	void ComputeTileFrustums();
+	void BuildTileFrustums();
+	void PrePassDepthBuffer();
+	void CullingLightPass();
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
@@ -59,11 +61,14 @@ public:
 
 	bool GetEnableDeferredRendering() { return bEnableDeferredRendering; }
 	void SetEnableDeferredRendering(bool b) { bEnableDeferredRendering = b; }
+
 private:
 
 	void CreateSceneCaptureCube();
 
 	void CreateGBuffers();
+
+	void CreateForwardFulsBuffer();
 
 private:
 
@@ -85,8 +90,19 @@ private:
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;
 	std::unique_ptr<RenderTarget2D> GBufferNormal;
+	//std::unique_ptr<RenderTarget2D> GBufferDepth;
 
 	std::unique_ptr<TD3D12DescriptorCache> GBufferDescriptorCache;
+
+	TD3D12RWStructuredBufferRef RWStructuredBufferRef;
+	TD3D12ConstantBufferRef ConstantBufferRef;
+	TD3D12ConstantBufferRef DispatchParamsCBRef;
+
+	TD3D12RWStructuredBufferRef LightIndexCounterCBRef;
+	TD3D12RWStructuredBufferRef LightIndexListCBRef;
+
+	std::unique_ptr<D3D12ColorBuffer> LightGridMap;
+	std::unique_ptr<D3D12ColorBuffer> DebugMap;
 };
 
  

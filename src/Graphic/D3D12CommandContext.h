@@ -38,8 +38,6 @@ private:
 	Microsoft::WRL::ComPtr<ID3D12CommandAllocator> CommandListAlloc = nullptr;
 	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList = nullptr;
 
-	Microsoft::WRL::ComPtr<ID3D12GraphicsCommandList> CommandList = nullptr;
-
 	std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
 
 private:

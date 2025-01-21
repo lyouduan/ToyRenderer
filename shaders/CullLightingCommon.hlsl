@@ -86,5 +86,47 @@ float4 ScreenToView(float4 screen)
     return ClipToView(clip);
 }
 
+// Frustum Culling algorithm
+struct Sphere
+{
+    float3 c; // Center point
+    float  r; // Radius
+};
 
+// Check to see if a sphere is fully behind (inside the negative halfspace of ) a plane.
+bool SphereInsidePlane(Sphere sphere, Plane plane)
+{
+    return dot(plane.N, sphere.c) - plane.d < -sphere.r;
+}
+
+// Chech to see of a light is partially contained within the frustum
+bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar)
+{
+    bool result = true;
+    
+    // First check depth
+    // return false if sphere behind zFar or before zNear 
+    
+    // Note: Here, the view vector points in the -Z axis so the 
+    // far depth value will be approaching - infinity. (int righ-handed coordinate)
+    
+    // we in left-handed coordinate,so swap the zNear and zFar
+    if (sphere.c.z - sphere.r > zFar || sphere.c.z + sphere.r < zNear)
+    {
+        result = false;
+    }
+    
+    // Then check frustum planes
+    for (int i = 0; i < 4 && result; i++)
+    {
+        if(SphereInsidePlane(sphere, frustum.Planes[i]))
+        {
+            result = false;
+        }
+    }
+
+    return result;
+}
+
+//
 #endif // !CULLLIGHTINGCOMMON_H

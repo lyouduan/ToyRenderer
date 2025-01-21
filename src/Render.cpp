@@ -5,6 +5,7 @@
 #include "ModelManager.h"
 #include "Display.h"
 #include "ImGuiManager.h"
+#include "Light.h"
 
 using namespace TD3D12RHI;
 using namespace PSOManager;
@@ -21,6 +22,9 @@ void TRender::Initalize()
 	CreateSceneCaptureCube();
 
 	CreateGBuffers();
+
+	CreateForwardFulsBuffer();
+
 }
 
 void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
@@ -28,8 +32,6 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 	auto obj = model.GetObjCBuffer();
 	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
 
-
-	
 	auto meshes = model.GetMeshes();
 	for (UINT i = 0; i < meshes.size(); ++i)
 	{
@@ -275,6 +277,7 @@ void TRender::GbuffersPass()
 	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(GBufferSpecular->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(GBufferWorldPos->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	//g_CommandContext.Transition(GBufferDepth->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// clear renderTargets
@@ -283,6 +286,7 @@ void TRender::GbuffersPass()
 	gfxCmdList->ClearRenderTargetView(GBufferNormal->GetRTV(), (float*)&clearColor, 0, nullptr);
 	gfxCmdList->ClearRenderTargetView(GBufferSpecular->GetRTV(),  (float*)&clearColor, 0, nullptr);
 	gfxCmdList->ClearRenderTargetView(GBufferWorldPos->GetRTV(),  (float*)&clearColor, 0, nullptr);
+	//gfxCmdList->ClearRenderTargetView(GBufferDepth->GetRTV(),  (float*)&clearColor, 0, nullptr);
 
 	gfxCmdList->ClearDepthStencilView(g_DepthBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
@@ -292,6 +296,7 @@ void TRender::GbuffersPass()
 	RtvDescriptors.push_back(GBufferSpecular->GetRTV());
 	RtvDescriptors.push_back(GBufferWorldPos->GetRTV());
 	RtvDescriptors.push_back(GBufferNormal->GetRTV());
+	//RtvDescriptors.push_back(GBufferDepth->GetRTV());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
@@ -331,9 +336,12 @@ void TRender::GbuffersPass()
 	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(GBufferSpecular->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(GBufferWorldPos->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	//g_CommandContext.Transition(GBufferDepth->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(g_DepthBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 
 	GBufferDescriptorCache->Reset();
+
+	// Debug
 }
 
 void TRender::DeferredShadingPass()
@@ -389,21 +397,122 @@ void TRender::GbuffersDebugPass()
 	case GBufferType::Specular:
 		texSRV = GBufferSpecular->GetSRV();
 		break;
+	//case GBufferType::Depth:
+	//	texSRV = GBufferDepth->GetSRV();
+	//	break;
 	default:
 		texSRV = NullDescriptor;
 		break;
 	}
-	shader.SetParameter("tex", texSRV);
+
+	auto srv = DebugMap->GetSRV();
+	shader.SetParameter("tex", srv);
 	
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
-
 }
 
-void TRender::ComputeTileFrustums()
+void TRender::PrePassDepthBuffer()
 {
+	auto shader = PSOManager::m_shaderMap["preDepthPass"];
+	auto pso = PSOManager::m_gfxPSOMap["preDepthPassPSO"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
 	
+	// set viewport and scissorRect
+	D3D12_VIEWPORT m_Viewport = { 0.0, 0.0, (float)g_DisplayWidth, (float)g_DisplayHeight, 0.0, 1.0 };
+	D3D12_RECT m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
+	gfxCmdList->RSSetViewports(1, &m_Viewport);
+	gfxCmdList->RSSetScissorRects(1, &m_ScissorRect);
+
+	// set PSO and RootSignature
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	g_CommandContext.Transition(g_PreDepthPassBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+
+	gfxCmdList->ClearDepthStencilView(g_PreDepthPassBuffer.GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+	gfxCmdList->OMSetRenderTargets(0, nullptr, false, &g_PreDepthPassBuffer.GetDSV());
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	// draw all mesh
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			ObjCBuffer obj;
+			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
+			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+			ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
+
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], shader, passCBufferRef);
+		}
+	}
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], shader, passCBufferRef);
+
+	// transit to generic read state
+	g_CommandContext.Transition(g_PreDepthPassBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+}
+
+void TRender::CullingLightPass()
+{
+	// Cull light
+
+	auto pso = PSOManager::m_ComputePSOMap["CullLight"];
+	auto shader = PSOManager::m_shaderMap["CullLight"];
+
+	auto computeCmdList = g_CommandContext.GetCommandList();
+	computeCmdList->SetComputeRootSignature(pso.GetRootSignature());
+	computeCmdList->SetPipelineState(pso.GetPSO());
+
+	auto DepthSRV = g_PreDepthPassBuffer.GetSRV();
+	shader.SetParameter("ScreenToViewParams", ConstantBufferRef);
+	shader.SetParameter("DispatchParams", DispatchParamsCBRef);
+	shader.SetParameter("DepthTextureVS", DepthSRV);
+	shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
+	shader.SetParameter("in_Frustums", RWStructuredBufferRef->GetSRV());
+
+	shader.SetParameterUAV("o_LightIndexCounter", LightIndexCounterCBRef->GetUAV());
+	shader.SetParameterUAV("o_LightIndexList", LightIndexListCBRef->GetUAV());
+	shader.SetParameterUAV("o_LightGrid", LightGridMap->GetUAV());
+
+	shader.SetParameterUAV("DebugTexture",DebugMap->GetUAV());
+
+	shader.BindParameters();
+
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
+	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
+}
+
+void TRender::BuildTileFrustums()
+{
+	g_CommandContext.ResetCommandList();
+
+	auto computeCmdList = g_CommandContext.GetCommandList();
+	auto pso = PSOManager::m_ComputePSOMap["ForwardPuls"];
+	auto shader = PSOManager::m_shaderMap["ForwardPuls"];
+
+	computeCmdList->SetComputeRootSignature(pso.GetRootSignature());
+	computeCmdList->SetPipelineState(pso.GetPSO());
+
+	// Shader binding
+	shader.SetParameter("ScreenToViewParams", ConstantBufferRef);
+	shader.SetParameter("DispatchParams", DispatchParamsCBRef);
+	shader.SetParameterUAV("out_Frustums", RWStructuredBufferRef->GetUAV());
+	shader.BindParameters();
+
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
+	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
+
+	g_CommandContext.ExecuteCommandLists();
 }
 
 void TRender::CreateSceneCaptureCube()
@@ -432,6 +541,7 @@ void TRender::CreateGBuffers()
 	GBufferSpecular = std::make_unique<RenderTarget2D>(L"Gbuffer Specular", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	GBufferWorldPos = std::make_unique<RenderTarget2D>(L"Gbuffer WorldPosition", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	GBufferNormal = std::make_unique<RenderTarget2D>(L"Gbuffer Normal", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	//GBufferDepth = std::make_unique<RenderTarget2D>(L"Gbuffer Depth", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 
 	GBufferDescriptorCache = std::make_unique<TD3D12DescriptorCache>(TD3D12RHI::g_Device);
 
@@ -463,7 +573,8 @@ void TRender::CreateGBuffers()
 		DXGI_FORMAT_R16G16B16A16_FLOAT,
 		DXGI_FORMAT_R16G16B16A16_FLOAT,
 		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		DXGI_FORMAT_R16G16B16A16_FLOAT
+		DXGI_FORMAT_R16G16B16A16_FLOAT,
+		//DXGI_FORMAT_R16G16B16A16_FLOAT
 	};
 	GBuffersPso.SetRenderTargetFormats(_countof(GBuffersFormat), GBuffersFormat, g_DepthBuffer.GetFormat());
 	GBuffersPso.Finalize();
@@ -481,4 +592,68 @@ void TRender::CreateGBuffers()
 	DeferredShadingPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 	DeferredShadingPso.Finalize();
 	m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
+}
+
+void TRender::CreateForwardFulsBuffer()
+{
+	struct Plane
+	{
+		XMFLOAT3 N; // plane normal
+		float  d; // distance to origin
+	};
+	struct Frustum
+	{
+		// left, right, top, bottom frustum planes.
+		Plane Planes[4];
+	};
+
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
+
+	RWStructuredBufferRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(Frustum),numGroupsX * numGroupsY);
+
+	struct ScreenToViewParams
+	{
+		XMFLOAT4X4 InverseProjection;
+		XMFLOAT2 ScreenDimensions;
+	};
+
+	ScreenToViewParams stv;
+	XMVECTOR det = XMMatrixDeterminant(g_Camera.GetProjMat());
+	XMMATRIX invProj = XMMatrixInverse(&det, g_Camera.GetProjMat());
+	XMStoreFloat4x4(&stv.InverseProjection, invProj);
+
+	stv.ScreenDimensions = { (float)g_DisplayWidth, (float)g_DisplayHeight };
+
+	ConstantBufferRef = TD3D12RHI::CreateConstantBuffer(&stv, sizeof(ScreenToViewParams));
+
+
+	struct DispatchParams
+	{
+		// Number of groups dispatched.
+		UINT numThreadGroups[3];
+		UINT padding0;
+	// uint padding //implicit padding to 16 bytes 
+
+	// Total number of threads dispatched.
+	// Note: This value may be less than the actual number of threads executed
+	// if the screen size is not evenly divisible by the block size
+		UINT numThreads[3];
+		UINT padding1;
+	// uint padding //implicit padding to 16 bytes 
+	};
+
+	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, 0,  {g_DisplayWidth, g_DisplayHeight} ,0};
+
+	DispatchParamsCBRef = TD3D12RHI::CreateConstantBuffer(&dp, sizeof(DispatchParams));
+
+	LightIndexCounterCBRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(UINT), 1);
+
+	LightIndexListCBRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(UINT), 512 * numGroupsX * numGroupsY);
+
+	LightGridMap = std::make_unique<D3D12ColorBuffer>() ;
+	LightGridMap->Create(L"Light Grip Map", numGroupsX, numGroupsY, 1, DXGI_FORMAT_R32G32_UINT);
+
+	DebugMap = std::make_unique<D3D12ColorBuffer>();
+	DebugMap->Create(L"Debug Map", numGroupsX, numGroupsY, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }

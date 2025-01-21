@@ -15,6 +15,7 @@ namespace TD3D12RHI
 
     // buffer
     D3D12DepthBuffer g_DepthBuffer;
+    D3D12DepthBuffer g_PreDepthPassBuffer;
 
     // memory allocator
     std::unique_ptr<TD3D12UploadBufferAllocator> UploadBufferAllocator = nullptr;
@@ -52,6 +53,7 @@ namespace TD3D12RHI
     {
         // create the dsv
         g_DepthBuffer.Create(L"Depth Buffer", g_DisplayWidth, g_DisplayHeight, DXGI_FORMAT_D32_FLOAT);
+        g_PreDepthPassBuffer.Create(L"pre-Pass Depth Buffer", g_DisplayWidth, g_DisplayHeight, DXGI_FORMAT_D32_FLOAT);
     }
 
     void InitialzeAllocator()

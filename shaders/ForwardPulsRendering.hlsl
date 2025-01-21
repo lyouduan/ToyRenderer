@@ -1,4 +1,5 @@
 #include "CullLightingCommon.hlsl"
+#include "lightInfo.hlsl"
 
 #ifndef BLOCK_SIZE
 #pragma message("BLOCK_SIZE undefined. Default to 16.")
@@ -92,3 +93,153 @@ void CS_ComputeFrustums(ComputeShaderInput In)
         out_Frustums[index] = frustum;
     }
 }
+
+// 
+// ------------------ Light Culling ------------------------
+// 
+
+// the depth from the screen space texture
+Texture2D DepthTextureVS;
+// Pre-computeed frustum for the grid.
+StructuredBuffer<Frustum> in_Frustums;
+
+// Golbal counter for current index into the light list
+globallycoherent RWStructuredBuffer<uint> o_LightIndexCounter;
+
+// Light index lists and light grids.
+RWStructuredBuffer<uint> o_LightIndexList;
+RWTexture2D<uint2> o_LightGrid;
+RWTexture2D<float4> DebugTexture;
+
+groupshared uint uMinDepth;
+groupshared uint uMaxDepth;
+
+groupshared Frustum GroupFrustum;
+
+// Opaque geometry light lists
+groupshared uint o_LightCount;
+groupshared uint o_LightIndexStartOffset;
+groupshared uint o_LightList[1024];
+
+// Add the light to the visible light list for opaque geometry
+void o_AppendLight(uint lightIndex)
+{
+    uint index; // Index into the visible lights array.
+    InterlockedAdd(o_LightCount, 1, index); // make sure atomic add updated by a single thread a time in multi-threads
+    if(index < 1024)
+    {
+        o_LightList[index] = lightIndex;
+    }
+    
+}
+
+// Light Culling Compute Shader
+[numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
+void CS_main(ComputeShaderInput In)
+{
+    // Calculate min and max depth in thread group
+    int2 texCoord = In.dispatchThreadID.xy;
+    float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r; // Load no filter and noramlize
+
+    uint uDepth = asuint(fDepth);
+    
+    if (In.groupIndex == 0) // Avoid contention by other threads in the group.
+    {
+        uMinDepth = 0xffffffff;
+        uMaxDepth = 0;
+        o_LightCount = 0;
+        GroupFrustum = in_Frustums[In.groupID.x + (In.groupID.y * numThreadGroups.x)];
+    }
+    
+    GroupMemoryBarrierWithGroupSync();
+    
+    InterlockedMin(uMinDepth, uDepth);
+    InterlockedMax(uMaxDepth, uDepth);
+    
+    GroupMemoryBarrierWithGroupSync();
+    
+    float fMinDepth = asfloat(uMinDepth);
+    float fMaxDepth = asfloat(uMaxDepth);
+    
+    // Convert depth values to view space
+    float minDepthVS = ClipToView(float4(0, 0, fMinDepth, 1)).z;
+    float maxDepthVS = ClipToView(float4(0, 0, fMaxDepth, 1)).z;
+    float nearClipVS = ClipToView(float4(0, 0, 0, 1)).z;
+ 
+    // Clipping plane for minimun depth value
+    // (used for testing lights within the bounds of opaque geometry)
+    Plane minPlane = { float3(0, 0, 1), minDepthVS };
+    
+    // Cull lights
+    // Each thread in a group will cull 1 light until all light have been culled.
+    for (uint i = In.groupIndex; i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
+    {
+        Light light = Lights[i];
+       
+        // Point light
+        Sphere sphere = { light.PositionV.xyz, light.Range };
+        
+        //if(SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+        {
+             // Add light to light list for transparent geometry.
+            //t_AppendLight(i);
+ 
+            if(!SphereInsidePlane(sphere, minPlane))
+            {
+                // Add light to light list for opaque geometry
+                o_AppendLight(i);
+            }
+        }
+    }
+    
+    // Wait till all threads in group have caught up.
+    GroupMemoryBarrierWithGroupSync();
+    
+    // Update global memory with visible light buffer.
+    // First update the light grid (only thread 0 in group needs to do this)
+    if(In.groupIndex == 0)
+    {
+        // Update light grid for opaque geometry.
+        InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
+        o_LightGrid[In.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
+        
+        // Update light grid for transparent geometry
+        // TODO...
+    }
+    
+    GroupMemoryBarrierWithGroupSync();
+    
+    // Now update the lightd index list (all threads).
+    // For opaque geometry
+    for (i = In.groupIndex; i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
+    {
+        o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
+    }
+    
+    
+    // ================= Debug ======================
+    // Update the debug texture output.
+    if (In.groupThreadID.x == 0 || In.groupThreadID.y == 0)
+    {
+        DebugTexture[texCoord] = float4(0, 0, 0, 0.9f);
+    }
+    else if (In.groupThreadID.x == 1 || In.groupThreadID.y == 1)
+    {
+        DebugTexture[texCoord] = float4(1, 1, 1, 0.5f);
+    }
+    else if (o_LightCount > 0)
+    {
+        float normalizedLightCount = o_LightCount / 50.0f;
+        DebugTexture[texCoord] = float4(minPlane.d, minPlane.d, minPlane.d, 0.5f);
+    }
+    else
+    {
+        DebugTexture[texCoord] = float4(0, 0, 0, 1);
+    }
+}
+    
+    
+
+
+
+

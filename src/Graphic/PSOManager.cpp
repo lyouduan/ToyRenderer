@@ -133,6 +133,15 @@ namespace PSOManager
 		TShader DeferredShadingShader(DeferredShadingInfo);
 		m_shaderMap["DeferredShadingShader"] = DeferredShadingShader;
 
+		TShaderInfo preDepthPassInfo;
+		preDepthPassInfo.FileName = "shaders/preDepthPass";
+		preDepthPassInfo.bCreateVS = true;
+		preDepthPassInfo.bCreatePS = true;
+		preDepthPassInfo.bCreateCS = false;
+		preDepthPassInfo.VSEntryPoint = "VSMain";
+		preDepthPassInfo.PSEntryPoint = "PSMain";
+		TShader preDepthPassShader(preDepthPassInfo);
+		m_shaderMap["preDepthPass"] = preDepthPassShader;
 
 		InitializeComputeShader();
 	}
@@ -152,6 +161,20 @@ namespace PSOManager
 		forwardPulsPSO.SetShader(&m_shaderMap["ForwardPuls"]);
 		forwardPulsPSO.Finalize();
 		m_ComputePSOMap["ForwardPuls"] = std::move(forwardPulsPSO);
+
+		TShaderInfo CullLightInfo;
+		CullLightInfo.FileName = "shaders/ForwardPulsRendering";
+		CullLightInfo.bCreateVS = false;
+		CullLightInfo.bCreatePS = false;
+		CullLightInfo.bCreateCS = true;
+		CullLightInfo.CSEntryPoint = "CS_main";
+		TShader CullLightShader(CullLightInfo);
+		m_shaderMap["CullLight"] = CullLightShader;
+
+		ComputePSO CullLightPSO;
+		CullLightPSO.SetShader(&m_shaderMap["CullLight"]);
+		CullLightPSO.Finalize();
+		m_ComputePSOMap["CullLight"] = std::move(CullLightPSO);
 	}
 
 	void InitializePSO()
@@ -323,7 +346,21 @@ namespace PSOManager
 		m_gfxPSOMap["prefilterMapPSO"] = prefilterMapPso;
 
 
-	
-	}
+		GraphicsPSO preDepthPass(L"pre-depth pass PSO");
+		preDepthPass.SetShader(&m_shaderMap["preDepthPass"]);
+		preDepthPass.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		preDepthPass.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		preDepthPass.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		preDepthPass.SetSampleMask(UINT_MAX);
+
+		dsvDesc.DepthEnable = TRUE;
+		preDepthPass.SetDepthStencilState(dsvDesc);
+		preDepthPass.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		preDepthPass.SetDepthTargetFormat(g_PreDepthPassBuffer.GetFormat());
+		preDepthPass.Finalize();
+
+		m_gfxPSOMap["preDepthPassPSO"] = preDepthPass;
+
+		}
 
 }
