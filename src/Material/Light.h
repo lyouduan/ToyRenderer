@@ -25,6 +25,8 @@ struct LightInfo
     float Intensity;
     float pad0;
 
+    XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
+
     int Type;
 };
 

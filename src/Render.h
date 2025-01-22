@@ -33,6 +33,9 @@ public:
 	void PrePassDepthBuffer();
 	void CullingLightPass();
 
+	// Draw Light
+	void LightPass();
+
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLPrefilterMap(int i) 

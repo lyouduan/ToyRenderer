@@ -371,6 +371,7 @@ void TRender::DeferredShadingPass()
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+
 }
 
 void TRender::GbuffersDebugPass()
@@ -450,7 +451,7 @@ void TRender::PrePassDepthBuffer()
 			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
 			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
 			ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
-
+	
 			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], shader, passCBufferRef);
 		}
 	}
@@ -489,6 +490,41 @@ void TRender::CullingLightPass()
 	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
 	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
 	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
+}
+
+void TRender::LightPass()
+{
+	Light light = LightManager::g_light;
+	// light 
+
+	auto lights = light.GetLightInfo();
+
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["lightPSO"].GetPSO());
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+
+	ObjCBuffer objCB;
+
+	for(int i = 0; i < lights.size(); i++)
+	{
+		objCB.ModelMat = lights[i].ModelMat;
+		passCB.Pad0 = i;
+
+		auto ObjCBufferRef = TD3D12RHI::CreateConstantBuffer(&objCB, sizeof(ObjCBuffer));
+		auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+		
+		m_shaderMap["lightShader"].SetParameter("objCBuffer", ObjCBufferRef);
+		m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
+		m_shaderMap["lightShader"].SetParameter("Lights", light.GetStructuredBuffer()->GetSRV());
+		m_shaderMap["lightShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
+		m_shaderMap["lightShader"].BindParameters();
+		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+	}
 }
 
 void TRender::BuildTileFrustums()

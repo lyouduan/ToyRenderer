@@ -19,6 +19,7 @@ struct Light
     float Intensity; // the intensity of the light
     float pad0; // the padding of alignment;
     
+    float4x4 ModelMat;
     uint  Type;
 };
 

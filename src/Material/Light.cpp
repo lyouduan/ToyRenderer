@@ -22,13 +22,17 @@ namespace LightManager
 
 		LightInfo light;
 		light.Type = ELightType::SpotLight;
+		std::srand(std::time(0));
 		for (int i = 0; i < 5; i++)
 		{
 			for (int j = 0; j < 5; j++)
 			{
 
-				light.Color = XMFLOAT4{ 1.0, 0.0, 0.0, 1.0 };
-				light.PositionW = XMFLOAT4{ (float)i * 10.0f,  -50.0f + 20 * (float)i, 10.0f * (float)j, 1.0 };
+				light.Color = XMFLOAT4{ static_cast<float>(std::rand()) / RAND_MAX, static_cast<float>(std::rand()) / RAND_MAX ,static_cast<float>(std::rand())/RAND_MAX, 1.0 };
+				light.PositionW = XMFLOAT4{ -20.0f + (float)i * 10.0f,  10.0f, 10.0f * (float)j, 1.0 };
+
+				XMMATRIX tanslation = XMMatrixTranslation(light.PositionW.x, light.PositionW.y, light.PositionW.z);
+				XMStoreFloat4x4(&light.ModelMat, XMMatrixTranspose(tanslation));
 
 				XMVECTOR pos = XMLoadFloat4(&light.PositionW);
 				XMStoreFloat4(&light.PositionV, XMVector4Transform(pos, TD3D12RHI::g_Camera.GetViewMat()));

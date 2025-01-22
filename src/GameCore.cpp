@@ -381,8 +381,6 @@ void GameCore::PopulateCommandList()
 		m_Render->PrePassDepthBuffer();
 		m_Render->CullingLightPass();
 	}
-	
-	
 
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
@@ -407,6 +405,9 @@ void GameCore::PopulateCommandList()
 		{
 			m_Render->GbuffersDebugPass();
 		}
+
+		// light pass
+		m_Render->LightPass();
 	}
 	else
 	{
@@ -461,17 +462,8 @@ void GameCore::PopulateCommandList()
 			ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
 		}
 
-		// light 
-		{
-			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
-			g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["lightPSO"].GetPSO());
-			m_shaderMap["lightShader"].SetParameter("objCBuffer", lightObjCBufferRef);
-			m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
-			m_shaderMap["lightShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
-			m_shaderMap["lightShader"].BindParameters();
-			ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
-		}
-		
+		// light pass
+		m_Render->LightPass();
 
 		// sky box
 		{
@@ -482,7 +474,7 @@ void GameCore::PopulateCommandList()
 			m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
 
 			if (m_Render->GetbUseEquirectangularMap())
-				m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLEnvironmemtMap()->GetSRV());
+				m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
 			else
 				m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
 

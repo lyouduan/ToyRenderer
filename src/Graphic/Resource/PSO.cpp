@@ -90,7 +90,7 @@ void GraphicsPSO::Finalize()
     m_PSODesc.VS = D3D12_SHADER_BYTECODE{ m_Shader->ShaderPass.at("VS")->GetBufferPointer(), m_Shader->ShaderPass.at("VS")->GetBufferSize() };
     m_PSODesc.PS = D3D12_SHADER_BYTECODE{ m_Shader->ShaderPass.at("PS")->GetBufferPointer(), m_Shader->ShaderPass.at("PS")->GetBufferSize() };
 
-    m_PSODesc.pRootSignature = m_Shader->RootSignature.Get();
+    m_PSODesc.pRootSignature = m_RootSignature;
 
     // Make sure the root signature is finalized first
     assert(m_RootSignature != nullptr);

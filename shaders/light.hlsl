@@ -1,26 +1,27 @@
+#include "lightInfo.hlsl"
 
-cbuffer objCBuffer : register(b0)
+cbuffer objCBuffer
 {
     float4x4 ModelMat;
 }
 
-cbuffer passCBuffer : register(b1)
+cbuffer passCBuffer
 {
     float4x4 gViewMat;
     float4x4 gProjMat;
     
     float3 gEyePosW;
-    float pad0;
+    float lightIndex;
     
     float3 gLightPos;
     float pad1;
     float3 gLightColor;
-    float pad2;
+    float Intensity;
 }
 
-Texture2D diffuseMap : register(t0);
-Texture2D specularMap : register(t1);
-Texture2D normalMap : register(t2);
+Texture2D diffuseMap;
+Texture2D specularMap;
+Texture2D normalMap;
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -48,6 +49,7 @@ struct PSInput
 PSInput VSMain(VSInput vin)
 {
     PSInput vout;
+    
     vout.positionW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
     
     float4x4 viewProj = mul(gViewMat, gProjMat);
@@ -60,5 +62,5 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    return float4(gLightColor, 1.0);
+    return float4(Lights[lightIndex].Color.xyz, 1.0);
 }
