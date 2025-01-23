@@ -361,7 +361,7 @@ void TRender::DeferredShadingPass()
 
 	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
 	gfxCmdList->SetPipelineState(pso.GetPSO());
-
+	
 	shader.SetParameter("passCBuffer", passCBufferRef);
 	shader.SetParameter("GBufferAlbedoMap", GBufferAlbedo->GetSRV());
 	shader.SetParameter("GBufferWorldPosMap", GBufferWorldPos->GetSRV());
@@ -406,7 +406,7 @@ void TRender::GbuffersDebugPass()
 		break;
 	}
 
-	auto srv = DebugMap->GetSRV();
+	auto srv = LightGridMap->GetSRV();
 	shader.SetParameter("tex", srv);
 	
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
@@ -482,13 +482,17 @@ void TRender::CullingLightPass()
 	shader.SetParameterUAV("o_LightIndexCounter", LightIndexCounterCBRef->GetUAV());
 	shader.SetParameterUAV("o_LightIndexList", LightIndexListCBRef->GetUAV());
 	shader.SetParameterUAV("o_LightGrid", LightGridMap->GetUAV());
-
 	shader.SetParameterUAV("DebugTexture",DebugMap->GetUAV());
 
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+	shader.SetParameter("passCBuffer", passCBufferRef);
+	
 	shader.BindParameters();
 
-	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
-	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 32.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 32.0f);
 	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
 }
 
@@ -496,8 +500,9 @@ void TRender::LightPass()
 {
 	Light light = LightManager::g_light;
 	// light 
-
 	auto lights = light.GetLightInfo();
+
+	Mesh pointLight = ModelManager::m_MeshMaps["SpotLight"];
 
 	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["lightPSO"].GetRootSignature());
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["lightPSO"].GetPSO());
@@ -521,9 +526,9 @@ void TRender::LightPass()
 		m_shaderMap["lightShader"].SetParameter("objCBuffer", ObjCBufferRef);
 		m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
 		m_shaderMap["lightShader"].SetParameter("Lights", light.GetStructuredBuffer()->GetSRV());
-		m_shaderMap["lightShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
+		m_shaderMap["lightShader"].SetDescriptorCache(pointLight.GetTD3D12DescriptorCache());
 		m_shaderMap["lightShader"].BindParameters();
-		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+		pointLight.DrawMesh(g_CommandContext);
 	}
 }
 
@@ -544,8 +549,8 @@ void TRender::BuildTileFrustums()
 	shader.SetParameterUAV("out_Frustums", RWStructuredBufferRef->GetUAV());
 	shader.BindParameters();
 
-	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
-	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 32.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 32.0f);
 	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
 
 	g_CommandContext.ExecuteCommandLists();
@@ -643,8 +648,8 @@ void TRender::CreateForwardFulsBuffer()
 		Plane Planes[4];
 	};
 
-	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
-	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 32.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 32.0f);
 
 	RWStructuredBufferRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(Frustum),numGroupsX * numGroupsY);
 
@@ -657,7 +662,7 @@ void TRender::CreateForwardFulsBuffer()
 	ScreenToViewParams stv;
 	XMVECTOR det = XMMatrixDeterminant(g_Camera.GetProjMat());
 	XMMATRIX invProj = XMMatrixInverse(&det, g_Camera.GetProjMat());
-	XMStoreFloat4x4(&stv.InverseProjection, invProj);
+	XMStoreFloat4x4(&stv.InverseProjection, XMMatrixTranspose(invProj));
 
 	stv.ScreenDimensions = { (float)g_DisplayWidth, (float)g_DisplayHeight };
 
@@ -667,19 +672,16 @@ void TRender::CreateForwardFulsBuffer()
 	struct DispatchParams
 	{
 		// Number of groups dispatched.
-		UINT numThreadGroups[3];
-		UINT padding0;
-	// uint padding //implicit padding to 16 bytes 
+		XMUINT3 numThreadGroups;
 
 	// Total number of threads dispatched.
 	// Note: This value may be less than the actual number of threads executed
 	// if the screen size is not evenly divisible by the block size
-		UINT numThreads[3];
-		UINT padding1;
-	// uint padding //implicit padding to 16 bytes 
+		XMUINT3 numThreads;
 	};
-
-	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, 0,  {g_DisplayWidth, g_DisplayHeight} ,0};
+	
+	//assert(sizeof(XMUINT3) == sizeof(UINT) * 4);
+	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, {g_DisplayWidth, g_DisplayHeight, 1}};
 
 	DispatchParamsCBRef = TD3D12RHI::CreateConstantBuffer(&dp, sizeof(DispatchParams));
 
@@ -688,8 +690,8 @@ void TRender::CreateForwardFulsBuffer()
 	LightIndexListCBRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(UINT), 512 * numGroupsX * numGroupsY);
 
 	LightGridMap = std::make_unique<D3D12ColorBuffer>() ;
-	LightGridMap->Create(L"Light Grip Map", numGroupsX, numGroupsY, 1, DXGI_FORMAT_R32G32_UINT);
+	LightGridMap->Create(L"Light Grip Map", numGroupsX, numGroupsY, 1, DXGI_FORMAT_R8G8_UINT);
 
 	DebugMap = std::make_unique<D3D12ColorBuffer>();
-	DebugMap->Create(L"Debug Map", numGroupsX, numGroupsY, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	DebugMap->Create(L"Debug Map", numGroupsX * 32, numGroupsY * 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }

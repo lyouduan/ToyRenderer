@@ -128,7 +128,7 @@ float4 PSMain(PSInput pin) : SV_Target
         float NdotV = saturate(dot(N, V));
         float2 brdf = BrdfLUT2D.Sample(LinearWrapSampler, float2(NdotV, gRoughness)).rg;
         float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
-        ambient = diffuse;
+        ambient = kD * diffuse + specular;
     }
     
     float3 color = ambient + Lo;

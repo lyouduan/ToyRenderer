@@ -378,9 +378,11 @@ void GameCore::PopulateCommandList()
 	{
 		m_Render->GbuffersPass();
 
-		m_Render->PrePassDepthBuffer();
-		m_Render->CullingLightPass();
+		
 	}
+	
+	m_Render->PrePassDepthBuffer();
+	m_Render->CullingLightPass();
 
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
@@ -396,6 +398,8 @@ void GameCore::PopulateCommandList()
 
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
+	m_Render->GbuffersDebugPass();
+
 	// full quad
 	if (m_Render->GetEnableDeferredRendering())
 	{
@@ -406,8 +410,6 @@ void GameCore::PopulateCommandList()
 			m_Render->GbuffersDebugPass();
 		}
 
-		// light pass
-		m_Render->LightPass();
 	}
 	else
 	{
@@ -465,6 +467,7 @@ void GameCore::PopulateCommandList()
 		// light pass
 		m_Render->LightPass();
 
+		
 		// sky box
 		{
 			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
@@ -474,7 +477,7 @@ void GameCore::PopulateCommandList()
 			m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
 
 			if (m_Render->GetbUseEquirectangularMap())
-				m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+				m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLEnvironmemtMap()->GetSRV());
 			else
 				m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
 

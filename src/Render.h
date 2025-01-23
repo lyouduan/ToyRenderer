@@ -88,7 +88,7 @@ private:
 
 	// Deferred Redenring
 	// GBuffer info
-	bool bEnableDeferredRendering = false;
+	bool bEnableDeferredRendering = true;
 	std::unique_ptr<RenderTarget2D> GBufferAlbedo;
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;

@@ -2,8 +2,8 @@
 #include "lightInfo.hlsl"
 
 #ifndef BLOCK_SIZE
-#pragma message("BLOCK_SIZE undefined. Default to 16.")
-#define BLOCK_SIZE 16 // should be defined by the application.
+#pragma message("BLOCK_SIZE undefined. Default to 32.")
+#define BLOCK_SIZE 32// should be defined by the application.
 #endif
 
 struct ComputeShaderInput
@@ -35,6 +35,20 @@ RWStructuredBuffer<Frustum> out_Frustums;
 // This kernel is executed once per grid cell.
 // Each thread computes a frustum for a grid cell.
 
+cbuffer passCBuffer
+{
+    float4x4 gViewMat;
+    float4x4 gProjMat;
+    
+    float3 gEyePosW;
+    float pad0;
+    
+    float3 gLightPos;
+    float pad1;
+    float3 gLightColor;
+    float pad2;
+}
+
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_ComputeFrustums(ComputeShaderInput In)
 {
@@ -53,7 +67,7 @@ void CS_ComputeFrustums(ComputeShaderInput In)
     screenSpace[2] = float4(float2(In.dispatchThreadID.x, In.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
     // Bottom right point
     screenSpace[3] = float4(float2(In.dispatchThreadID.x + 1, In.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
-    
+
     float3 viewSpace[4];
     // Now convert the screen space points to view space
     for (int i = 0; i < 4; i++)
@@ -121,10 +135,11 @@ groupshared uint o_LightCount;
 groupshared uint o_LightIndexStartOffset;
 groupshared uint o_LightList[1024];
 
+
 // Add the light to the visible light list for opaque geometry
 void o_AppendLight(uint lightIndex)
 {
-    uint index; // Index into the visible lights array.
+    uint index = 0; // Index into the visible lights array.
     InterlockedAdd(o_LightCount, 1, index); // make sure atomic add updated by a single thread a time in multi-threads
     if(index < 1024)
     {
@@ -137,12 +152,15 @@ void o_AppendLight(uint lightIndex)
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_main(ComputeShaderInput In)
 {
-    // Calculate min and max depth in thread group
+    // Counters
+    uint i, index;
+
+    // Calculate min & max depth in threadgroup / tile.
     int2 texCoord = In.dispatchThreadID.xy;
-    float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r; // Load no filter and noramlize
+    float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
 
     uint uDepth = asuint(fDepth);
-    
+
     if (In.groupIndex == 0) // Avoid contention by other threads in the group.
     {
         uMinDepth = 0xffffffff;
@@ -150,42 +168,48 @@ void CS_main(ComputeShaderInput In)
         o_LightCount = 0;
         GroupFrustum = in_Frustums[In.groupID.x + (In.groupID.y * numThreadGroups.x)];
     }
-    
-    GroupMemoryBarrierWithGroupSync();
-    
     InterlockedMin(uMinDepth, uDepth);
     InterlockedMax(uMaxDepth, uDepth);
     
     GroupMemoryBarrierWithGroupSync();
-    
+
     float fMinDepth = asfloat(uMinDepth);
     float fMaxDepth = asfloat(uMaxDepth);
-    
-    // Convert depth values to view space
+
+     // Convert depth values to view space.
     float minDepthVS = ClipToView(float4(0, 0, fMinDepth, 1)).z;
     float maxDepthVS = ClipToView(float4(0, 0, fMaxDepth, 1)).z;
     float nearClipVS = ClipToView(float4(0, 0, 0, 1)).z;
  
-    // Clipping plane for minimun depth value
-    // (used for testing lights within the bounds of opaque geometry)
-    Plane minPlane = { float3(0, 0, 1), minDepthVS };
+    // Clipping plane for minimum depth value 
+    // (used for testing lights within the bounds of opaque geometry).
+    Plane minPlane = { float3(0, 0, 1), -minDepthVS };
     
     // Cull lights
     // Each thread in a group will cull 1 light until all light have been culled.
-    for (uint i = In.groupIndex; i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
+    
+    float3 lightColor = float3(1.0, 1.0, 1.0);
+    for (i = In.groupIndex;  i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
     {
         Light light = Lights[i];
        
         // Point light
-        Sphere sphere = { light.PositionV.xyz, light.Range };
+        Sphere sphere = { mul(float4(light.PositionW.xyz, 1), gViewMat).xyz, light.Range };
         
-        //if(SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+        lightColor = float3(1.0, 1.0, 1.0);
+        
+        if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
         {
-             // Add light to light list for transparent geometry.
+            //lightColor = light.PositionW.xyz;
+            
+            
+            // Add light to light list for transparent geometry.
             //t_AppendLight(i);
- 
-            if(!SphereInsidePlane(sphere, minPlane))
+            
+            if (!SphereInsidePlane(sphere, minPlane))
             {
+                lightColor = float3(1.0, 0.0, 1.0);
+                
                 // Add light to light list for opaque geometry
                 o_AppendLight(i);
             }
@@ -216,30 +240,24 @@ void CS_main(ComputeShaderInput In)
         o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
     }
     
-    
     // ================= Debug ======================
     // Update the debug texture output.
-    if (In.groupThreadID.x == 0 || In.groupThreadID.y == 0)
+    if (o_LightCount > 0)
     {
-        DebugTexture[texCoord] = float4(0, 0, 0, 0.9f);
-    }
-    else if (In.groupThreadID.x == 1 || In.groupThreadID.y == 1)
-    {
-        DebugTexture[texCoord] = float4(1, 1, 1, 0.5f);
-    }
-    else if (o_LightCount > 0)
-    {
-        float normalizedLightCount = o_LightCount / 50.0f;
-        DebugTexture[texCoord] = float4(minPlane.d, minPlane.d, minPlane.d, 0.5f);
+        if(o_LightCount < 5)
+            DebugTexture[texCoord] = float4(1.0, 0.0 ,0.0, 1.0f);
+        if (o_LightCount < 10)
+            DebugTexture[texCoord] = float4(0.0, 1.0, 0.0, 1.0f);
+        if (o_LightCount < 15)
+            DebugTexture[texCoord] = float4(0.0, 0.0, 1.0, 1.0f);
+        if (o_LightCount < 20)
+            DebugTexture[texCoord] = float4(1.0, 0.0, 1.0, 1.0f);
+        else
+            DebugTexture[texCoord] = float4(1.0, 1.0, 1.0, 1.0f);
     }
     else
     {
-        DebugTexture[texCoord] = float4(0, 0, 0, 1);
+        DebugTexture[texCoord] = float4(0.0, 0.0, 0.0, 1); // None
     }
 }
-    
-    
-
-
-
 

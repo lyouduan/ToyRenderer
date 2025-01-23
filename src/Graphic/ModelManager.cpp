@@ -12,14 +12,18 @@ namespace ModelManager
 		box.CreateBox(1, 1, 1, 3);
 		m_MeshMaps["box"] = box;
 
+
 		ModelLoader boxModel;
 		boxModel.SetMesh(m_MeshMaps["box"]);
 		m_ModelMaps["box"] = std::move(boxModel);
 
-
 		Mesh sphere;
 		sphere.CreateSphere(1, 20, 20);
 		m_MeshMaps["sphere"] = sphere;
+
+		Mesh pointLight;
+		pointLight.CreateSphere(1, 20, 20);
+		m_MeshMaps["SpotLight"] = pointLight;
 
 		ModelLoader sphereModel;
 		sphereModel.SetMesh(m_MeshMaps["sphere"]);
@@ -40,6 +44,10 @@ namespace ModelManager
 		ModelLoader DebugQuadquadModel;
 		DebugQuadquadModel.SetMesh(m_MeshMaps["DebugQuad"]);
 		m_ModelMaps["DebugQuad"] = std::move(DebugQuadquadModel);
+
+		Mesh HalfQuad;
+		HalfQuad.CreateQuad(0, 0, 1, 1, 0);
+		m_MeshMaps["HalfQuad"] = HalfQuad;
 
 		Mesh Cylinder;
 		Cylinder.CreateCylinder(1, 1, 5, 10, 10);

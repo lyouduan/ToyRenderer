@@ -50,7 +50,7 @@ cbuffer ScreenToViewParams
 
 float4 ClipToView(float4 clip)
 {
-    float4 view = mul(InverseProjection, clip);
+    float4 view = mul(clip, InverseProjection);
     
     view /= view.w;
     
@@ -96,6 +96,7 @@ struct Sphere
 // Check to see if a sphere is fully behind (inside the negative halfspace of ) a plane.
 bool SphereInsidePlane(Sphere sphere, Plane plane)
 {
+    
     return dot(plane.N, sphere.c) - plane.d < -sphere.r;
 }
 
@@ -109,9 +110,7 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
     
     // Note: Here, the view vector points in the -Z axis so the 
     // far depth value will be approaching - infinity. (int righ-handed coordinate)
-    
-    // we in left-handed coordinate,so swap the zNear and zFar
-    if (sphere.c.z - sphere.r > zFar || sphere.c.z + sphere.r < zNear)
+    if (sphere.c.z - sphere.r > zNear || sphere.c.z + sphere.r < zFar)
     {
         result = false;
     }
@@ -119,7 +118,7 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
     // Then check frustum planes
     for (int i = 0; i < 4 && result; i++)
     {
-        if(SphereInsidePlane(sphere, frustum.Planes[i]))
+        if (SphereInsidePlane(sphere, frustum.Planes[i]))
         {
             result = false;
         }
