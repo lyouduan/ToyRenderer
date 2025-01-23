@@ -58,6 +58,12 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			shader.SetParameter("metallicMap", NullDescriptor);
 		}
 
+		if (bEnableForwardPuls)
+		{
+			shader.SetParameter("o_LightGrid", LightGridMap->GetSRV());
+			shader.SetParameter("o_LightIndexList", LightIndexListCBRef->GetSRV());
+			shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
+		}
 		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
 		meshes[i].DrawMesh(gfxContext);
@@ -407,7 +413,8 @@ void TRender::GbuffersDebugPass()
 	}
 
 	auto srv = LightGridMap->GetSRV();
-	shader.SetParameter("tex", srv);
+	shader.SetParameter("LightGrid", srv);
+	//shader.SetParameter("tex", texSRV);
 	
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
@@ -455,7 +462,7 @@ void TRender::PrePassDepthBuffer()
 			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], shader, passCBufferRef);
 		}
 	}
-	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], shader, passCBufferRef);
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
 
 	// transit to generic read state
 	g_CommandContext.Transition(g_PreDepthPassBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
@@ -491,9 +498,46 @@ void TRender::CullingLightPass()
 	
 	shader.BindParameters();
 
-	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 32.0f);
-	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 32.0f);
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
 	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
+}
+
+void TRender::ForwardPlusPass()
+{
+	auto shader = PSOManager::m_shaderMap["ForwardPulsPass"];
+	auto pso = PSOManager::m_gfxPSOMap["ForwardPulsPass"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	// set PSO and RootSignature
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	// draw all mesh
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			ObjCBuffer obj;
+			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
+			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+			ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
+
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], shader, passCBufferRef);
+		}
+	}
+
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+
+	// transit to generic read state
+	g_CommandContext.Transition(g_PreDepthPassBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void TRender::LightPass()
@@ -549,8 +593,8 @@ void TRender::BuildTileFrustums()
 	shader.SetParameterUAV("out_Frustums", RWStructuredBufferRef->GetUAV());
 	shader.BindParameters();
 
-	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 32.0f);
-	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 32.0f);
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
 	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
 
 	g_CommandContext.ExecuteCommandLists();
@@ -648,8 +692,8 @@ void TRender::CreateForwardFulsBuffer()
 		Plane Planes[4];
 	};
 
-	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 32.0f);
-	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 32.0f);
+	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
+	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
 
 	RWStructuredBufferRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(Frustum),numGroupsX * numGroupsY);
 
@@ -687,11 +731,11 @@ void TRender::CreateForwardFulsBuffer()
 
 	LightIndexCounterCBRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(UINT), 1);
 
-	LightIndexListCBRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(UINT), 512 * numGroupsX * numGroupsY);
+	LightIndexListCBRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(UINT), 200 * numGroupsX * numGroupsY);
 
 	LightGridMap = std::make_unique<D3D12ColorBuffer>() ;
 	LightGridMap->Create(L"Light Grip Map", numGroupsX, numGroupsY, 1, DXGI_FORMAT_R8G8_UINT);
 
 	DebugMap = std::make_unique<D3D12ColorBuffer>();
-	DebugMap->Create(L"Debug Map", numGroupsX * 32, numGroupsY * 32, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+	DebugMap->Create(L"Debug Map", numGroupsX * 16, numGroupsY * 16, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }

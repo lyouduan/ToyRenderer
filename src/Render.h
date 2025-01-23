@@ -32,6 +32,7 @@ public:
 	void BuildTileFrustums();
 	void PrePassDepthBuffer();
 	void CullingLightPass();
+	void ForwardPlusPass();
 
 	// Draw Light
 	void LightPass();
@@ -65,6 +66,8 @@ public:
 	bool GetEnableDeferredRendering() { return bEnableDeferredRendering; }
 	void SetEnableDeferredRendering(bool b) { bEnableDeferredRendering = b; }
 
+	bool GetEnableForwardPulsPass() { return bEnableForwardPuls; }
+	void SetEnableForwardPulsPass(bool b) { bEnableForwardPuls = b; }
 private:
 
 	void CreateSceneCaptureCube();
@@ -77,8 +80,9 @@ private:
 
 	// PBR and IBL
 	bool bUseEquirectangularMap = false;
-	bool bEnableIBLEnvLighting = false;
+	bool bEnableIBLEnvLighting = true;
 	bool bDebugGBuffers = false;
+	bool bEnableForwardPuls = true;
 	
 	const static UINT IBLPrefilterMaxMipLevel = 5;
 	std::unique_ptr<SceneCaptureCube> IBLEnvironmentMap;
@@ -88,7 +92,8 @@ private:
 
 	// Deferred Redenring
 	// GBuffer info
-	bool bEnableDeferredRendering = true;
+	bool bEnableDeferredRendering = false;
+
 	std::unique_ptr<RenderTarget2D> GBufferAlbedo;
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;

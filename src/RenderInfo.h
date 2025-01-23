@@ -12,6 +12,7 @@ __declspec(align(16))
 struct ObjCBuffer
 {
     XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 InvTranModelMat = MATH::IdentityMatrix;
 };
 
 __declspec(align(16))

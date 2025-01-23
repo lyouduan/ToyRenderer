@@ -55,6 +55,11 @@ public:
 	const TD3D12VertexBufferRef& GetVertexBuffer() const { return m_vertexBufferRef; }
 	const TD3D12IndexBufferRef& GetIndexBuffer() const { return m_indexBufferRef; }
 
+	void SetTexture(D3D12_CPU_DESCRIPTOR_HANDLE srv)
+	{
+		m_SRV.push_back(srv);
+	}
+
 public:
 	/// Creates a box centered at the origin with the given dimensions, where each
 	/// face has m rows and n columns of vertices.

@@ -2,8 +2,8 @@
 #include "lightInfo.hlsl"
 
 #ifndef BLOCK_SIZE
-#pragma message("BLOCK_SIZE undefined. Default to 32.")
-#define BLOCK_SIZE 32// should be defined by the application.
+#pragma message("BLOCK_SIZE undefined. Default to 16.")
+#define BLOCK_SIZE 16// should be defined by the application.
 #endif
 
 struct ComputeShaderInput
@@ -183,7 +183,7 @@ void CS_main(ComputeShaderInput In)
  
     // Clipping plane for minimum depth value 
     // (used for testing lights within the bounds of opaque geometry).
-    Plane minPlane = { float3(0, 0, 1), -minDepthVS };
+    Plane minPlane = { float3(0, 0, 1), minDepthVS };
     
     // Cull lights
     // Each thread in a group will cull 1 light until all light have been culled.
@@ -195,6 +195,7 @@ void CS_main(ComputeShaderInput In)
        
         // Point light
         Sphere sphere = { mul(float4(light.PositionW.xyz, 1), gViewMat).xyz, light.Range };
+        //Sphere sphere = { light.PositionV.xyz, light.Range };
         
         lightColor = float3(1.0, 1.0, 1.0);
         

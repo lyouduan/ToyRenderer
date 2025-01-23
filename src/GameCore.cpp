@@ -161,6 +161,14 @@ void GameCore::UpdateImGui()
 		if(ImGuiManager::bDebugGBuffers)
 			ImGuiManager::RenderCombo();
 
+		// forward puls
+		if (ImGui::Checkbox("Enable Forward Puls Rendering", &ImGuiManager::bEnableForwardPuls))
+		{
+			if (ImGuiManager::bEnableForwardPuls)
+				m_Render->SetEnableForwardPulsPass(true);
+			else
+				m_Render->SetEnableForwardPulsPass(false);
+		}
 
 		// camera control
 		g_Camera.CamerImGui();
@@ -380,10 +388,13 @@ void GameCore::PopulateCommandList()
 
 		
 	}
-	
-	m_Render->PrePassDepthBuffer();
-	m_Render->CullingLightPass();
 
+	if (m_Render->GetEnableForwardPulsPass())
+	{
+		m_Render->PrePassDepthBuffer();
+		m_Render->CullingLightPass();
+	}
+	
 	// set necessary state
 	g_CommandContext.GetCommandList()->RSSetViewports(1, &m_viewport);
 	g_CommandContext.GetCommandList()->RSSetScissorRects(1, &m_scissorRect);
@@ -398,7 +409,6 @@ void GameCore::PopulateCommandList()
 
 	g_CommandContext.GetCommandList()->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), TRUE, &TD3D12RHI::g_DepthBuffer.GetDSV());
 
-	m_Render->GbuffersDebugPass();
 
 	// full quad
 	if (m_Render->GetEnableDeferredRendering())
@@ -409,6 +419,14 @@ void GameCore::PopulateCommandList()
 		{
 			m_Render->GbuffersDebugPass();
 		}
+
+	}
+	else if (m_Render->GetEnableForwardPulsPass())
+	{
+		m_Render->ForwardPlusPass();
+		m_Render->GbuffersDebugPass();
+		// light pass
+		m_Render->LightPass();
 
 	}
 	else

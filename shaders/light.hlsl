@@ -11,7 +11,7 @@ cbuffer passCBuffer
     float4x4 gProjMat;
     
     float3 gEyePosW;
-    float lightIndex;
+    float gLightIndex;
     
     float3 gLightPos;
     float pad1;
@@ -62,5 +62,5 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    return float4(Lights[lightIndex].Color.xyz, 1.0);
+    return float4(Lights[gLightIndex].Color.xyz, 1.0);
 }

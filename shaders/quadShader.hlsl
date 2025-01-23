@@ -25,7 +25,6 @@ PSInput VSMain(VSInput input)
 
 Texture2D<uint2> LightGrid;
 
-Texture2D tex;
 
 SamplerState PointWrapSampler : register(s0);
 SamplerState PointClampSampler : register(s1);
@@ -46,10 +45,12 @@ float4 PSMain(PSInput pin) : SV_Target
     
     // cull light grid debug
     {
-        uint2 threadXY = uint2(floor(1280 / 32.0), floor(720 / 32.0));
+        uint2 threadXY = uint2(floor(1280 / 16.0), floor(720 / 16.0));
         uint2 tileIndex = uint2(floor(pin.tex * threadXY));
     
         uint r = LightGrid[tileIndex].g;
+        if (r < 1)
+            return float4(0.0, 0.0, 0.0, 1.0f);
         if (r < 5)
             return float4(1.0, 0.0, 0.0, 1.0f);
         if (r < 10)

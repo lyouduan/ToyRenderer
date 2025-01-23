@@ -143,13 +143,24 @@ namespace PSOManager
 		TShader preDepthPassShader(preDepthPassInfo);
 		m_shaderMap["preDepthPass"] = preDepthPassShader;
 
+
+		TShaderInfo ForwardPulsPassInfo;
+		ForwardPulsPassInfo.FileName = "shaders/ForwardPulsPass";
+		ForwardPulsPassInfo.bCreateVS = true;
+		ForwardPulsPassInfo.bCreatePS = true;
+		ForwardPulsPassInfo.bCreateCS = false;
+		ForwardPulsPassInfo.VSEntryPoint = "VSMain";
+		ForwardPulsPassInfo.PSEntryPoint = "PSMain";
+		TShader ForwardPulsPassShader(ForwardPulsPassInfo);
+		m_shaderMap["ForwardPulsPass"] = ForwardPulsPassShader;
+
 		InitializeComputeShader();
 	}
 
 	void InitializeComputeShader()
 	{
 		TShaderInfo ForwardPlusInfo;
-		ForwardPlusInfo.FileName = "shaders/ForwardPulsRendering";
+		ForwardPlusInfo.FileName = "shaders/ForwardPulsCS";
 		ForwardPlusInfo.bCreateVS = false;
 		ForwardPlusInfo.bCreatePS = false;
 		ForwardPlusInfo.bCreateCS = true;
@@ -163,7 +174,7 @@ namespace PSOManager
 		m_ComputePSOMap["ForwardPuls"] = std::move(forwardPulsPSO);
 
 		TShaderInfo CullLightInfo;
-		CullLightInfo.FileName = "shaders/ForwardPulsRendering";
+		CullLightInfo.FileName = "shaders/ForwardPulsCS";
 		CullLightInfo.bCreateVS = false;
 		CullLightInfo.bCreatePS = false;
 		CullLightInfo.bCreateCS = true;
@@ -352,7 +363,6 @@ namespace PSOManager
 		preDepthPass.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		preDepthPass.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
 		preDepthPass.SetSampleMask(UINT_MAX);
-
 		dsvDesc.DepthEnable = TRUE;
 		preDepthPass.SetDepthStencilState(dsvDesc);
 		preDepthPass.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
@@ -360,6 +370,22 @@ namespace PSOManager
 		preDepthPass.Finalize();
 
 		m_gfxPSOMap["preDepthPassPSO"] = preDepthPass;
+
+
+		GraphicsPSO ForwardPulsPso(L"ForwardPuls PSO");
+		ForwardPulsPso.SetShader(&m_shaderMap["ForwardPulsPass"]);
+		ForwardPulsPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		ForwardPulsPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		ForwardPulsPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		ForwardPulsPso.SetDepthStencilState(dsvDesc);
+		ForwardPulsPso.SetSampleMask(UINT_MAX);
+		ForwardPulsPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		ForwardPulsPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		ForwardPulsPso.Finalize();
+		m_gfxPSOMap["ForwardPulsPass"] = ForwardPulsPso;
 
 		}
 

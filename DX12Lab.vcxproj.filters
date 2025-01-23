@@ -313,8 +313,9 @@
     <None Include="shaders\DeferredShading.hlsl" />
     <None Include="shaders\lightInfo.hlsl" />
     <None Include="shaders\CullLightingCommon.hlsl" />
-    <None Include="shaders\ForwardPulsRendering.hlsl" />
+    <None Include="shaders\ForwardPulsCS.hlsl" />
     <None Include="shaders\preDepthPass.hlsl" />
+    <None Include="shaders\ForwardPulsPass.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

@@ -71,15 +71,33 @@ namespace ModelManager
 		if (!wall.Load("./models/brick_wall/brick_wall.obj"))
 			assert(false);
 
-		float scale = 10;
+		float scale = 50;
 		XMMATRIX scalingMat = XMMatrixScaling(scale, scale, scale);
 		const XMVECTOR rotationAxisX = XMVectorSet(1, 0, 0, 0);
 		XMMATRIX rotationMat = XMMatrixRotationAxis(rotationAxisX, XMConvertToRadians(90));
+
+		auto modelMat = scalingMat * rotationMat;
+		auto det = XMMatrixDeterminant(modelMat);
+		auto invTranModelMat = XMMatrixTranspose(XMMatrixInverse(&det, modelMat));
+
 		ObjCBuffer objCB;
-		XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(scalingMat * rotationMat));
+		XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(modelMat));
+		XMStoreFloat4x4(&objCB.InvTranModelMat, XMMatrixTranspose(invTranModelMat));
 		wall.SetObjCBuffer(objCB);
 		m_ModelMaps["wall"] = wall;
 
+
+		Mesh gridMesh;
+		gridMesh.CreateGrid(100.0, 100.0, 60, 40);
+		TD3D12Texture tex;
+		tex.Create2D(64, 64);
+		if (tex.CreateWICFromFile(L"./textures/grid.jpg", 0, false))
+			gridMesh.SetTexture(tex.GetSRV());
+		else
+			assert(false);
+		ModelLoader floor;
+		floor.SetMesh(gridMesh);
+		m_ModelMaps["floor"] = floor;
 
 		ModelLoader Cerberus_LP;
 		if (!Cerberus_LP.Load("./models/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX"))
