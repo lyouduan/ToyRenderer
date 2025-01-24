@@ -139,7 +139,7 @@ float4 PSMain(PSInput pin) : SV_Target
     float3 diffuse = totalDiffuse * albedo;
     float3 specular = totalSpecular * metallic;
     
-    float3 ambient = albedo * 0.2;
+    float3 ambient = albedo * 0.5;
     
     float3 color = diffuse + specular * ambient;
     

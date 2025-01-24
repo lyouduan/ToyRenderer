@@ -202,17 +202,13 @@ void CS_main(ComputeShaderInput In)
         if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
         {
             //lightColor = light.PositionW.xyz;
-            
-            
+            o_AppendLight(i);
             // Add light to light list for transparent geometry.
-            //t_AppendLight(i);
-            
             if (!SphereInsidePlane(sphere, minPlane))
             {
                 lightColor = float3(1.0, 0.0, 1.0);
                 
                 // Add light to light list for opaque geometry
-                o_AppendLight(i);
             }
         }
     }
@@ -245,16 +241,7 @@ void CS_main(ComputeShaderInput In)
     // Update the debug texture output.
     if (o_LightCount > 0)
     {
-        if(o_LightCount < 5)
-            DebugTexture[texCoord] = float4(1.0, 0.0 ,0.0, 1.0f);
-        if (o_LightCount < 10)
-            DebugTexture[texCoord] = float4(0.0, 1.0, 0.0, 1.0f);
-        if (o_LightCount < 15)
-            DebugTexture[texCoord] = float4(0.0, 0.0, 1.0, 1.0f);
-        if (o_LightCount < 20)
-            DebugTexture[texCoord] = float4(1.0, 0.0, 1.0, 1.0f);
-        else
-            DebugTexture[texCoord] = float4(1.0, 1.0, 1.0, 1.0f);
+        DebugTexture[texCoord] = float4(1.0, 1.0, 1.0, 1.0f);
     }
     else
     {

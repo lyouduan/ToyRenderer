@@ -108,9 +108,10 @@ bool SphereInsideFrustum(Sphere sphere, Frustum frustum, float zNear, float zFar
     // First check depth
     // return false if sphere behind zFar or before zNear 
     
-    // Note: Here, the view vector points in the -Z axis so the 
-    // far depth value will be approaching - infinity. (int righ-handed coordinate)
-    if (sphere.c.z - sphere.r > zNear || sphere.c.z + sphere.r < zFar)
+    // Note: Here, the view vector points in the Z axis so the 
+    // far depth value will be approaching infinity. 
+    // (in left-handed coordinate)
+    if (sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar)
     {
         result = false;
     }
