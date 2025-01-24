@@ -26,13 +26,14 @@ public:
 	// Deferred rendering
 	void GbuffersPass();
 	void DeferredShadingPass();
-	void GbuffersDebugPass();
+	void GbuffersDebug();
 
 	// ForwardPuls Rendering
 	void BuildTileFrustums();
 	void PrePassDepthBuffer();
 	void CullingLightPass();
 	void ForwardPlusPass();
+	void LightGridDebug();
 
 	// Draw Light
 	void LightPass();

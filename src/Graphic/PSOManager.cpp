@@ -53,6 +53,16 @@ namespace PSOManager
 		TShader DebugQuadShader(DebugQuadInfo);
 		m_shaderMap["DebugQuadShader"] = DebugQuadShader;
 
+		TShaderInfo LightGridDebug;
+		LightGridDebug.FileName = "shaders/LightGridDebug";
+		LightGridDebug.bCreateVS = true;
+		LightGridDebug.bCreatePS = true;
+		LightGridDebug.bCreateCS = false;
+		LightGridDebug.VSEntryPoint = "VSMain";
+		LightGridDebug.PSEntryPoint = "PSMain";
+		TShader LightGridDebugShader(LightGridDebug);
+		m_shaderMap["LightGridDebug"] = LightGridDebugShader;
+
 		TShaderInfo brdfInfo;
 		brdfInfo.FileName = "shaders/brdf";
 		brdfInfo.bCreateVS = true;
@@ -264,6 +274,21 @@ namespace PSOManager
 		DebugQuadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		DebugQuadPso.Finalize();
 		m_gfxPSOMap["DebugQuadPSO"] = DebugQuadPso;
+
+		GraphicsPSO LightGridDebug(L"LightGridDebug PSO");
+		LightGridDebug.SetShader(&m_shaderMap["LightGridDebug"]);
+		LightGridDebug.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		LightGridDebug.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		LightGridDebug.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
+		LightGridDebug.SetDepthStencilState(dsvDesc);
+		LightGridDebug.SetSampleMask(UINT_MAX);
+		LightGridDebug.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
+		LightGridDebug.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		LightGridDebug.Finalize();
+		m_gfxPSOMap["LightGridDebug"] = LightGridDebug;
 
 
 		GraphicsPSO brdfPso(L"brdf PSO");

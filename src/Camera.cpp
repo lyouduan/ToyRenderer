@@ -201,10 +201,10 @@ void Camera::CamerImGui()
 	bool rollDirty = false;
 
 	ImGui::Text("Camera Orientation");
-	dcheck(ImGui::SliderFloat("FOV", &mFovY, 0.1f, 89.0f, "%.1f"), projDirty);
-	dcheck(ImGui::SliderFloat("X", &mPosition.x, -50.0f, 50.0f, "%.1f"), moveDirty);
-	dcheck(ImGui::SliderFloat("Y", &mPosition.y, -50.0f, 50.0f, "%.1f"), moveDirty);
-	dcheck(ImGui::SliderFloat("Z", &mPosition.z, -50.0f, 50.0f, "%.1f"), moveDirty);
+	dcheck(ImGui::SliderFloat("FOV", &mFovY, 0.1f, 90.0f, "%.1f"), projDirty);
+	dcheck(ImGui::SliderFloat("X", &mPosition.x, -150.0f, 150.0f, "%.1f"), moveDirty);
+	dcheck(ImGui::SliderFloat("Y", &mPosition.y, -150.0f, 150.0f, "%.1f"), moveDirty);
+	dcheck(ImGui::SliderFloat("Z", &mPosition.z, -150.0f, 150.0f, "%.1f"), moveDirty);
 	
 	dcheck(ImGui::SliderFloat("Pitch", &pitch, -90.0f, 90.0f, "%.1f"), pitchDirty);
 	dcheck(ImGui::SliderFloat("Yaw", &yaw, -180.0f, 180.0f, "%.1f"), yawDirty);

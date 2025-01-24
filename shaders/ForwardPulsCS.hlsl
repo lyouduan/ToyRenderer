@@ -202,11 +202,11 @@ void CS_main(ComputeShaderInput In)
         if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
         {
             //lightColor = light.PositionW.xyz;
-            o_AppendLight(i);
             // Add light to light list for transparent geometry.
             if (!SphereInsidePlane(sphere, minPlane))
             {
                 lightColor = float3(1.0, 0.0, 1.0);
+                o_AppendLight(i);
                 
                 // Add light to light list for opaque geometry
             }

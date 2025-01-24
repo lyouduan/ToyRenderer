@@ -39,7 +39,7 @@ namespace LightManager
 				XMVECTOR pos = XMLoadFloat4(&light.PositionW);
 				XMStoreFloat4(&light.PositionV, XMVector4Transform(pos, TD3D12RHI::g_Camera.GetViewMat()));
 
-				light.Intensity = 50 + i * j * 20;
+				light.Intensity = 100;
 				light.Range = 50;
 
 				lights.push_back(light);

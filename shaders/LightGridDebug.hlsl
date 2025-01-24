@@ -33,15 +33,17 @@ float4 PSMain(PSInput pin) : SV_Target
         uint2 tileIndex = uint2(floor(pin.tex * threadXY));
     
         uint r = LightGrid[tileIndex].g;
-        if (r < 1)
+        if (r < 0)
             return float4(0.0, 0.0, 0.0, 1.0f);
-        if (r < 5)
-            return float4(1.0, 0.0, 0.0, 1.0f);
         if (r < 10)
-            return float4(0.0, 1.0, 0.0, 1.0f);
-        if (r < 15)
-            return float4(0.0, 0.0, 1.0, 1.0f);
+            return float4(0.5, 0.5, 0.5, 1.0f);
         if (r < 20)
+            return float4(1.0, 0.0, 0.0, 1.0f);
+        if (r < 40)
+            return float4(0.0, 1.0, 0.0, 1.0f);
+        if (r < 60)
+            return float4(0.0, 0.0, 1.0, 1.0f);
+        if (r < 80)
             return float4(1.0, 0.0, 1.0, 1.0f);
         else
             return float4(1.0, 1.0, 1.0, 1.0f);

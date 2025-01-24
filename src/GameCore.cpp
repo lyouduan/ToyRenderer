@@ -417,14 +417,14 @@ void GameCore::PopulateCommandList()
 
 		if (m_Render->GetbDebugGBuffers())
 		{
-			m_Render->GbuffersDebugPass();
+			m_Render->GbuffersDebug();
 		}
 
 	}
 	else if (m_Render->GetEnableForwardPulsPass())
 	{
 		m_Render->ForwardPlusPass();
-		m_Render->GbuffersDebugPass();
+		m_Render->LightGridDebug();
 		// light pass
 		m_Render->LightPass();
 

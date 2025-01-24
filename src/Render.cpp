@@ -380,7 +380,7 @@ void TRender::DeferredShadingPass()
 
 }
 
-void TRender::GbuffersDebugPass()
+void TRender::GbuffersDebug()
 {
 	auto pso = PSOManager::m_gfxPSOMap["DebugQuadPSO"];
 	auto shader = m_shaderMap["DebugQuadShader"];
@@ -411,10 +411,8 @@ void TRender::GbuffersDebugPass()
 		texSRV = NullDescriptor;
 		break;
 	}
-
-	auto srv = LightGridMap->GetSRV();
-	shader.SetParameter("LightGrid", srv);
-	//shader.SetParameter("tex", texSRV);
+	
+	shader.SetParameter("tex", texSRV);
 	
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
@@ -538,6 +536,23 @@ void TRender::ForwardPlusPass()
 
 	// transit to generic read state
 	g_CommandContext.Transition(g_PreDepthPassBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+}
+
+void TRender::LightGridDebug()
+{
+	auto pso = PSOManager::m_gfxPSOMap["LightGridDebug"];
+	auto shader = m_shaderMap["LightGridDebug"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	auto srv = LightGridMap->GetSRV();
+	shader.SetParameter("LightGrid", srv);
+
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
+	shader.BindParameters();
+	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
 
 void TRender::LightPass()

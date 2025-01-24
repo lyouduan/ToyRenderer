@@ -316,6 +316,7 @@
     <None Include="shaders\ForwardPulsCS.hlsl" />
     <None Include="shaders\preDepthPass.hlsl" />
     <None Include="shaders\ForwardPulsPass.hlsl" />
+    <None Include="shaders\LightGridDebug.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />
