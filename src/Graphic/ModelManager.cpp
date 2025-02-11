@@ -49,13 +49,13 @@ namespace ModelManager
 		HalfQuad.CreateQuad(0, 0, 1, 1, 0);
 		m_MeshMaps["HalfQuad"] = HalfQuad;
 
-		Mesh Cylinder;
-		Cylinder.CreateCylinder(1, 1, 5, 10, 10);
-		m_MeshMaps["Cylinder"] = Cylinder;
-
-		ModelLoader CylinderModel;
-		CylinderModel.SetMesh(m_MeshMaps["Cylinder"]);
-		m_ModelMaps["Cylinder"] = std::move(CylinderModel);
+		//Mesh Cylinder;
+		//Cylinder.CreateCylinder(1, 1, 5, 10, 10);
+		//m_MeshMaps["Cylinder"] = Cylinder;
+		//
+		//ModelLoader CylinderModel;
+		//CylinderModel.SetMesh(m_MeshMaps["Cylinder"]);
+		//m_ModelMaps["Cylinder"] = std::move(CylinderModel);
 	}
 
 	void LoadModel()
@@ -86,7 +86,20 @@ namespace ModelManager
 		wall.SetObjCBuffer(objCB);
 		m_ModelMaps["wall"] = wall;
 
+		// clydiner
+		Mesh CylinderMesh;
+		CylinderMesh.CreateCylinder(1, 1, 10, 10, 10);
+		TD3D12Texture bricks;
+		bricks.Create2D(64, 64);
+		if (bricks.CreateDDSFromFile(L"./textures/bricks.dds", 0, false))
+			CylinderMesh.SetTexture(bricks.GetSRV());
+		else
+			assert(false);
+		ModelLoader Cylinder;
+		Cylinder.SetMesh(CylinderMesh);
+		m_ModelMaps["Cylinder"] = Cylinder;
 
+		// floor
 		Mesh gridMesh;
 		gridMesh.CreateGrid(100.0, 100.0, 60, 40);
 		TD3D12Texture tex;

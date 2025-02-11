@@ -44,10 +44,9 @@ uint GridIndex(float2 position)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-#if 1
+#if 0
     const uint gridIndex = GridIndex(pin.position.xy);
     const Frustum f = in_Frustums[gridIndex];
-    
     const uint halfTile = BLOCK_SIZE / 2;
     
     float3 color = abs(f.Planes[1].N);
@@ -83,7 +82,7 @@ float4 PSMain(PSInput pin) : SV_Target
     
     return float4((float3)c, 1.0f);
     
-#elif 0
+#elif 1
 
     // cull light grid debug
     {
@@ -101,7 +100,7 @@ float4 PSMain(PSInput pin) : SV_Target
             return float4(0.0, 1.0, 0.0, 1.0f);
         if (r < 60)
             return float4(0.0, 0.0, 1.0, 1.0f);
-        if (r < 80)
+        if (r < 70)
             return float4(1.0, 0.0, 1.0, 1.0f);
         else
             return float4(1.0, 1.0, 1.0, 1.0f);

@@ -104,6 +104,7 @@ void CS_ComputeFrustums(ComputeShaderInput In)
     frustum.Planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
     
     // Store the computed frustum in global memory (if our thread ID is in bounds of the grid)
+
     out_Frustums[x + y * numThreads.x] = frustum;
 }
 
@@ -112,7 +113,7 @@ void CS_ComputeFrustums(ComputeShaderInput In)
 // 
 
 // the depth from the screen space texture
-Texture2D DepthTextureVS;
+Texture2D DepthTexture;
 // Pre-computeed frustum for the grid.
 StructuredBuffer<Frustum> in_Frustums;
 
@@ -144,45 +145,48 @@ void o_AppendLight(uint lightIndex)
     {
         o_LightList[index] = lightIndex;
     }
-    
+}
+
+void CalculateMinMaxDepthInLds(uint2 globalThreadIdx)
+{
+    float depth = DepthTexture.Load(uint3(globalThreadIdx.x, globalThreadIdx.y, 0)).x;
+    float viewPosZ = ConvertProjDepthToView(depth);
+    uint z = asuint(viewPosZ);
+    {
+        InterlockedMax(uMaxDepth, z);
+        InterlockedMin(uMinDepth, z);
+    }
 }
 
 // Light Culling Compute Shader
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_main(ComputeShaderInput In)
 {
-    // Counters
-    uint i, index;
-
-    // Calculate min & max depth in threadgroup / tile.
-    int2 texCoord = In.dispatchThreadID.xy;
-    float fDepth = DepthTextureVS.Load(int3(texCoord, 0)).r;
-
-    uint uDepth = asuint(fDepth);
+    // Countersq
+    uint i;
 
     if (In.groupIndex == 0) // Avoid contention by other threads in the group.
     {
-        uMinDepth = 0xffffffff;
+        uMinDepth = 0x7f7fffff;
         uMaxDepth = 0;
         o_LightCount = 0;
         GroupFrustum = in_Frustums[In.groupID.x + (In.groupID.y * numThreadGroups.x)];
     }
-    InterlockedMin(uMinDepth, uDepth);
-    InterlockedMax(uMaxDepth, uDepth);
+    
+    // Calculate min & max depth in threadgroup / tile.
+    int2 texCoord = In.dispatchThreadID.xy;
+    
+     // Convert depth values to view space.
+    CalculateMinMaxDepthInLds(texCoord);
     
     GroupMemoryBarrierWithGroupSync();
 
     float fMinDepth = asfloat(uMinDepth);
     float fMaxDepth = asfloat(uMaxDepth);
-
-     // Convert depth values to view space.
-    float minDepthVS = ClipToView(float4(0, 0, fMinDepth, 1)).z;
-    float maxDepthVS = ClipToView(float4(0, 0, fMaxDepth, 1)).z;
-    float nearClipVS = ClipToView(float4(0, 0, 0, 1)).z;
  
     // Clipping plane for minimum depth value 
     // (used for testing lights within the bounds of opaque geometry).
-    Plane minPlane = { float3(0, 0, 1), minDepthVS };
+    Plane minPlane = { float3(0, 0, 1), fMinDepth };
     
     // Cull lights
     // Each thread in a group will cull 1 light until all light have been culled.
@@ -193,22 +197,24 @@ void CS_main(ComputeShaderInput In)
         Light light = Lights[i];
        
         // Point light
-        Sphere sphere = { mul(float4(light.PositionW.xyz, 1), gViewMat).xyz, light.Range };
+        float3 lightPosVS = mul(float4(light.PositionW.xyz, 1), gViewMat).xyz;
+        Sphere sphere = { lightPosVS, light.Range };
+        
         //Sphere sphere = { light.PositionV.xyz, light.Range };
         
         lightColor = float3(1.0, 1.0, 1.0);
         
-        if (SphereInsideFrustum(sphere, GroupFrustum, minDepthVS, maxDepthVS))
+        if (SphereInsideFrustum(sphere, GroupFrustum, fMinDepth, fMaxDepth))
         {
             //lightColor = light.PositionW.xyz;
             // Add light to light list for transparent geometry.
-                o_AppendLight(i);
             
             if (!SphereInsidePlane(sphere, minPlane))
             {
-                lightColor = float3(1.0, 0.0, 1.0);
-                
                 // Add light to light list for opaque geometry
+                o_AppendLight(i);
+                
+                //lightColor = float3(1.0, 0.0, 1.0);
             }
         }
     }

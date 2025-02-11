@@ -448,16 +448,15 @@ void TRender::PrePassDepthBuffer()
 	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
 	// draw all mesh
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 5; i++)
 	{
-		for (int j = 0; j < 3; j++)
+		for (int j = 0; j < 5; j++)
 		{
 			ObjCBuffer obj;
-			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
+			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
 			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
-			ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
-	
-			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], shader, passCBufferRef);
+			ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
 		}
 	}
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
@@ -480,7 +479,7 @@ void TRender::CullingLightPass()
 	auto DepthSRV = g_PreDepthPassBuffer.GetSRV();
 	shader.SetParameter("ScreenToViewParams", ConstantBufferRef);
 	shader.SetParameter("DispatchParams", DispatchParamsCBRef);
-	shader.SetParameter("DepthTextureVS", DepthSRV);
+	shader.SetParameter("DepthTexture", DepthSRV);
 	shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
 	shader.SetParameter("in_Frustums", RWStructuredBufferRef->GetSRV());
 
@@ -519,16 +518,15 @@ void TRender::ForwardPlusPass()
 	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
 	// draw all mesh
-	for (int i = 0; i < 3; i++)
+	for (int i = 0; i < 5; i++)
 	{
-		for (int j = 0; j < 3; j++)
+		for (int j = 0; j < 5; j++)
 		{
 			ObjCBuffer obj;
-			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
+			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
 			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
-			ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
-
-			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], shader, passCBufferRef);
+			ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
 		}
 	}
 
@@ -550,9 +548,9 @@ void TRender::LightGridDebug()
 	shader.SetParameter("LightGrid", LightGridMap->GetSRV());
 	shader.SetParameter("in_Frustums", RWStructuredBufferRef->GetSRV());
 
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
-	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
 
 void TRender::LightPass()
@@ -581,7 +579,7 @@ void TRender::LightPass()
 
 		auto ObjCBufferRef = TD3D12RHI::CreateConstantBuffer(&objCB, sizeof(ObjCBuffer));
 		auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
-		
+
 		m_shaderMap["lightShader"].SetParameter("objCBuffer", ObjCBufferRef);
 		m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
 		m_shaderMap["lightShader"].SetParameter("Lights", light.GetStructuredBuffer()->GetSRV());
@@ -734,15 +732,14 @@ void TRender::CreateForwardFulsBuffer()
 		XMUINT3 numThreadGroups;
 		UINT pad0;
 
-	// Total number of threads dispatched.
-	// Note: This value may be less than the actual number of threads executed
-	// if the screen size is not evenly divisible by the block size
+		// Total number of threads dispatched.
+		// Note: This value may be less than the actual number of threads executed
+		// if the screen size is not evenly divisible by the block size
 		XMUINT3 numThreads;
 		UINT pad1;
 	};
 	
-	//assert(sizeof(XMUINT3) == sizeof(UINT) * 4);
-	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, 0, {numGroupsX, numGroupsY, 1}, 0};
+	DispatchParams dp = { {16, 16, 1}, 0, {numGroupsX, numGroupsY, 1}, 0};
 
 	DispatchParamsCBRef = TD3D12RHI::CreateConstantBuffer(&dp, sizeof(DispatchParams));
 
