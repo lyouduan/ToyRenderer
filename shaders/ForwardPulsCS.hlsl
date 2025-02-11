@@ -19,13 +19,13 @@ cbuffer DispatchParams
 {
     // Number of groups dispatched.
     uint3 numThreadGroups;
-    // uint padding //implicit padding to 16 bytes 
+    uint padding1; //implicit padding to 16 bytes 
     
     // Total number of threads dispatched.
     // Note: This value may be less than the actual number of threads executed
     // if the screen size is not evenly divisible by the block size
     uint3 numThreads;
-    // uint padding //implicit padding to 16 bytes 
+    uint padding2; //implicit padding to 16 bytes 
 };
 
 // View space frustums for the grid cells
@@ -52,21 +52,28 @@ cbuffer passCBuffer
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_ComputeFrustums(ComputeShaderInput In)
 {
+    const uint x = In.dispatchThreadID.x;
+    const uint y = In.dispatchThreadID.y;
+    
+    // return if our thread ID is not in bounds of the grid.
+    if (x >= numThreads.x || y >= numThreads.y)
+        return;
+    
     // View space eye position in always at the origin.
     const float3 eyePos = float3(0.0, 0.0, 0.0);
     
     // Compute the 4 corner points on the far clipping plane
     // to use as the frustum vertices.
+    // four corners of the tile, clockwise from top-left
     float4 screenSpace[4];
-    
     // Top left point
-    screenSpace[0] = float4(In.dispatchThreadID.xy * BLOCK_SIZE, 1.0f, 1.0f);
+    screenSpace[0] = float4(float2(x, y) * BLOCK_SIZE, 1.0f, 1.0f);
     // Top right point
-    screenSpace[1] = float4(float2(In.dispatchThreadID.x + 1, In.dispatchThreadID.y) * BLOCK_SIZE, 1.0f, 1.0f);
+    screenSpace[1] = float4(float2(x+1, y) * BLOCK_SIZE, 1.0f, 1.0f);
     // Bottom left point
-    screenSpace[2] = float4(float2(In.dispatchThreadID.x, In.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
+    screenSpace[2] = float4(float2(x, y+1) * BLOCK_SIZE, 1.0f, 1.0f);
     // Bottom right point
-    screenSpace[3] = float4(float2(In.dispatchThreadID.x + 1, In.dispatchThreadID.y + 1) * BLOCK_SIZE, 1.0f, 1.0f);
+    screenSpace[3] = float4(float2(x+1, y+1) * BLOCK_SIZE, 1.0f, 1.0f);
 
     float3 viewSpace[4];
     // Now convert the screen space points to view space
@@ -90,22 +97,14 @@ void CS_ComputeFrustums(ComputeShaderInput In)
     // Note: frustum normal toward inside for simplifying frustum culling 
     // So we need to notice the order of the three points to ComputePlane function.
     
-    // left plane
+    // left, right, top, bottom
     frustum.Planes[0] = ComputePlane(eyePos, viewSpace[2], viewSpace[0]);
-    // right plane
     frustum.Planes[1] = ComputePlane(eyePos, viewSpace[1], viewSpace[3]);
-    // top plane
     frustum.Planes[2] = ComputePlane(eyePos, viewSpace[0], viewSpace[1]);
-    // bottom plane
     frustum.Planes[3] = ComputePlane(eyePos, viewSpace[3], viewSpace[2]);
     
     // Store the computed frustum in global memory (if our thread ID is in bounds of the grid)
-    if (In.dispatchThreadID.x < numThreads.x && In.dispatchThreadID.y < numThreads.y)
-    {
-        uint index = In.dispatchThreadID.x + (In.dispatchThreadID.y * numThreads.x);
-        
-        out_Frustums[index] = frustum;
-    }
+    out_Frustums[x + y * numThreads.x] = frustum;
 }
 
 // 
@@ -199,14 +198,15 @@ void CS_main(ComputeShaderInput In)
         
         lightColor = float3(1.0, 1.0, 1.0);
         
-        if (SphereInsideFrustum(sphere, GroupFrustum, nearClipVS, maxDepthVS))
+        if (SphereInsideFrustum(sphere, GroupFrustum, minDepthVS, maxDepthVS))
         {
             //lightColor = light.PositionW.xyz;
             // Add light to light list for transparent geometry.
+                o_AppendLight(i);
+            
             if (!SphereInsidePlane(sphere, minPlane))
             {
                 lightColor = float3(1.0, 0.0, 1.0);
-                o_AppendLight(i);
                 
                 // Add light to light list for opaque geometry
             }

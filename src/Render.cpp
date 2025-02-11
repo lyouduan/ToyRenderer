@@ -547,12 +547,12 @@ void TRender::LightGridDebug()
 	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
 	gfxCmdList->SetPipelineState(pso.GetPSO());
 
-	auto srv = LightGridMap->GetSRV();
-	shader.SetParameter("LightGrid", srv);
+	shader.SetParameter("LightGrid", LightGridMap->GetSRV());
+	shader.SetParameter("in_Frustums", RWStructuredBufferRef->GetSRV());
 
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
-	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 }
 
 void TRender::LightPass()
@@ -715,7 +715,7 @@ void TRender::CreateForwardFulsBuffer()
 	struct ScreenToViewParams
 	{
 		XMFLOAT4X4 InverseProjection;
-		XMFLOAT2 ScreenDimensions;
+		XMFLOAT2 InvScreenDimensions;
 	};
 
 	ScreenToViewParams stv;
@@ -723,7 +723,7 @@ void TRender::CreateForwardFulsBuffer()
 	XMMATRIX invProj = XMMatrixInverse(&det, g_Camera.GetProjMat());
 	XMStoreFloat4x4(&stv.InverseProjection, XMMatrixTranspose(invProj));
 
-	stv.ScreenDimensions = { (float)g_DisplayWidth, (float)g_DisplayHeight };
+	stv.InvScreenDimensions = { 1.0f/(float)g_DisplayWidth, 1.0f / (float)g_DisplayHeight };
 
 	ConstantBufferRef = TD3D12RHI::CreateConstantBuffer(&stv, sizeof(ScreenToViewParams));
 
@@ -732,15 +732,17 @@ void TRender::CreateForwardFulsBuffer()
 	{
 		// Number of groups dispatched.
 		XMUINT3 numThreadGroups;
+		UINT pad0;
 
 	// Total number of threads dispatched.
 	// Note: This value may be less than the actual number of threads executed
 	// if the screen size is not evenly divisible by the block size
 		XMUINT3 numThreads;
+		UINT pad1;
 	};
 	
 	//assert(sizeof(XMUINT3) == sizeof(UINT) * 4);
-	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, {g_DisplayWidth, g_DisplayHeight, 1}};
+	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, 0, {numGroupsX, numGroupsY, 1}, 0};
 
 	DispatchParamsCBRef = TD3D12RHI::CreateConstantBuffer(&dp, sizeof(DispatchParams));
 

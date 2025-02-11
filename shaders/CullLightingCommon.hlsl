@@ -45,7 +45,7 @@ struct Frustum
 cbuffer ScreenToViewParams
 {
     float4x4 InverseProjection;
-    float2 ScreenDimensions;
+    float2 InvScreenDimensions;
 }
 
 float4 ClipToView(float4 clip)
@@ -77,7 +77,7 @@ float4 ScreenToView(float4 screen)
     // (0,0)x------------>
     
     // Covert to normalized texture coordinates;
-    float2 texCoord = screen.xy / ScreenDimensions;
+    float2 texCoord = screen.xy * InvScreenDimensions;
     
     // Convert to clip space
     float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2 - 1.0, screen.z, screen.w);

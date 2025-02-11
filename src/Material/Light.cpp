@@ -24,10 +24,10 @@ namespace LightManager
 		LightInfo light;
 		light.Type = ELightType::SpotLight;
 		std::srand(std::time(0));
-		for (int i = 0; i < 10; i++)
+		for (int i = 1; i < 10; i++)
 		{
 
-			for (int j = 0; j < 10; j++)
+			for (int j = 1; j < 10; j++)
 			{
 
 				light.Color = XMFLOAT4{ static_cast<float>(std::rand()) / RAND_MAX, static_cast<float>(std::rand()) / RAND_MAX ,static_cast<float>(std::rand())/RAND_MAX, 1.0 };

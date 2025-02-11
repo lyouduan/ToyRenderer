@@ -1,5 +1,6 @@
 #include "PBRLighting.hlsl"
 #include "lightInfo.hlsl"
+
 #ifndef BLOCK_SIZE
 #define BLOCK_SIZE 16// should be defined by the application.
 #endif
@@ -97,6 +98,20 @@ float DoAttenuation(float range, float d)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
+#if 0
+   
+#elif 0
+    const uint2 pos = uint2(pin.position.xy);
+    uint2 tileIndex = uint2(floor(pos / BLOCK_SIZE));
+    
+    float c = (tileIndex.x + tileIndex.y) * 0.0001f;
+    if (tileIndex.x % 2 == 0)
+        c += 0.1f;
+    if (tileIndex.y % 2 == 0)
+        c += 0.1f;
+    
+    return float4((float3)c, 1.0f);
+#elif 1
     uint startOffset, lightCount;
 
     uint2 tileIndex = uint2(floor(pin.position.xy / BLOCK_SIZE));
@@ -144,4 +159,5 @@ float4 PSMain(PSInput pin) : SV_Target
     float3 color = diffuse + specular * ambient;
     
     return float4(color, 1.0);
+#endif
 }
