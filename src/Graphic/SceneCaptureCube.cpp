@@ -64,4 +64,6 @@ void SceneCaptureCube::SetViewportAndScissorRect()
 {
 	m_Viewport = { 0.0, 0.0, (float)m_Width, (float)m_Height, 0.0, 1.0 };
 	m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
+
+	
 }

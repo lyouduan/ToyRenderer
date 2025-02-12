@@ -23,7 +23,9 @@ void TRender::Initalize()
 
 	CreateGBuffers();
 
-	CreateForwardFulsBuffer();
+	CreateForwardPulsBuffer();
+
+	CreateShadowBuffer();
 
 }
 
@@ -64,6 +66,13 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			shader.SetParameter("o_LightIndexList", LightIndexListCBRef->GetSRV());
 			shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
 		}
+
+		if (bEnableShadowMap)
+		{
+			shader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
+			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
+		}
+
 		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
 		meshes[i].DrawMesh(gfxContext);
@@ -412,6 +421,8 @@ void TRender::GbuffersDebug()
 		break;
 	}
 	
+	texSRV = m_ShadowMap->GetSRV();
+
 	shader.SetParameter("tex", texSRV);
 	
 	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
@@ -531,9 +542,6 @@ void TRender::ForwardPlusPass()
 	}
 
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
-
-	// transit to generic read state
-	g_CommandContext.Transition(g_PreDepthPassBuffer.GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void TRender::LightGridDebug()
@@ -588,6 +596,103 @@ void TRender::LightPass()
 		pointLight.DrawMesh(g_CommandContext);
 	}
 }
+
+void TRender::ShadowPass()
+{
+	auto shader = PSOManager::m_shaderMap["preDepthPass"];
+	auto pso = PSOManager::m_gfxPSOMap["preDepthPassPSO"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	// set viewport and scissorRect
+	gfxCmdList->RSSetViewports(1, m_ShadowMap->GetViewport());
+	gfxCmdList->RSSetScissorRects(1, m_ShadowMap->GetScissorRect());
+
+	// transition buffer state
+	g_CommandContext.Transition(m_ShadowMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+	// set render target
+	gfxCmdList->ClearDepthStencilView(m_ShadowMap->GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+	gfxCmdList->OMSetRenderTargets(0, nullptr, false, &m_ShadowMap->GetDSV());
+
+	// set PSO and RootSignature
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	// UpdateShadowCB
+	PassCBuffer passCB;
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_ShadowMap->GetLightView()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_ShadowMap->GetLightProj()));
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	// draw all mesh
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 5; j++)
+		{
+			ObjCBuffer obj;
+			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
+			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+			ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
+		}
+	}
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+
+	g_CommandContext.Transition(m_ShadowMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_READ);
+}
+
+void TRender::ShadowMapDebug()
+{
+	auto pso = PSOManager::m_gfxPSOMap["ShadowMapDebug"];
+	auto shader = m_shaderMap["ShadowMapDebug"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	auto texSRV = m_ShadowMap->GetSRV();
+	shader.SetParameter("tex", texSRV);
+
+	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
+	shader.BindParameters();
+	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
+}
+
+void TRender::ScenePass()
+{
+	auto shader = PSOManager::m_shaderMap["ShadowMap"];
+	auto pso = PSOManager::m_gfxPSOMap["ShadowMap"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	// set PSO and RootSignature
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightPos = ImGuiManager::lightPos;
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	// draw all mesh
+	for (int i = 0; i < 5; i++)
+	{
+		for (int j = 0; j < 5; j++)
+		{
+			ObjCBuffer obj;
+			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
+			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+			ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
+		}
+	}
+
+	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+}
+
 
 void TRender::BuildTileFrustums()
 {
@@ -692,7 +797,7 @@ void TRender::CreateGBuffers()
 	m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
 }
 
-void TRender::CreateForwardFulsBuffer()
+void TRender::CreateForwardPulsBuffer()
 {
 	struct Plane
 	{
@@ -752,4 +857,25 @@ void TRender::CreateForwardFulsBuffer()
 
 	DebugMap = std::make_unique<D3D12ColorBuffer>();
 	DebugMap->Create(L"Debug Map", numGroupsX * 16, numGroupsY * 16, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+}
+
+void TRender::CreateShadowBuffer()
+{
+	m_ShadowMap = std::make_unique<ShadowMap>(L"ShadowMap", 1024, 1024, DXGI_FORMAT_D32_FLOAT);
+
+	XMFLOAT3 lightDir = XMFLOAT3{ 10.0f, -10.0f, 10.0f};
+	m_ShadowMap->SetLightView(lightDir);
+	// directional light
+	std::vector<LightInfo> directionalLights;
+	LightInfo directionalLight;
+	directionalLight.Type = ELightType::DirectionalLight;
+	directionalLight.Color = XMFLOAT4{ 1.0, 1.0, 1.0, 1.0 };
+	directionalLight.DirectionW = XMFLOAT4{ lightDir.x,lightDir.y,lightDir.z, 1.0f };
+	directionalLight.Intensity = 200;
+	XMStoreFloat4x4(&directionalLight.ShadowTransform, XMMatrixTranspose(m_ShadowMap->GetShadowTransform()));
+	directionalLights.push_back(directionalLight);
+
+	LightManager::DirectionalLight.SetLightInfo(directionalLights);
+	LightManager::DirectionalLight.CreateStructuredBufferRef();
+
 }

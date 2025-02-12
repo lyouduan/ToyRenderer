@@ -20,6 +20,7 @@ struct Light
     float pad0; // the padding of alignment;
     
     float4x4 ModelMat;
+    float4x4 ShadowTransform;
     uint  Type;
 };
 

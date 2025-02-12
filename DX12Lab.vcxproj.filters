@@ -141,6 +141,9 @@
     <ClCompile Include="src\Material\Light.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Graphic\ShadowMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -296,11 +299,14 @@
     <ClInclude Include="src\Material\Light.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Graphic\ShadowMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl" />
     <None Include="shaders\skyboxShader.hlsl" />
-    <None Include="shaders\quadShader.hlsl" />
+    <None Include="shaders\DebugQuad.hlsl" />
     <None Include="shaders\cubeMap.hlsl" />
     <None Include="shaders\pbr.hlsl" />
     <None Include="shaders\light.hlsl" />
@@ -317,6 +323,9 @@
     <None Include="shaders\preDepthPass.hlsl" />
     <None Include="shaders\ForwardPulsPass.hlsl" />
     <None Include="shaders\LightGridDebug.hlsl" />
+    <None Include="shaders\shadow\ShadowMap.hlsl" />
+    <None Include="shaders\shadow\ShadowMapDebug.hlsl" />
+    <None Include="shaders\Common.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

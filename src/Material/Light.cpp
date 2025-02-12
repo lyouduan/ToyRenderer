@@ -15,9 +15,11 @@ void Light::CreateStructuredBufferRef()
 namespace LightManager
 {
 	Light g_light;
+	Light DirectionalLight;
 
 	void InitialzeLights()
 	{
+		
 		// point light
 		std::vector<LightInfo> lights;
 

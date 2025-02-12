@@ -34,7 +34,7 @@ namespace PSOManager
 		m_shaderMap["skyboxShader"] = boxShader;
 
 		TShaderInfo quadInfo;
-		quadInfo.FileName = "shaders/quadShader";
+		quadInfo.FileName = "shaders/DebugQuad";
 		quadInfo.bCreateVS = true;
 		quadInfo.bCreatePS = true;
 		quadInfo.bCreateCS = false;
@@ -44,7 +44,7 @@ namespace PSOManager
 		m_shaderMap["quadShader"] = quadShader;
 
 		TShaderInfo DebugQuadInfo;
-		DebugQuadInfo.FileName = "shaders/quadShader";
+		DebugQuadInfo.FileName = "shaders/DebugQuad";
 		DebugQuadInfo.bCreateVS = true;
 		DebugQuadInfo.bCreatePS = true;
 		DebugQuadInfo.bCreateCS = false;
@@ -52,6 +52,16 @@ namespace PSOManager
 		DebugQuadInfo.PSEntryPoint = "PSMain";
 		TShader DebugQuadShader(DebugQuadInfo);
 		m_shaderMap["DebugQuadShader"] = DebugQuadShader;
+
+		TShaderInfo ShadowMapDebug;
+		ShadowMapDebug.FileName = "shaders/shadow/ShadowMapDebug";
+		ShadowMapDebug.bCreateVS = true;
+		ShadowMapDebug.bCreatePS = true;
+		ShadowMapDebug.bCreateCS = false;
+		ShadowMapDebug.VSEntryPoint = "VSMain";
+		ShadowMapDebug.PSEntryPoint = "PSMain";
+		TShader ShadowMapDebugShader(ShadowMapDebug);
+		m_shaderMap["ShadowMapDebug"] = ShadowMapDebugShader;
 
 		TShaderInfo LightGridDebug;
 		LightGridDebug.FileName = "shaders/LightGridDebug";
@@ -164,6 +174,17 @@ namespace PSOManager
 		TShader ForwardPulsPassShader(ForwardPulsPassInfo);
 		m_shaderMap["ForwardPulsPass"] = ForwardPulsPassShader;
 
+
+		TShaderInfo ShadowMapInfo;
+		ShadowMapInfo.FileName = "shaders/shadow/ShadowMap";
+		ShadowMapInfo.bCreateVS = true;
+		ShadowMapInfo.bCreatePS = true;
+		ShadowMapInfo.bCreateCS = false;
+		ShadowMapInfo.VSEntryPoint = "VSMain";
+		ShadowMapInfo.PSEntryPoint = "PSMain";
+		TShader ShadowMapShader(ShadowMapInfo);
+		m_shaderMap["ShadowMap"] = ShadowMapShader;
+
 		InitializeComputeShader();
 	}
 
@@ -275,13 +296,41 @@ namespace PSOManager
 		DebugQuadPso.Finalize();
 		m_gfxPSOMap["DebugQuadPSO"] = DebugQuadPso;
 
+		GraphicsPSO ShadowMapDebugPso(L"ShadowMapDebug PSO");
+		ShadowMapDebugPso.SetShader(&m_shaderMap["ShadowMapDebug"]);
+		ShadowMapDebugPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		ShadowMapDebugPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		ShadowMapDebugPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
+		ShadowMapDebugPso.SetDepthStencilState(dsvDesc);
+		ShadowMapDebugPso.SetSampleMask(UINT_MAX);
+		ShadowMapDebugPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		ShadowMapDebugPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		ShadowMapDebugPso.Finalize();
+		m_gfxPSOMap["ShadowMapDebug"] = ShadowMapDebugPso;
+
+		GraphicsPSO ShadowMapPso(L"ShadowMap PSO");
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
+		ShadowMapPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		ShadowMapPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		ShadowMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		ShadowMapPso.SetDepthStencilState(dsvDesc);
+		ShadowMapPso.SetSampleMask(UINT_MAX);
+		ShadowMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		ShadowMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMap"] = ShadowMapPso;
+
 		GraphicsPSO LightGridDebug(L"LightGridDebug PSO");
 		LightGridDebug.SetShader(&m_shaderMap["LightGridDebug"]);
 		LightGridDebug.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		LightGridDebug.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		LightGridDebug.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
 		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
 		LightGridDebug.SetDepthStencilState(dsvDesc);
 		LightGridDebug.SetSampleMask(UINT_MAX);
 		LightGridDebug.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
@@ -393,7 +442,6 @@ namespace PSOManager
 		preDepthPass.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		preDepthPass.SetDepthTargetFormat(g_PreDepthPassBuffer.GetFormat());
 		preDepthPass.Finalize();
-
 		m_gfxPSOMap["preDepthPassPSO"] = preDepthPass;
 
 

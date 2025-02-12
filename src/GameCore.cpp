@@ -382,11 +382,15 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
+	if (m_Render->GetbEnableShadowMap())
+	{
+		m_Render->ShadowPass();
+		
+	}
+
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 	{
 		m_Render->GbuffersPass();
-
-		
 	}
 
 	if (m_Render->GetEnableForwardPulsPass())
@@ -428,6 +432,11 @@ void GameCore::PopulateCommandList()
 		// light pass
 		m_Render->LightPass();
 
+	}
+	else if (m_Render->GetbEnableShadowMap())
+	{
+		m_Render->ScenePass();
+		m_Render->ShadowMapDebug();
 	}
 	else
 	{
@@ -482,10 +491,6 @@ void GameCore::PopulateCommandList()
 			ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
 		}
 
-		// light pass
-		m_Render->LightPass();
-
-		
 		// sky box
 		{
 			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());

@@ -1,10 +1,11 @@
+
 cbuffer passCBuffer
 {
     float4x4 gViewMat;
     float4x4 gProjMat;
     
     float3 gEyePosW;
-    float pad0;
+    float gLightIndex;
     
     float3 gLightPos;
     float pad1;

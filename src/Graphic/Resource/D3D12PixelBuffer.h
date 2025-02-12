@@ -124,6 +124,7 @@ public:
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() const { return m_DSVHandle; }
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() { return m_DSVHandle; }
 
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() { return m_SRVHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV() const { return m_SRVHandle; }
 
 	float GetClearDepth() const { return m_ClearDepth; }

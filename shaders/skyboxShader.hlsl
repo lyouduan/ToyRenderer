@@ -1,15 +1,22 @@
 
 cbuffer objCBuffer : register(b0)
 {
-    float4x4 ModelMat;
+    float4x4 gModelMat;
+    float4x4 gInvTranModelMat;
 }
 
 cbuffer passCBuffer : register(b1)
 {
-    float4x4 ViewMat;
-    float4x4 ProjMat;
-    float3 EyePosW;
-    float padding;
+    float4x4 gViewMat;
+    float4x4 gProjMat;
+    
+    float3 gEyePosW;
+    float gLightIndex;
+    
+    float3 gLightPos;
+    float pad1;
+    float3 gLightColor;
+    float gIntensity;
 }
 
 struct VSInput
@@ -47,10 +54,10 @@ PSInput VSMain(VSInput vin)
     //float4 posW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
     
     // Remove translation from the view matrix
-    float4x4 View = ViewMat;
+    float4x4 View = gViewMat;
     View[3][0] = View[3][1] = View[3][2] = 0.0f;
     
-    vout.position = mul(mul(float4(vin.position.xyz, 1.0), View), ProjMat).xyww;
+    vout.position = mul(mul(float4(vin.position.xyz, 1.0), View), gProjMat).xyww;
     
     return vout;
 }

@@ -6,6 +6,7 @@
 #include "RenderTarget.h"
 #include "D3D12DescriptorCache.h"
 #include "ModelLoader.h"
+#include "ShadowMap.h"
 
 class SceneCaptureCube;
 
@@ -38,6 +39,12 @@ public:
 	// Draw Light
 	void LightPass();
 
+	// shadow map
+	void ShadowPass();
+	void ShadowMapDebug();
+	void ScenePass();
+
+
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLPrefilterMap(int i) 
@@ -69,13 +76,19 @@ public:
 
 	bool GetEnableForwardPulsPass() { return bEnableForwardPuls; }
 	void SetEnableForwardPulsPass(bool b) { bEnableForwardPuls = b; }
+
+	bool GetbEnableShadowMap() { return bEnableShadowMap; }
+	void SetbEnableShadowMap(bool b) { bEnableShadowMap = b; }
+
 private:
 
 	void CreateSceneCaptureCube();
 
 	void CreateGBuffers();
 
-	void CreateForwardFulsBuffer();
+	void CreateForwardPulsBuffer();
+
+	void CreateShadowBuffer();
 
 private:
 
@@ -83,7 +96,9 @@ private:
 	bool bUseEquirectangularMap = false;
 	bool bEnableIBLEnvLighting = true;
 	bool bDebugGBuffers = false;
-	bool bEnableForwardPuls = true;
+	bool bEnableForwardPuls = false;
+
+	bool bEnableShadowMap = true;
 	
 	const static UINT IBLPrefilterMaxMipLevel = 5;
 	std::unique_ptr<SceneCaptureCube> IBLEnvironmentMap;
@@ -112,6 +127,9 @@ private:
 
 	std::unique_ptr<D3D12ColorBuffer> LightGridMap;
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;
+
+	// ShadowMap
+	std::unique_ptr<ShadowMap> m_ShadowMap;
 };
 
  

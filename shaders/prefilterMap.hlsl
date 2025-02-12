@@ -3,6 +3,7 @@
 cbuffer objCBuffer : register(b0)
 {
     float4x4 ModelMat;
+    float4x4 gInvTranModelMat;
 }
 
 cbuffer passCBuffer : register(b1)

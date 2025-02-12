@@ -26,6 +26,7 @@ struct LightInfo
     float pad0;
 
     XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 ShadowTransform = MATH::IdentityMatrix;
 
     int Type;
 };
@@ -64,6 +65,7 @@ private:
 namespace LightManager
 {
     extern Light g_light;
+    extern Light DirectionalLight;
 
     void InitialzeLights();
 }

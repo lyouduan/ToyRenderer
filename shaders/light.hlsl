@@ -1,11 +1,12 @@
 #include "lightInfo.hlsl"
 
-cbuffer objCBuffer
+cbuffer objCBuffer : register(b0)
 {
-    float4x4 ModelMat;
+    float4x4 gModelMat;
+    float4x4 gInvTranModelMat;
 }
 
-cbuffer passCBuffer
+cbuffer passCBuffer : register(b1)
 {
     float4x4 gViewMat;
     float4x4 gProjMat;
@@ -16,7 +17,7 @@ cbuffer passCBuffer
     float3 gLightPos;
     float pad1;
     float3 gLightColor;
-    float Intensity;
+    float gIntensity;
 }
 
 Texture2D diffuseMap;
@@ -50,7 +51,7 @@ PSInput VSMain(VSInput vin)
 {
     PSInput vout;
     
-    vout.positionW = mul(float4(vin.position.xyz, 1.0f), ModelMat);
+    vout.positionW = mul(float4(vin.position.xyz, 1.0f), gModelMat);
     
     float4x4 viewProj = mul(gViewMat, gProjMat);
     vout.position = mul(float4(vout.positionW, 1.0), viewProj);

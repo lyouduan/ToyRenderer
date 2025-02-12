@@ -208,11 +208,11 @@ void CS_main(ComputeShaderInput In)
         {
             //lightColor = light.PositionW.xyz;
             // Add light to light list for transparent geometry.
+            o_AppendLight(i);
             
             if (!SphereInsidePlane(sphere, minPlane))
             {
                 // Add light to light list for opaque geometry
-                o_AppendLight(i);
                 
                 //lightColor = float3(1.0, 0.0, 1.0);
             }
