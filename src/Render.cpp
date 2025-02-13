@@ -629,7 +629,7 @@ void TRender::ShadowPass()
 	// draw all mesh
 	for (int i = 0; i < 5; i++)
 	{
-		for (int j = 0; j < 5; j++)
+		for (int j = 0; j < 2; j++)
 		{
 			ObjCBuffer obj;
 			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
@@ -680,7 +680,7 @@ void TRender::ScenePass()
 	// draw all mesh
 	for (int i = 0; i < 5; i++)
 	{
-		for (int j = 0; j < 5; j++)
+		for (int j = 0; j < 2; j++)
 		{
 			ObjCBuffer obj;
 			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
@@ -871,7 +871,7 @@ void TRender::CreateShadowBuffer()
 	directionalLight.Type = ELightType::DirectionalLight;
 	directionalLight.Color = XMFLOAT4{ 1.0, 1.0, 1.0, 1.0 };
 	directionalLight.DirectionW = XMFLOAT4{ lightDir.x,lightDir.y,lightDir.z, 1.0f };
-	directionalLight.Intensity = 200;
+	directionalLight.Intensity = 5;
 	XMStoreFloat4x4(&directionalLight.ShadowTransform, XMMatrixTranspose(m_ShadowMap->GetShadowTransform()));
 	directionalLights.push_back(directionalLight);
 

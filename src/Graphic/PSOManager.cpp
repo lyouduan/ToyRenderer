@@ -54,7 +54,7 @@ namespace PSOManager
 		m_shaderMap["DebugQuadShader"] = DebugQuadShader;
 
 		TShaderInfo ShadowMapDebug;
-		ShadowMapDebug.FileName = "shaders/shadow/ShadowMapDebug";
+		ShadowMapDebug.FileName = "shaders/ShadowMapDebug";
 		ShadowMapDebug.bCreateVS = true;
 		ShadowMapDebug.bCreatePS = true;
 		ShadowMapDebug.bCreateCS = false;
@@ -176,7 +176,7 @@ namespace PSOManager
 
 
 		TShaderInfo ShadowMapInfo;
-		ShadowMapInfo.FileName = "shaders/shadow/ShadowMap";
+		ShadowMapInfo.FileName = "shaders/ShadowMap";
 		ShadowMapInfo.bCreateVS = true;
 		ShadowMapInfo.bCreatePS = true;
 		ShadowMapInfo.bCreateCS = false;

@@ -15,7 +15,7 @@ ShadowMap::~ShadowMap()
 
 void ShadowMap::SetLightView(DirectX::XMFLOAT3 lightDir)
 {
-	DirectX::BoundingSphere mSceneBounds = DirectX::BoundingSphere(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), 50.0f);
+	DirectX::BoundingSphere mSceneBounds = DirectX::BoundingSphere(DirectX::XMFLOAT3(0.0f, 0.0f, 0.0f), 70.0f);
 
 	// Light Space from directional light
 	XMVECTOR lightDirVec = XMLoadFloat3(&lightDir);

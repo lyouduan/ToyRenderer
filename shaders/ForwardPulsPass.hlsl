@@ -1,40 +1,10 @@
+#include "Common.hlsl"
 #include "PBRLighting.hlsl"
 #include "lightInfo.hlsl"
 
 #ifndef BLOCK_SIZE
 #define BLOCK_SIZE 16// should be defined by the application.
 #endif
-cbuffer objCBuffer : register(b0)
-{
-    float4x4 gModelMat;
-    float4x4 gInvTranModelMat;
-}
-
-cbuffer passCBuffer : register(b1)
-{
-    float4x4 gViewMat;
-    float4x4 gProjMat;
-    
-    float3 gEyePosW;
-    float gLightIndex;
-    
-    float3 gLightPos;
-    float pad1;
-    float3 gLightColor;
-    float gIntensity;
-}
-
-cbuffer matCBuffer : register(b2)
-{
-    float4 gDiffuseAlbedo;
-    float3 gFresnelR0;
-    float gRoughness;
-    float4x4 gMatTransform;
-    
-    float3 gEmissvieColor;
-    float gMetallic;
-}
-
 
 Texture2D diffuseMap;
 Texture2D metallicMap;
@@ -47,13 +17,6 @@ Texture2D BrdfLUT2D;
 // light grid 
 Texture2D<uint2> o_LightGrid;
 StructuredBuffer<uint> o_LightIndexList;
-
-SamplerState PointWrapSampler : register(s0);
-SamplerState PointClampSampler : register(s1);
-SamplerState LinearWrapSampler : register(s2);
-SamplerState LinearClampSampler : register(s3);
-SamplerState AnisotropicWrapSampler : register(s4);
-SamplerState AnisotropicClampSampler : register(s5);
 
 struct VSInput
 {
@@ -156,7 +119,7 @@ float4 PSMain(PSInput pin) : SV_Target
     
     float3 ambient = albedo * 0.5;
     
-    float3 color = diffuse + specular * ambient;
+    float3 color = diffuse + specular + ambient;
     
     return float4(color, 1.0);
 #endif

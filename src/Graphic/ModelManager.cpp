@@ -88,7 +88,7 @@ namespace ModelManager
 
 		// clydiner
 		Mesh CylinderMesh;
-		CylinderMesh.CreateCylinder(1, 1, 10, 10, 10);
+		CylinderMesh.CreateCylinder(2, 2, 10, 10, 10);
 		TD3D12Texture bricks;
 		bricks.Create2D(64, 64);
 		if (bricks.CreateDDSFromFile(L"./textures/bricks.dds", 0, false))

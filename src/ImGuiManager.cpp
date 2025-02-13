@@ -14,6 +14,7 @@ namespace ImGuiManager
 	bool useCubeMap = false;
 	bool bEnableDeferredRendering = false;
 	bool bEnableForwardPuls = true;
+	bool bEnableShadowMap = false;
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	DirectX::XMFLOAT3 lightPos = { 0.0, 10.0, -5.0 };
@@ -77,8 +78,6 @@ namespace ImGuiManager
 	{
 		RenderModelItem();
 		RenderLightItem();
-
-		
 	}
 
 	void RenderModelItem()

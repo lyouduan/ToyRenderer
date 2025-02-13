@@ -1,22 +1,4 @@
-cbuffer objCBuffer : register(b0)
-{
-    float4x4 gModelMat;
-    float4x4 gInvTranModelMat;
-}
-
-cbuffer passCBuffer : register(b1)
-{
-    float4x4 gViewMat;
-    float4x4 gProjMat;
-    
-    float3 gEyePosW;
-    float gLightIndex;
-    
-    float3 gLightPos;
-    float pad1;
-    float3 gLightColor;
-    float gIntensity;
-}
+#include "Common.hlsl"
 
 struct VSInput
 {

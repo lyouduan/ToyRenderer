@@ -18,6 +18,7 @@ namespace ImGuiManager
 	extern bool useCubeMap;
 	extern bool bEnableDeferredRendering;
 	extern bool bEnableForwardPuls;
+	extern bool bEnableShadowMap;
 	extern bool bDebugGBuffers;
 	extern int  GbufferType;
 	

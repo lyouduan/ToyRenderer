@@ -323,9 +323,11 @@
     <None Include="shaders\preDepthPass.hlsl" />
     <None Include="shaders\ForwardPulsPass.hlsl" />
     <None Include="shaders\LightGridDebug.hlsl" />
-    <None Include="shaders\shadow\ShadowMap.hlsl" />
-    <None Include="shaders\shadow\ShadowMapDebug.hlsl" />
+    <None Include="shaders\ShadowMap.hlsl" />
+    <None Include="shaders\ShadowMapDebug.hlsl" />
     <None Include="shaders\Common.hlsl" />
+    <None Include="shaders\Shadows.hlsl" />
+    <None Include="shaders\Sampler.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

@@ -1,46 +1,9 @@
-
-cbuffer objCBuffer : register(b0)
-{
-    float4x4 gModelMat;
-    float4x4 gInvTranModelMat;
-}
-
-cbuffer passCBuffer : register(b1)
-{
-    float4x4 gViewMat;
-    float4x4 gProjMat;
-    
-    float3 gEyePosW;
-    float gLightIndex;
-    
-    float3 gLightPos;
-    float pad1;
-    float3 gLightColor;
-    float gIntensity;
-}
-
-cbuffer matCBuffer : register(b2)
-{
-    float4 gDiffuseAlbedo;
-    float3 gFresnelR0;
-    float gRoughness;
-    float4x4 gMatTransform;
-    
-    float3 gEmissvieColor;
-    float gMetallic;
-}
+#include "Common.hlsl"
 
 Texture2D diffuseMap;
 Texture2D metallicMap;
 Texture2D normalMap;
 Texture2D roughnessMap;
-
-SamplerState PointWrapSampler : register(s0);
-SamplerState PointClampSampler : register(s1);
-SamplerState LinearWrapSampler : register(s2);
-SamplerState LinearClampSampler : register(s3);
-SamplerState AnisotropicWrapSampler : register(s4);
-SamplerState AnisotropicClampSampler : register(s5);
 
 struct VSInput
 {

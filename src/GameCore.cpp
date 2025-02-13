@@ -170,6 +170,15 @@ void GameCore::UpdateImGui()
 				m_Render->SetEnableForwardPulsPass(false);
 		}
 
+		// shadow map
+		if (ImGui::Checkbox("Enable ShadowMap", &ImGuiManager::bEnableShadowMap))
+		{
+			if (ImGuiManager::bEnableShadowMap)
+				m_Render->SetbEnableShadowMap(true);
+			else
+				m_Render->SetbEnableShadowMap(false);
+		}
+
 		// camera control
 		g_Camera.CamerImGui();
 
