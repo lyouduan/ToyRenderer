@@ -4,6 +4,14 @@
 
 using namespace TD3D12RHI;
 
+static D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+{
+	{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+	{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+};
+
 namespace PSOManager
 {
 	std::unordered_map<std::string, TShader> m_shaderMap;
@@ -175,6 +183,13 @@ namespace PSOManager
 		m_shaderMap["ForwardPulsPass"] = ForwardPulsPassShader;
 
 
+		GenerateShadowShader();
+
+		InitializeComputeShader();
+	}
+
+	void GenerateShadowShader()
+	{
 		TShaderInfo ShadowMapInfo;
 		ShadowMapInfo.FileName = "shaders/ShadowMap";
 		ShadowMapInfo.bCreateVS = true;
@@ -185,7 +200,33 @@ namespace PSOManager
 		TShader ShadowMapShader(ShadowMapInfo);
 		m_shaderMap["ShadowMap"] = ShadowMapShader;
 
-		InitializeComputeShader();
+		TShaderInfo VSMInfo;
+		VSMInfo.FileName = "shaders/GenerateVSM";
+		VSMInfo.bCreateVS = false;
+		VSMInfo.bCreatePS = false;
+		VSMInfo.bCreateCS = true;
+		VSMInfo.CSEntryPoint = "CS";
+		TShader VSMInfoShader(VSMInfo);
+		m_shaderMap["GenerateVSM"] = VSMInfoShader;
+
+
+		TShaderInfo HorzBlurVSM;
+		HorzBlurVSM.FileName = "shaders/BlurVSM";
+		HorzBlurVSM.bCreateVS = false;
+		HorzBlurVSM.bCreatePS = false;
+		HorzBlurVSM.bCreateCS = true;
+		HorzBlurVSM.CSEntryPoint = "HorzBlurCS";
+		TShader HorzBlurVSMShader(HorzBlurVSM);
+		m_shaderMap["HorzBlurVSM"] = HorzBlurVSMShader;
+
+		TShaderInfo VertBlurVSM;
+		VertBlurVSM.FileName = "shaders/BlurVSM";
+		VertBlurVSM.bCreateVS = false;
+		VertBlurVSM.bCreatePS = false;
+		VertBlurVSM.bCreateCS = true;
+		VertBlurVSM.CSEntryPoint = "VertBlurCS";
+		TShader VertBlurVSMhader(VertBlurVSM);
+		m_shaderMap["VertBlurVSM"] = VertBlurVSMhader;
 	}
 
 	void InitializeComputeShader()
@@ -199,11 +240,7 @@ namespace PSOManager
 		TShader ForwardPulsRenderingShader(ForwardPlusInfo);
 		m_shaderMap["ForwardPuls"] = ForwardPulsRenderingShader;
 
-		ComputePSO forwardPulsPSO;
-		forwardPulsPSO.SetShader(&m_shaderMap["ForwardPuls"]);
-		forwardPulsPSO.Finalize();
-		m_ComputePSOMap["ForwardPuls"] = std::move(forwardPulsPSO);
-
+		
 		TShaderInfo CullLightInfo;
 		CullLightInfo.FileName = "shaders/ForwardPulsCS";
 		CullLightInfo.bCreateVS = false;
@@ -213,24 +250,13 @@ namespace PSOManager
 		TShader CullLightShader(CullLightInfo);
 		m_shaderMap["CullLight"] = CullLightShader;
 
-		ComputePSO CullLightPSO;
-		CullLightPSO.SetShader(&m_shaderMap["CullLight"]);
-		CullLightPSO.Finalize();
-		m_ComputePSOMap["CullLight"] = std::move(CullLightPSO);
+		
 	}
 
 	void InitializePSO()
 	{
 		// load shader info
 		InitializeShader();
-
-		D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-		{
-			{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-			{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-		};
 
 		GraphicsPSO pso(L"model PSO");
 		pso.SetShader(&m_shaderMap["modelShader"]);
@@ -295,34 +321,6 @@ namespace PSOManager
 		DebugQuadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		DebugQuadPso.Finalize();
 		m_gfxPSOMap["DebugQuadPSO"] = DebugQuadPso;
-
-		GraphicsPSO ShadowMapDebugPso(L"ShadowMapDebug PSO");
-		ShadowMapDebugPso.SetShader(&m_shaderMap["ShadowMapDebug"]);
-		ShadowMapDebugPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		ShadowMapDebugPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-		ShadowMapDebugPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
-		ShadowMapDebugPso.SetDepthStencilState(dsvDesc);
-		ShadowMapDebugPso.SetSampleMask(UINT_MAX);
-		ShadowMapDebugPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-		ShadowMapDebugPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
-		ShadowMapDebugPso.Finalize();
-		m_gfxPSOMap["ShadowMapDebug"] = ShadowMapDebugPso;
-
-		GraphicsPSO ShadowMapPso(L"ShadowMap PSO");
-		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
-		ShadowMapPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		ShadowMapPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-		ShadowMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		ShadowMapPso.SetDepthStencilState(dsvDesc);
-		ShadowMapPso.SetSampleMask(UINT_MAX);
-		ShadowMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-		ShadowMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
-		ShadowMapPso.Finalize();
-		m_gfxPSOMap["ShadowMap"] = ShadowMapPso;
 
 		GraphicsPSO LightGridDebug(L"LightGridDebug PSO");
 		LightGridDebug.SetShader(&m_shaderMap["LightGridDebug"]);
@@ -460,6 +458,71 @@ namespace PSOManager
 		ForwardPulsPso.Finalize();
 		m_gfxPSOMap["ForwardPulsPass"] = ForwardPulsPso;
 
-		}
 
+		GenerateShadowPSO();
+
+		GenerateComputePSO();
+	}
+	
+	void GenerateShadowPSO()
+	{
+		GraphicsPSO ShadowMapPso(L"ShadowMap PSO");
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
+		ShadowMapPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		ShadowMapPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		ShadowMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		D3D12_DEPTH_STENCIL_DESC dsvDesc = {};
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		dsvDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
+		dsvDesc.StencilEnable = FALSE;
+		ShadowMapPso.SetDepthStencilState(dsvDesc);
+		ShadowMapPso.SetSampleMask(UINT_MAX);
+		ShadowMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		ShadowMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMap"] = ShadowMapPso;
+
+		GraphicsPSO ShadowMapDebugPso(L"ShadowMapDebug PSO");
+		ShadowMapDebugPso.SetShader(&m_shaderMap["ShadowMapDebug"]);
+		ShadowMapDebugPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		ShadowMapDebugPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		ShadowMapDebugPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
+		ShadowMapDebugPso.SetDepthStencilState(dsvDesc);
+		ShadowMapDebugPso.SetSampleMask(UINT_MAX);
+		ShadowMapDebugPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		ShadowMapDebugPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		ShadowMapDebugPso.Finalize();
+		m_gfxPSOMap["ShadowMapDebug"] = ShadowMapDebugPso;
+	}
+
+	void GenerateComputePSO()
+	{
+		ComputePSO forwardPulsPSO;
+		forwardPulsPSO.SetShader(&m_shaderMap["ForwardPuls"]);
+		forwardPulsPSO.Finalize();
+		m_ComputePSOMap["ForwardPuls"] = std::move(forwardPulsPSO);
+
+		ComputePSO CullLightPSO;
+		CullLightPSO.SetShader(&m_shaderMap["CullLight"]);
+		CullLightPSO.Finalize();
+		m_ComputePSOMap["CullLight"] = std::move(CullLightPSO);
+
+		ComputePSO VSMPSO;
+		VSMPSO.SetShader(&m_shaderMap["GenerateVSM"]);
+		VSMPSO.Finalize();
+		m_ComputePSOMap["GenerateVSM"] = std::move(VSMPSO);
+
+		ComputePSO HorzBlurVSMPSO;
+		HorzBlurVSMPSO.SetShader(&m_shaderMap["HorzBlurVSM"]);
+		HorzBlurVSMPSO.Finalize();
+		m_ComputePSOMap["HorzBlurVSM"] = std::move(HorzBlurVSMPSO);
+
+		ComputePSO VertBlurVSMPSO;
+		VertBlurVSMPSO.SetShader(&m_shaderMap["VertBlurVSM"]);
+		VertBlurVSMPSO.Finalize();
+		m_ComputePSOMap["VertBlurVSM"] = std::move(VertBlurVSMPSO);
+	}
 }

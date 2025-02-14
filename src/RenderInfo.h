@@ -42,3 +42,24 @@ struct MatCBuffer
     XMFLOAT3 EmissiveColor;
     float metallic = 0.5;
 };
+
+__declspec(align(16))
+struct BlurCBuffer
+{
+    int gBlurRadius;
+
+    // Support up to 11 blur weights.
+    float w0;
+    float w1;
+    float w2;
+    float w3;
+
+    float w4;
+    float w5;
+    float w6;
+    float w7;
+
+    float w8;
+    float w9;
+    float w10;
+};

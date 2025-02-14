@@ -5,12 +5,13 @@
 #include "sample.hlsl"
 
 #define PCF_SAMPLER_COUNT 30
-#define PCF_SAMPLER_PIXLE_RADIUS 3
+#define PCF_SAMPLER_PIXLE_RADIUS 5
 
 #define BLOCKER_SEARCH_SAMPLE_COUNT    10
 #define BLOCKER_SEARCH_PIXEL_RADIUS    5.0f 
 
 Texture2D ShadowMap;
+Texture2D VSMTexture;
 
 static const float2 offsets[9] =
 {
@@ -98,13 +99,24 @@ float PCSS(float3 ShadowPos, float bias)
     return PCF(ShadowPos, radius, bias);
 }
 
-
-float VSSM(float3 ShadowPos, float bias)
+float VSM(float3 ShadowPos)
 {
+    float ReceiverDepth = ShadowPos.z;
+    float2 SampleValue = VSMTexture.Sample(LinearClampSampler, ShadowPos.xy).xy;
     
-    // TODO
+    float mean = SampleValue.x;
     
+    if (ReceiverDepth - 0.0001 <= mean) // Receiver closer
+    {
+        return 1.0f;
+    }
     
-    return 0.0f;
+    // (sigma^2 = E[x^2] - E[x]^2)
+    float Variance = SampleValue.y - mean * mean;
+    float Diff = ReceiverDepth - mean;
+    // p = sigma^2 / (sigma^2 + (d - E[x])^2)
+    float Result = Variance / (Variance + Diff * Diff);
+    
+    return clamp(Result, 0.0f, 1.0f);
 }
 #endif

@@ -23,6 +23,11 @@ public:
 	DirectX::XMMATRIX GetLightProj() const { return m_LightProj; }
 	DirectX::XMMATRIX GetShadowTransform() const { return m_ShadowTransform; }
 
+
+	uint32_t GetWidth(void) const { return m_Width; }
+	uint32_t GetHeight(void) const { return m_Height; }
+	const DXGI_FORMAT& GetFormat(void) const { return m_Format; }
+
 private:
 	
 	void CreateShadowMap(const std::wstring& name);

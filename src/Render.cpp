@@ -23,9 +23,9 @@ void TRender::Initalize()
 
 	CreateGBuffers();
 
-	CreateForwardPulsBuffer();
+	CreateForwardPulsResource();
 
-	CreateShadowBuffer();
+	CreateShadowResource();
 
 }
 
@@ -70,6 +70,7 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 		if (bEnableShadowMap)
 		{
 			shader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
+			shader.SetParameter("VSMTexture", m_VSMTexture->GetSRV());
 			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
 		}
 
@@ -487,6 +488,10 @@ void TRender::CullingLightPass()
 	computeCmdList->SetComputeRootSignature(pso.GetRootSignature());
 	computeCmdList->SetPipelineState(pso.GetPSO());
 
+
+	g_CommandContext.Transition(LightGridMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	g_CommandContext.Transition(DebugMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
 	auto DepthSRV = g_PreDepthPassBuffer.GetSRV();
 	shader.SetParameter("ScreenToViewParams", ConstantBufferRef);
 	shader.SetParameter("DispatchParams", DispatchParamsCBRef);
@@ -509,6 +514,10 @@ void TRender::CullingLightPass()
 	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
 	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
 	computeCmdList->Dispatch(numGroupsX, numGroupsY, 1);
+
+
+	g_CommandContext.Transition(LightGridMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(DebugMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void TRender::ForwardPlusPass()
@@ -629,7 +638,7 @@ void TRender::ShadowPass()
 	// draw all mesh
 	for (int i = 0; i < 5; i++)
 	{
-		for (int j = 0; j < 2; j++)
+		for (int j = 0; j < 5; j++)
 		{
 			ObjCBuffer obj;
 			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
@@ -680,7 +689,7 @@ void TRender::ScenePass()
 	// draw all mesh
 	for (int i = 0; i < 5; i++)
 	{
-		for (int j = 0; j < 2; j++)
+		for (int j = 0; j < 5; j++)
 		{
 			ObjCBuffer obj;
 			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
@@ -691,6 +700,80 @@ void TRender::ScenePass()
 	}
 
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+}
+
+void TRender::GenerateVSMShadow()
+{
+	// --------------- Get depth sqaure ---------------
+	
+	auto computeCmdList = g_CommandContext.GetCommandList();
+
+	// Set PSO and RootSignature
+	auto vsmPSO = PSOManager::m_ComputePSOMap["GenerateVSM"];
+	auto vsmShader = PSOManager::m_shaderMap["GenerateVSM"];
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	// Set Shader Parameter
+	computeCmdList->SetComputeRootSignature(vsmPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(vsmPSO.GetPSO());
+
+	vsmShader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
+	vsmShader.SetParameterUAV("VSM", m_VSMTexture->GetUAV());
+	vsmShader.BindParameters();
+
+	UINT NumGroupsX = (UINT)ceilf(ShadowSize / 16.0f);
+	UINT NumGroupsY = (UINT)ceilf(ShadowSize / 16.0f);
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	// --------------- Gaussian Blur ---------------
+#if 1
+	// --------------- Horizontal Blur ---------------
+	// Set PSO and RootSignature
+	auto HorzBlurPSO = PSOManager::m_ComputePSOMap["HorzBlurVSM"];
+	auto HorzBlurShader = PSOManager::m_shaderMap["HorzBlurVSM"];
+
+	// Set PSO and RootSignature
+	computeCmdList->SetComputeRootSignature(HorzBlurPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(HorzBlurPSO.GetPSO());
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(m_VSMBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	// Set Shader Parameter
+	HorzBlurShader.SetParameter("InputTexture", m_VSMTexture->GetSRV());
+	HorzBlurShader.SetParameterUAV("OutputTexture", m_VSMBlurTexture->GetUAV());
+	HorzBlurShader.SetParameter("BlurCBuffer", GaussWeightsCBRef);
+	HorzBlurShader.BindParameters();
+
+	NumGroupsX = (UINT)ceilf(ShadowSize / 256.0f);
+	NumGroupsY = ShadowSize;
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+
+	g_CommandContext.Transition(m_VSMBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// --------------- Vertical Blur ---------------
+	// Set PSO and RootSignature
+	auto VertBlurPSO = PSOManager::m_ComputePSOMap["VertBlurVSM"];
+	auto VertBlurShader = PSOManager::m_shaderMap["VertBlurVSM"];
+
+	// Set PSO and RootSignature
+	computeCmdList->SetComputeRootSignature(VertBlurPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(VertBlurPSO.GetPSO());
+
+	// Set Shader Parameter
+	VertBlurShader.SetParameter("InputTexture", m_VSMBlurTexture->GetSRV());
+	VertBlurShader.SetParameterUAV("OutputTexture", m_VSMTexture->GetUAV());
+	VertBlurShader.SetParameter("BlurCBuffer", GaussWeightsCBRef);
+	VertBlurShader.BindParameters();
+
+	NumGroupsX = ShadowSize;
+	NumGroupsY = (UINT)ceilf(ShadowSize / 256.0f);
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+	g_CommandContext.Transition(m_VSMBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+#endif
 }
 
 
@@ -797,7 +880,7 @@ void TRender::CreateGBuffers()
 	m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
 }
 
-void TRender::CreateForwardPulsBuffer()
+void TRender::CreateForwardPulsResource()
 {
 	struct Plane
 	{
@@ -859,9 +942,9 @@ void TRender::CreateForwardPulsBuffer()
 	DebugMap->Create(L"Debug Map", numGroupsX * 16, numGroupsY * 16, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }
 
-void TRender::CreateShadowBuffer()
+void TRender::CreateShadowResource()
 {
-	m_ShadowMap = std::make_unique<ShadowMap>(L"ShadowMap", 1024, 1024, DXGI_FORMAT_D32_FLOAT);
+	m_ShadowMap = std::make_unique<ShadowMap>(L"ShadowMap", ShadowSize, ShadowSize, DXGI_FORMAT_D32_FLOAT);
 
 	XMFLOAT3 lightDir = XMFLOAT3{ 10.0f, -10.0f, 10.0f};
 	m_ShadowMap->SetLightView(lightDir);
@@ -878,4 +961,51 @@ void TRender::CreateShadowBuffer()
 	LightManager::DirectionalLight.SetLightInfo(directionalLights);
 	LightManager::DirectionalLight.CreateStructuredBufferRef();
 
+	// Create VSM Shadow Buffer
+	m_VSMTexture = std::make_unique<D3D12ColorBuffer>();
+	m_VSMTexture->Create(L"VSM Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32G32_FLOAT);
+
+	m_VSMBlurTexture = std::make_unique<D3D12ColorBuffer>();
+	m_VSMBlurTexture->Create(L"VSM Blur Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32G32_FLOAT);
+
+	// Create gaussian blur weights
+	auto GaussWeights = CalcGaussianWeights(1.5f);
+	int BlurRaidus = (int)GaussWeights.size() / 2;
+
+	BlurCBuffer blurCB;
+	blurCB.gBlurRadius = BlurRaidus;
+	size_t DataSize = GaussWeights.size() * sizeof(float);
+	memcpy_s(&blurCB.w0, DataSize, GaussWeights.data(), DataSize);
+
+	GaussWeightsCBRef = TD3D12RHI::CreateConstantBuffer(&blurCB, sizeof(BlurCBuffer));
+}
+
+std::vector<float> TRender::CalcGaussianWeights(float sigma)
+{
+	float twoSigma2 = 2.0f * sigma * sigma;
+
+	// Estimate the blur radius based on sigma since sigma controls the "width" of the bell curve.
+	int blurRadius = (int)ceil(2.0f * sigma);
+
+	const int MaxBlurRadius = 5;
+	assert(blurRadius <= MaxBlurRadius);
+
+	std::vector<float> weights;
+	weights.resize(2 * blurRadius + 1);
+
+	float weightSum = 0.0f;
+
+	for (int i = -blurRadius; i <= blurRadius; ++i)
+	{
+		float x = (float)i;
+		weights[i + blurRadius] = expf(-x * x / twoSigma2);
+		weightSum += weights[i + blurRadius];
+	}
+
+	for (int i = 0; i < weights.size(); ++i)
+	{
+		weights[i] /= weightSum;
+	}
+
+	return weights;
 }

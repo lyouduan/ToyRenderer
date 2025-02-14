@@ -44,6 +44,9 @@ public:
 	void ShadowMapDebug();
 	void ScenePass();
 
+	// Compute VSM
+	void GenerateVSMShadow();
+
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
@@ -86,9 +89,11 @@ private:
 
 	void CreateGBuffers();
 
-	void CreateForwardPulsBuffer();
+	void CreateForwardPulsResource();
 
-	void CreateShadowBuffer();
+	void CreateShadowResource();
+
+	std::vector<float> CalcGaussianWeights(float sigma);
 
 private:
 
@@ -129,7 +134,12 @@ private:
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;
 
 	// ShadowMap
+	uint32_t ShadowSize = 1024;
 	std::unique_ptr<ShadowMap> m_ShadowMap;
+	// VSM Shadow
+	std::unique_ptr<D3D12ColorBuffer> m_VSMTexture;
+	std::unique_ptr<D3D12ColorBuffer> m_VSMBlurTexture;
+	TD3D12ConstantBufferRef GaussWeightsCBRef;
 };
 
  

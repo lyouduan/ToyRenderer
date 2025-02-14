@@ -394,7 +394,7 @@ void GameCore::PopulateCommandList()
 	if (m_Render->GetbEnableShadowMap())
 	{
 		m_Render->ShadowPass();
-		
+		m_Render->GenerateVSMShadow();
 	}
 
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())

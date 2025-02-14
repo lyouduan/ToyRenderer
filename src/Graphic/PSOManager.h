@@ -10,8 +10,15 @@ namespace PSOManager
 	extern std::unordered_map<std::string, ComputePSO> m_ComputePSOMap;
 
 	void InitializeShader();
+
+	void GenerateShadowShader();
+
 	void InitializeComputeShader();
 
 	void InitializePSO();
+
+	void GenerateComputePSO();
+
+	void GenerateShadowPSO();
 };
 

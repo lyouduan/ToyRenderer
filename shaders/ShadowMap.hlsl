@@ -78,7 +78,8 @@ float4 PSMain(PSInput pin) : SV_Target
         ShadowPos.xyz /= ShadowPos.w;
         
         float bias = 0.001;
-        float ShadowFactor = PCSS(ShadowPos.xyz, bias);
+        //float ShadowFactor = PCSS(ShadowPos.xyz, bias);
+        float ShadowFactor = VSM(ShadowPos.xyz);
         
         totalDiffuse += lightDiffuse * ShadowFactor;
         totalSpecular += lightSpecular * ShadowFactor;
