@@ -8,6 +8,25 @@ enum class MeshType
     Mesh,
 };
 
+enum class ShadowType
+{
+    NONE,
+    PCSS,
+    VSM,
+    ESM,
+    EVSM,
+    Count,
+};
+
+enum class GBufferType
+{
+    Position,
+    Normal,
+    Albedo,
+    Specular,
+    Count,
+};
+
 __declspec(align(16))
 struct ObjCBuffer
 {

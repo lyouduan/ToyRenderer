@@ -1,6 +1,7 @@
 #include "ImGuiManager.h"
 #include "D3D12RHI.h"
 #include "Win32Application.h"
+#include "RenderInfo.h"
 
 #include "imgui.h"
 #include "imgui_impl_win32.h"
@@ -14,9 +15,11 @@ namespace ImGuiManager
 	bool useCubeMap = false;
 	bool bEnableDeferredRendering = false;
 	bool bEnableForwardPuls = true;
-	bool bEnableShadowMap = false;
+	bool bEnableShadowMap = true;
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
+	int  ShadowType = (int)ShadowType::Count;
+
 	DirectX::XMFLOAT3 lightPos = { 0.0, 10.0, -5.0 };
 	DirectX::XMFLOAT3 lightColor = { 1.0, 1.0, 1.0 };
 	float Intensity = 100;
@@ -63,8 +66,6 @@ namespace ImGuiManager
 
 		if (ImGuiManager::show_demo_window)
 			ImGui::ShowDemoWindow(&ImGuiManager::show_demo_window);
-
-
 	}
 
 	void EndRenderImGui(TD3D12CommandContext& gfxContext)
@@ -131,6 +132,31 @@ namespace ImGuiManager
 			ImGui::EndCombo();
 		}
 
+	}
+
+	void ShadowTypeCombo()
+	{	/*
+		enum class GBufferType
+		{
+			Position,
+			Normal,
+			Albedo,
+			Specular,
+			Count,
+		};*/
+		const char* items[] = { "NONE", "PCSS", "VSM", "ESM", "EVSM", "PCF"};
+
+		// 创建选择框
+		if (ImGui::BeginCombo("Select an option", items[ShadowType])) {
+			// 遍历选项
+			for (int i = 0; i < IM_ARRAYSIZE(items); i++) {
+				bool is_selected = (ShadowType == i); // 判断是否为当前选中项
+				if (ImGui::Selectable(items[i], is_selected)) {
+					ShadowType = i; // 更新当前选项
+				}
+			}
+			ImGui::EndCombo();
+		}
 	}
 
 	void DestroyImGui()

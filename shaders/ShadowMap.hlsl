@@ -75,12 +75,11 @@ float4 PSMain(PSInput pin) : SV_Target
         float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
         
         float4 ShadowPos = mul(float4(pin.positionW, 1.0), light.ShadowTransform);
-        ShadowPos.xyz /= ShadowPos.w;
         
-        float bias = 0.001;
-        //float ShadowFactor = PCSS(ShadowPos.xyz, bias);
-        float ShadowFactor = VSM(ShadowPos.xyz);
-        
+        float ShadowFactor = 1.0;
+#if SHADOW_MAPPING       
+        ShadowFactor = CalcVisibility(ShadowPos);
+#endif
         totalDiffuse += lightDiffuse * ShadowFactor;
         totalSpecular += lightSpecular * ShadowFactor;
     }

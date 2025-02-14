@@ -179,6 +179,9 @@ void GameCore::UpdateImGui()
 				m_Render->SetbEnableShadowMap(false);
 		}
 
+		if (ImGuiManager::bEnableShadowMap)
+			ImGuiManager::ShadowTypeCombo();
+
 		// camera control
 		g_Camera.CamerImGui();
 
@@ -380,6 +383,12 @@ void GameCore::LoadAssets()
 	// Build Tile Frustums
 	m_Render->BuildTileFrustums();
 
+	// Shadow Map
+	m_Render->ShadowPass();
+	m_Render->GenerateVSMShadow();
+	m_Render->GenerateESMShadow();
+	m_Render->GenerateEVSMShadow();
+
 	g_CommandContext.FlushCommandQueue();
 }
 
@@ -391,12 +400,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
-	if (m_Render->GetbEnableShadowMap())
-	{
-		m_Render->ShadowPass();
-		m_Render->GenerateVSMShadow();
-	}
-
+	
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 	{
 		m_Render->GbuffersPass();

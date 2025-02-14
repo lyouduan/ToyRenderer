@@ -197,8 +197,40 @@ namespace PSOManager
 		ShadowMapInfo.bCreateCS = false;
 		ShadowMapInfo.VSEntryPoint = "VSMain";
 		ShadowMapInfo.PSEntryPoint = "PSMain";
+		
+		TShaderDefines ShadowShaderDefines;
+		ShadowShaderDefines.SetDefine("SHADOW_MAPPING", "0");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader NoShadowMapShader(ShadowMapInfo);
+		m_shaderMap["NoShadowMap"] = NoShadowMapShader;
+
+		ShadowShaderDefines.SetDefine("SHADOW_MAPPING", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
 		TShader ShadowMapShader(ShadowMapInfo);
 		m_shaderMap["ShadowMap"] = ShadowMapShader;
+
+		ShadowShaderDefines.SetDefine("USE_PCSS", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader PCSSShader(ShadowMapInfo);
+		m_shaderMap["ShadowMapPCSS"] = PCSSShader;
+
+		ShadowShaderDefines.SetDefine("USE_PCSS", "0");
+		ShadowShaderDefines.SetDefine("USE_VSM", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader VSMShader(ShadowMapInfo);
+		m_shaderMap["ShadowMapVSM"] = VSMShader;
+
+		ShadowShaderDefines.SetDefine("USE_VSM", "0");
+		ShadowShaderDefines.SetDefine("USE_ESM", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader ESMShader(ShadowMapInfo);
+		m_shaderMap["ShadowMapESM"] = ESMShader;
+
+		ShadowShaderDefines.SetDefine("USE_ESM", "0");
+		ShadowShaderDefines.SetDefine("USE_EVSM", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader EVSMShader(ShadowMapInfo);
+		m_shaderMap["ShadowMapEVSM"] = EVSMShader;
 
 		TShaderInfo VSMInfo;
 		VSMInfo.FileName = "shaders/GenerateVSM";
@@ -206,9 +238,27 @@ namespace PSOManager
 		VSMInfo.bCreatePS = false;
 		VSMInfo.bCreateCS = true;
 		VSMInfo.CSEntryPoint = "CS";
+
+		TShaderDefines ShaderDefines;
+		ShaderDefines.SetDefine("USE_VSM", "1");
+		VSMInfo.ShaderDefines = ShaderDefines;
 		TShader VSMInfoShader(VSMInfo);
 		m_shaderMap["GenerateVSM"] = VSMInfoShader;
 
+		TShaderInfo ESMInfo = VSMInfo;
+		ShaderDefines.SetDefine("USE_VSM", "0");
+		ShaderDefines.SetDefine("USE_ESM", "1");
+		ESMInfo.ShaderDefines = ShaderDefines;
+		TShader ESMInfoShader(ESMInfo);
+		m_shaderMap["GenerateESM"] = ESMInfoShader;
+
+		TShaderInfo EVSMInfo = ESMInfo;
+		ShaderDefines.SetDefine("USE_VSM", "0");
+		ShaderDefines.SetDefine("USE_ESM", "0");
+		ShaderDefines.SetDefine("USE_EVSM", "1");
+		EVSMInfo.ShaderDefines = ShaderDefines;
+		TShader EVSMInfoShader(EVSMInfo);
+		m_shaderMap["GenerateEVSM"] = EVSMInfoShader;
 
 		TShaderInfo HorzBlurVSM;
 		HorzBlurVSM.FileName = "shaders/BlurVSM";
@@ -249,8 +299,6 @@ namespace PSOManager
 		CullLightInfo.CSEntryPoint = "CS_main";
 		TShader CullLightShader(CullLightInfo);
 		m_shaderMap["CullLight"] = CullLightShader;
-
-		
 	}
 
 	void InitializePSO()
@@ -467,7 +515,7 @@ namespace PSOManager
 	void GenerateShadowPSO()
 	{
 		GraphicsPSO ShadowMapPso(L"ShadowMap PSO");
-		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
+		ShadowMapPso.SetShader(&m_shaderMap["NoShadowMap"]);
 		ShadowMapPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		ShadowMapPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		ShadowMapPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
@@ -481,7 +529,27 @@ namespace PSOManager
 		ShadowMapPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		ShadowMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		ShadowMapPso.Finalize();
+		m_gfxPSOMap["NoShadowMap"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
+		ShadowMapPso.Finalize();
 		m_gfxPSOMap["ShadowMap"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMapPCSS"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMapPCSS"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMapVSM"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMapVSM"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMapESM"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMapESM"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMapEVSM"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMapEVSM"] = ShadowMapPso;
 
 		GraphicsPSO ShadowMapDebugPso(L"ShadowMapDebug PSO");
 		ShadowMapDebugPso.SetShader(&m_shaderMap["ShadowMapDebug"]);
@@ -514,6 +582,16 @@ namespace PSOManager
 		VSMPSO.SetShader(&m_shaderMap["GenerateVSM"]);
 		VSMPSO.Finalize();
 		m_ComputePSOMap["GenerateVSM"] = std::move(VSMPSO);
+
+		ComputePSO ESMPSO;
+		ESMPSO.SetShader(&m_shaderMap["GenerateESM"]);
+		ESMPSO.Finalize();
+		m_ComputePSOMap["GenerateESM"] = std::move(ESMPSO);
+
+		ComputePSO EVSMPSO;
+		EVSMPSO.SetShader(&m_shaderMap["GenerateEVSM"]);
+		EVSMPSO.Finalize();
+		m_ComputePSOMap["GenerateEVSM"] = std::move(EVSMPSO);
 
 		ComputePSO HorzBlurVSMPSO;
 		HorzBlurVSMPSO.SetShader(&m_shaderMap["HorzBlurVSM"]);

@@ -3,15 +3,6 @@
 
 class TD3D12CommandContext;
 
-enum class GBufferType
-{
-	Position,
-	Normal,
-	Albedo,
-	Specular,
-	Count,
-};
-
 namespace ImGuiManager
 {
 	extern bool show_demo_window;
@@ -21,6 +12,7 @@ namespace ImGuiManager
 	extern bool bEnableShadowMap;
 	extern bool bDebugGBuffers;
 	extern int  GbufferType;
+	extern int  ShadowType;
 	
 	extern DirectX::XMFLOAT3 lightPos;
 	extern DirectX::XMFLOAT3 lightColor;
@@ -43,6 +35,7 @@ namespace ImGuiManager
 	void RenderLightItem();
 
 	void RenderCombo();
+	void ShadowTypeCombo();
 
 	void DestroyImGui();
 };

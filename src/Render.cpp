@@ -71,6 +71,8 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 		{
 			shader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
 			shader.SetParameter("VSMTexture", m_VSMTexture->GetSRV());
+			shader.SetParameter("ESMTexture", m_ESMTexture->GetSRV());
+			shader.SetParameter("EVSMTexture", m_EVSMTexture->GetSRV());
 			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
 		}
 
@@ -608,6 +610,8 @@ void TRender::LightPass()
 
 void TRender::ShadowPass()
 {
+	g_CommandContext.ResetCommandList();
+
 	auto shader = PSOManager::m_shaderMap["preDepthPass"];
 	auto pso = PSOManager::m_gfxPSOMap["preDepthPassPSO"];
 	auto gfxCmdList = g_CommandContext.GetCommandList();
@@ -650,6 +654,8 @@ void TRender::ShadowPass()
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
 
 	g_CommandContext.Transition(m_ShadowMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_READ);
+
+	g_CommandContext.ExecuteCommandLists();
 }
 
 void TRender::ShadowMapDebug()
@@ -671,8 +677,36 @@ void TRender::ShadowMapDebug()
 
 void TRender::ScenePass()
 {
-	auto shader = PSOManager::m_shaderMap["ShadowMap"];
-	auto pso = PSOManager::m_gfxPSOMap["ShadowMap"];
+	TShader shader;
+	GraphicsPSO pso;
+	switch ((ShadowType)ImGuiManager::ShadowType)
+	{
+	case ShadowType::NONE:
+		shader = PSOManager::m_shaderMap["NoShadowMap"];
+		pso = PSOManager::m_gfxPSOMap["NoShadowMap"];
+		break;
+	case ShadowType::PCSS:
+		shader = PSOManager::m_shaderMap["ShadowMapPCSS"];
+		pso = PSOManager::m_gfxPSOMap["ShadowMapPCSS"];
+		break;
+	case ShadowType::VSM:
+		shader = PSOManager::m_shaderMap["ShadowMapVSM"];
+		pso = PSOManager::m_gfxPSOMap["ShadowMapVSM"];
+		break;
+	case ShadowType::ESM:
+		shader = PSOManager::m_shaderMap["ShadowMapESM"];
+		pso = PSOManager::m_gfxPSOMap["ShadowMapESM"];
+		break;
+	case ShadowType::EVSM:
+		shader = PSOManager::m_shaderMap["ShadowMapEVSM"];
+		pso = PSOManager::m_gfxPSOMap["ShadowMapEVSM"];
+		break;
+	default: // PCF
+		shader = PSOManager::m_shaderMap["ShadowMap"];
+		pso = PSOManager::m_gfxPSOMap["ShadowMap"];
+		break;
+	}
+
 	auto gfxCmdList = g_CommandContext.GetCommandList();
 
 	// set PSO and RootSignature
@@ -705,7 +739,8 @@ void TRender::ScenePass()
 void TRender::GenerateVSMShadow()
 {
 	// --------------- Get depth sqaure ---------------
-	
+	g_CommandContext.ResetCommandList();
+
 	auto computeCmdList = g_CommandContext.GetCommandList();
 
 	// Set PSO and RootSignature
@@ -774,6 +809,61 @@ void TRender::GenerateVSMShadow()
 	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 
 #endif
+	g_CommandContext.ExecuteCommandLists();
+}
+
+void TRender::GenerateESMShadow()
+{
+	// --------------- Get Exponential Shadow Mapping ---------------
+	g_CommandContext.ResetCommandList();
+
+	auto computeCmdList = g_CommandContext.GetCommandList();
+
+	// Set PSO and RootSignature
+	auto EsmPSO = PSOManager::m_ComputePSOMap["GenerateESM"];
+	auto EsmShader = PSOManager::m_shaderMap["GenerateESM"];
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	// Set Shader Parameter
+	computeCmdList->SetComputeRootSignature(EsmPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(EsmPSO.GetPSO());
+
+	EsmShader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
+	EsmShader.SetParameterUAV("ESM", m_ESMTexture->GetUAV());
+	EsmShader.BindParameters();
+
+	UINT NumGroupsX = (UINT)ceilf(ShadowSize / 16.0f);
+	UINT NumGroupsY = (UINT)ceilf(ShadowSize / 16.0f);
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+	g_CommandContext.Transition(m_ESMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	g_CommandContext.ExecuteCommandLists();
+}
+
+void TRender::GenerateEVSMShadow()
+{
+	// --------------- Get Exponential Shadow Mapping ---------------
+	g_CommandContext.ResetCommandList();
+
+	auto computeCmdList = g_CommandContext.GetCommandList();
+
+	// Set PSO and RootSignature
+	auto EvsmPSO = PSOManager::m_ComputePSOMap["GenerateEVSM"];
+	auto EvsmShader = PSOManager::m_shaderMap["GenerateEVSM"];
+	g_CommandContext.Transition(m_VSMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+	// Set Shader Parameter
+	computeCmdList->SetComputeRootSignature(EvsmPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(EvsmPSO.GetPSO());
+
+	EvsmShader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
+	EvsmShader.SetParameterUAV("EVSM", m_EVSMTexture->GetUAV());
+	EvsmShader.BindParameters();
+
+	UINT NumGroupsX = (UINT)ceilf(ShadowSize / 16.0f);
+	UINT NumGroupsY = (UINT)ceilf(ShadowSize / 16.0f);
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+	g_CommandContext.Transition(m_ESMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	g_CommandContext.ExecuteCommandLists();
 }
 
 
@@ -978,6 +1068,14 @@ void TRender::CreateShadowResource()
 	memcpy_s(&blurCB.w0, DataSize, GaussWeights.data(), DataSize);
 
 	GaussWeightsCBRef = TD3D12RHI::CreateConstantBuffer(&blurCB, sizeof(BlurCBuffer));
+
+	// Create ESM
+	m_ESMTexture = std::make_unique<D3D12ColorBuffer>();
+	m_ESMTexture->Create(L"ESM Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32_FLOAT);
+
+	// Create EVSM
+	m_EVSMTexture = std::make_unique<D3D12ColorBuffer>();
+	m_EVSMTexture->Create(L"EVSM Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
 }
 
 std::vector<float> TRender::CalcGaussianWeights(float sigma)

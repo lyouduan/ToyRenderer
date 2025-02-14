@@ -46,6 +46,8 @@ public:
 
 	// Compute VSM
 	void GenerateVSMShadow();
+	void GenerateESMShadow();
+	void GenerateEVSMShadow();
 
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
@@ -140,6 +142,11 @@ private:
 	std::unique_ptr<D3D12ColorBuffer> m_VSMTexture;
 	std::unique_ptr<D3D12ColorBuffer> m_VSMBlurTexture;
 	TD3D12ConstantBufferRef GaussWeightsCBRef;
+
+	// ESM Shadow
+	std::unique_ptr<D3D12ColorBuffer> m_ESMTexture;
+	// EVSM
+	std::unique_ptr<D3D12ColorBuffer> m_EVSMTexture;
 };
 
  

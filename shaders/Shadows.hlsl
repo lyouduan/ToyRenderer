@@ -12,6 +12,8 @@
 
 Texture2D ShadowMap;
 Texture2D VSMTexture;
+Texture2D ESMTexture;
+Texture2D EVSMTexture;
 
 static const float2 offsets[9] =
 {
@@ -77,7 +79,7 @@ float BlockerSearch(float3 ShadowPos, float dx)
     return AverageBlockerDepth;
 }
 
-float PCSS(float3 ShadowPos, float bias)
+float PCSS(float3 ShadowPos)
 {
     float ReceiverDepth = ShadowPos.z;
     
@@ -96,7 +98,19 @@ float PCSS(float3 ShadowPos, float bias)
     float radius = (lightSize * (ReceiverDepth - blockerDepth)) / blockerDepth;
     
     // 3. PFC using Radius
+    float bias = 0.001f;
     return PCF(ShadowPos, radius, bias);
+}
+
+float Chebyshev(float2 moment, float depth)
+{
+    // (sigma^2 = E[x^2] - E[x]^2)
+    float Variance = moment.y - moment.x * moment.x;
+    float Diff = depth - moment.x;
+    // p = sigma^2 / (sigma^2 + (d - E[x])^2)
+    float p = Variance / (Variance + Diff * Diff);
+    
+    return p;
 }
 
 float VSM(float3 ShadowPos)
@@ -104,19 +118,66 @@ float VSM(float3 ShadowPos)
     float ReceiverDepth = ShadowPos.z;
     float2 SampleValue = VSMTexture.Sample(LinearClampSampler, ShadowPos.xy).xy;
     
-    float mean = SampleValue.x;
-    
-    if (ReceiverDepth - 0.0001 <= mean) // Receiver closer
+    if (ReceiverDepth - 0.0001 <= SampleValue.x) // Receiver closer
     {
         return 1.0f;
     }
     
-    // (sigma^2 = E[x^2] - E[x]^2)
-    float Variance = SampleValue.y - mean * mean;
-    float Diff = ReceiverDepth - mean;
-    // p = sigma^2 / (sigma^2 + (d - E[x])^2)
-    float Result = Variance / (Variance + Diff * Diff);
+    float Result = Chebyshev(SampleValue, ReceiverDepth);
     
-    return clamp(Result, 0.0f, 1.0f);
+    return saturate(Result);
 }
+
+float ESM(float3 ShadowPos)
+{
+    float ReceiverDepth = ShadowPos.z;
+    float SampleValue = ESMTexture.Sample(LinearClampSampler, ShadowPos.xy).x;
+    
+    float Result = exp(-60 * ReceiverDepth) * SampleValue.x;
+    
+    return saturate(Result);
+}
+
+float EVSM(float3 ShadowPos)
+{
+    float ReceiverDepth = ShadowPos.z;
+    float4 SampleValue = EVSMTexture.Sample(LinearClampSampler, ShadowPos.xy).xyzw;
+  
+    float warpDepth1 = exp(60 * ReceiverDepth);
+    float warpDepth2 = -exp(-60 * ReceiverDepth);
+    
+    float p1 = Chebyshev(SampleValue.xy, warpDepth1);
+    float p2 = Chebyshev(SampleValue.zw, warpDepth2);
+    
+    return min(p1, p2);
+}
+
+float CalcVisibility(float4 ShadowPosH)
+{
+    // Complete projection by doing division by w.
+    ShadowPosH.xyz /= ShadowPosH.w;
+
+    // NDC space.
+    float3 ReceiverPos = ShadowPosH.xyz;
+    if (ReceiverPos.x < 0.0f || ReceiverPos.x > 1.0f || ReceiverPos.y < 0.0f || ReceiverPos.y > 1.0f)
+    {
+        return 0.0f;
+    }
+
+    float ShadowFactor = 1.0;
+#if USE_PCSS 
+    ShadowFactor = PCSS(ReceiverPos);
+#elif USE_VSM
+    ShadowFactor = VSM(ReceiverPos);
+#elif USE_ESM
+    ShadowFactor = ESM(ReceiverPos);
+#elif USE_EVSM
+    ShadowFactor = EVSM(ReceiverPos);
+#else
+    float bias = 0.005;
+    ShadowFactor = PCF(ReceiverPos, PCF_SAMPLER_PIXLE_RADIUS, bias);
+#endif 
+    return ShadowFactor;
+}
+
 #endif
