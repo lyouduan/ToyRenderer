@@ -39,7 +39,7 @@ namespace TD3D12RHI
 	extern std::unique_ptr<TD3D12HeapSlotAllocator> ImGuiSRVHeapAllocator;
 
 	// cache descriptor for GPU
-	extern std::unique_ptr<TD3D12DescriptorCache> DescriptorCache;
+	extern std::unique_ptr<TD3D12DescriptorCache> g_DescriptorCache;
 
 	extern D3D12_CPU_DESCRIPTOR_HANDLE NullDescriptor;
 

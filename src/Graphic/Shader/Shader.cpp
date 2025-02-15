@@ -39,7 +39,7 @@ void TShader::Initialize()
 		ShaderPass["CS"] = CSBlob;
 		GetShaderParameter(CSBlob, EShaderType::COMPUTE_SHADER);
 
-		descriptorCache = std::make_unique<TD3D12DescriptorCache>(TD3D12RHI::g_Device);
+		//descriptorCache = std::make_unique<TD3D12DescriptorCache>(TD3D12RHI::g_Device);
 	}
 
 	// create rootSignature
@@ -47,12 +47,12 @@ void TShader::Initialize()
 
 }
 
-bool TShader::SetDescriptorCache(std::shared_ptr<TD3D12DescriptorCache> InDescriptorCache)
-{
-	descriptorCache = InDescriptorCache;
+//bool TShader::SetDescriptorCache(std::shared_ptr<TD3D12DescriptorCache> InDescriptorCache)
+//{
+	//descriptorCache = InDescriptorCache;
 
-	return descriptorCache != nullptr;
-}
+	//return descriptorCache != nullptr;
+//}
 
 bool TShader::SetParameter(std::string ParamName, TD3D12ConstantBufferRef ConstantBufferRef)
 {
@@ -103,7 +103,6 @@ bool TShader::SetParameterUAV(std::string ParamName, D3D12_CPU_DESCRIPTOR_HANDLE
 	UAVList.push_back(UAVHandle);
 
 	return SetParameterUAV(ParamName, UAVList);
-	return false;
 }
 
 bool TShader::SetParameterUAV(std::string ParamName, std::vector<D3D12_CPU_DESCRIPTOR_HANDLE>& UAVHandleList)
@@ -129,6 +128,7 @@ void TShader::BindParameters()
 {
 	auto CommandList = TD3D12RHI::g_CommandContext.GetCommandList();
 	
+	auto& descriptorCache = TD3D12RHI::g_DescriptorCache;
 
 	CheckBindings();
 
@@ -497,10 +497,10 @@ void TShader::CheckBindings()
 		assert(Param.UAVList.size() > 0);
 	}
 
-	if (descriptorCache == nullptr)
-	{
-		assert(false && "descriptorCache is null!");
-	}
+	//if (descriptorCache == nullptr)
+	//{
+	//	assert(false && "descriptorCache is null!");
+	//}
 }
 
 void TShader::ClearBindings()
@@ -520,7 +520,7 @@ void TShader::ClearBindings()
 		Param.UAVList.clear();
 	}
 
-	descriptorCache->Reset();
+	//descriptorCache->Reset();
 }
 
 void TShaderDefines::GetD3DShaderMacro(std::vector<D3D_SHADER_MACRO>& outMacros) const

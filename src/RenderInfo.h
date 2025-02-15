@@ -13,6 +13,7 @@ enum class ShadowType
     NONE,
     PCSS,
     VSM,
+    VSSM,
     ESM,
     EVSM,
     Count,

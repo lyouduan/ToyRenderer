@@ -10,10 +10,13 @@
 #define BLOCKER_SEARCH_SAMPLE_COUNT    10
 #define BLOCKER_SEARCH_PIXEL_RADIUS    5.0f 
 
+#define VSSM_MAX_MIP_LEVEL 5
+
 Texture2D ShadowMap;
 Texture2D VSMTexture;
 Texture2D ESMTexture;
 Texture2D EVSMTexture;
+Texture2D VSSMTextures[VSSM_MAX_MIP_LEVEL];
 
 static const float2 offsets[9] =
 {
@@ -102,27 +105,25 @@ float PCSS(float3 ShadowPos)
     return PCF(ShadowPos, radius, bias);
 }
 
-float Chebyshev(float2 moment, float depth)
+float Chebyshev(float2 moment, float t)
 {
+    // One-tailed inequality valid if t > moment.x
+    float p = (t <= moment.x);
+    
     // (sigma^2 = E[x^2] - E[x]^2)
     float Variance = moment.y - moment.x * moment.x;
-    float Diff = depth - moment.x;
+    float Diff = t - moment.x;
     // p = sigma^2 / (sigma^2 + (d - E[x])^2)
-    float p = Variance / (Variance + Diff * Diff);
+    float p_max = Variance / (Variance + Diff * Diff);
     
-    return p;
+    return max(p, p_max);
 }
 
 float VSM(float3 ShadowPos)
 {
     float ReceiverDepth = ShadowPos.z;
     float2 SampleValue = VSMTexture.Sample(LinearClampSampler, ShadowPos.xy).xy;
-    
-    if (ReceiverDepth - 0.0001 <= SampleValue.x) // Receiver closer
-    {
-        return 1.0f;
-    }
-    
+  
     float Result = Chebyshev(SampleValue, ReceiverDepth);
     
     return saturate(Result);
@@ -143,13 +144,56 @@ float EVSM(float3 ShadowPos)
     float ReceiverDepth = ShadowPos.z;
     float4 SampleValue = EVSMTexture.Sample(LinearClampSampler, ShadowPos.xy).xyzw;
   
-    float warpDepth1 = exp(60 * ReceiverDepth);
-    float warpDepth2 = -exp(-60 * ReceiverDepth);
+    float warpDepth1 = exp(30 * ReceiverDepth);
+    float warpDepth2 = -exp(-30 * ReceiverDepth);
     
     float p1 = Chebyshev(SampleValue.xy, warpDepth1);
     float p2 = Chebyshev(SampleValue.zw, warpDepth2);
     
     return min(p1, p2);
+}
+
+float2 GetVSSM(float Radius, float3 ShadowPos)
+{
+    float Level = Radius * (VSSM_MAX_MIP_LEVEL - 1);
+    int FloorLevel = floor(Level);
+    int CeilLevel = ceil(Level);
+
+    float2 FloorSample = VSSMTextures[FloorLevel].Sample(LinearWrapSampler, ShadowPos.xy).rg;
+    float2 CeilSample = VSSMTextures[CeilLevel].Sample(LinearWrapSampler, ShadowPos.xy).rg;
+	
+    float2 Result = lerp(FloorSample, CeilSample, (Level - FloorLevel));
+    return Result;
+}
+
+float VSSM(float3 ShadowPos)
+{
+    float ReceiverDepth = ShadowPos.z;
+    
+    // 1. calcualte average Blocker depth
+    float2 SampleValue = VSSMTextures[2].Sample(LinearClampSampler, ShadowPos.xy).xy;
+    if (ReceiverDepth - 0.005 <= SampleValue.x) // Receiver closer
+    {
+        return 1.0f;
+    }
+    
+    float p = Chebyshev(SampleValue, ReceiverDepth);
+    float Zunocc = ReceiverDepth;
+    float Zavg = SampleValue.x;
+    float Zocc = (Zavg - p * Zunocc) / (1 - p);
+    
+    // 2. Calculate the Penumbra radius
+    float lightSize = 20.0;
+    float radius = (lightSize * (ReceiverDepth - Zocc)) / Zocc;
+    float maxRadius = 5.0;
+    radius = saturate(radius / maxRadius);
+    
+    // VSM
+    float2 VSSM_SampleValue = GetVSSM(radius, ShadowPos);
+  
+    float Result = Chebyshev(VSSM_SampleValue, ReceiverDepth);
+    
+    return Result;
 }
 
 float CalcVisibility(float4 ShadowPosH)
@@ -169,6 +213,8 @@ float CalcVisibility(float4 ShadowPosH)
     ShadowFactor = PCSS(ReceiverPos);
 #elif USE_VSM
     ShadowFactor = VSM(ReceiverPos);
+#elif USE_VSSM
+    ShadowFactor = VSSM(ReceiverPos);
 #elif USE_ESM
     ShadowFactor = ESM(ReceiverPos);
 #elif USE_EVSM

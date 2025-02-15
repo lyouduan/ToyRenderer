@@ -17,12 +17,18 @@ public:
 	~TRender();
 
 	void Initalize();
+
+	void SetDescriptorHeaps();
+
 	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef);
+	void DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef);
 
 	void CreateIBLEnvironmentMap();
 	void CreateIBLIrradianceMap();
 	void CreateIBLPrefilterMap();
 	void CreateIBLLUT2D();
+
+	void IBLRenderPass();
 
 	// Deferred rendering
 	void GbuffersPass();
@@ -45,10 +51,13 @@ public:
 	void ScenePass();
 
 	// Compute VSM
-	void GenerateVSMShadow();
-	void GenerateESMShadow();
-	void GenerateEVSMShadow();
+	void GenerateVSM();
+	void GenerateESM();
+	void GenerateEVSM();
+	void GenerateVSSM();
 
+	// TODO
+	void GenerateSAT();
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
@@ -105,7 +114,7 @@ private:
 	bool bDebugGBuffers = false;
 	bool bEnableForwardPuls = false;
 
-	bool bEnableShadowMap = true;
+	bool bEnableShadowMap = false;
 	
 	const static UINT IBLPrefilterMaxMipLevel = 5;
 	std::unique_ptr<SceneCaptureCube> IBLEnvironmentMap;
@@ -141,12 +150,21 @@ private:
 	// VSM Shadow
 	std::unique_ptr<D3D12ColorBuffer> m_VSMTexture;
 	std::unique_ptr<D3D12ColorBuffer> m_VSMBlurTexture;
+
 	TD3D12ConstantBufferRef GaussWeightsCBRef;
 
 	// ESM Shadow
 	std::unique_ptr<D3D12ColorBuffer> m_ESMTexture;
 	// EVSM
 	std::unique_ptr<D3D12ColorBuffer> m_EVSMTexture;
+
+	// Sum Area Table
+	std::unique_ptr<D3D12ColorBuffer> m_SATTexture;
+	std::unique_ptr<D3D12ColorBuffer> m_SATMiddleTexture;
+
+	// VSSM
+	const static UINT VSSMMaxRadius = 5;
+	std::vector<std::unique_ptr<D3D12ColorBuffer>> m_VSSMTextures;
 };
 
  

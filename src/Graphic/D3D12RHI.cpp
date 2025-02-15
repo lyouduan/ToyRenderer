@@ -30,7 +30,7 @@ namespace TD3D12RHI
     std::unique_ptr<TD3D12HeapSlotAllocator> ImGuiSRVHeapAllocator = nullptr;
 
     // cache descriptor handle
-    std::unique_ptr<TD3D12DescriptorCache> DescriptorCache = nullptr;
+    std::unique_ptr<TD3D12DescriptorCache> g_DescriptorCache = nullptr;
 
     D3D12_CPU_DESCRIPTOR_HANDLE NullDescriptor;
 
@@ -67,7 +67,7 @@ namespace TD3D12RHI
         SRVHeapSlotAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 128);
         ImGuiSRVHeapAllocator = std::make_unique<TD3D12HeapSlotAllocator>(g_Device, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV, 1);
 
-        DescriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
+        g_DescriptorCache = std::make_unique<TD3D12DescriptorCache>(g_Device);
     }
 }
 

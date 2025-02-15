@@ -1,5 +1,6 @@
 #pragma once
 #include "DirectXMath.h"
+#include "RenderInfo.h"
 
 class TD3D12CommandContext;
 
@@ -13,6 +14,9 @@ namespace ImGuiManager
 	extern bool bDebugGBuffers;
 	extern int  GbufferType;
 	extern int  ShadowType;
+	extern int  SceneType;
+
+	extern MatCBuffer matCB;
 	
 	extern DirectX::XMFLOAT3 lightPos;
 	extern DirectX::XMFLOAT3 lightColor;
@@ -33,6 +37,7 @@ namespace ImGuiManager
 	void RenderAllItem();
 	void RenderModelItem();
 	void RenderLightItem();
+	void RenderPBRIem();
 
 	void RenderCombo();
 	void ShadowTypeCombo();

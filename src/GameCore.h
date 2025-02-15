@@ -29,8 +29,6 @@ private:
 
 	void UpdateImGui();
 
-	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader);
-
 	// pipleline objects
 	CD3DX12_VIEWPORT m_viewport;
 	CD3DX12_RECT m_scissorRect;
@@ -41,7 +39,6 @@ private:
 	TD3D12ConstantBufferRef lightObjCBufferRef;
 	TD3D12ConstantBufferRef passCBufferRef;
 	TD3D12ConstantBufferRef matCBufferRef;
-	MatCBuffer matCB;
 
 	std::unique_ptr<TRender> m_Render;
 

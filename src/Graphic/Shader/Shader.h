@@ -113,7 +113,7 @@ public:
 
 	void Initialize();
 
-	bool SetDescriptorCache(std::shared_ptr<TD3D12DescriptorCache> InDescriptorCache);
+	//bool SetDescriptorCache(std::shared_ptr<TD3D12DescriptorCache> InDescriptorCache);
 
 	bool SetParameter(std::string ParamName, TD3D12ConstantBufferRef ConstantBufferRef);
 
@@ -174,5 +174,5 @@ public:
 
 	Microsoft::WRL::ComPtr<ID3D12RootSignature> RootSignature;
 
-	std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
+	//std::shared_ptr<TD3D12DescriptorCache> descriptorCache = nullptr;
 };

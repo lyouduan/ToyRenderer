@@ -330,6 +330,7 @@
     <None Include="shaders\Sampler.hlsl" />
     <None Include="shaders\GenerateVSM.hlsl" />
     <None Include="shaders\BlurVSM.hlsl" />
+    <None Include="shaders\SAT.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

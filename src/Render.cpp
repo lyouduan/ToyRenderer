@@ -29,6 +29,13 @@ void TRender::Initalize()
 
 }
 
+void TRender::SetDescriptorHeaps()
+{
+	// set descriptor heaps
+	ID3D12DescriptorHeap* ppHeaps[] = { TD3D12RHI::g_DescriptorCache->GetCacheCbvSrvUavDescriptorHeap().Get()};
+	g_CommandContext.GetCommandList()->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
+}
+
 void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
 {
 	auto obj = model.GetObjCBuffer();
@@ -60,6 +67,8 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			shader.SetParameter("metallicMap", NullDescriptor);
 		}
 
+		
+
 		if (bEnableForwardPuls)
 		{
 			shader.SetParameter("o_LightGrid", LightGridMap->GetSRV());
@@ -74,9 +83,74 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			shader.SetParameter("ESMTexture", m_ESMTexture->GetSRV());
 			shader.SetParameter("EVSMTexture", m_EVSMTexture->GetSRV());
 			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
+
+			// IBL SRV
+			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+			for (UINT i = 0; i < m_VSSMTextures.size(); ++i)
+			{
+				SRVHandleList.push_back(m_VSSMTextures[i]->GetSRV());
+			}
+			shader.SetParameter("VSSMTextures", SRVHandleList);
 		}
 
-		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
+		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
+		meshes[i].DrawMesh(gfxContext);
+	}
+}
+
+void TRender::DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
+{
+	auto obj = model.GetObjCBuffer();
+	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
+	auto meshes = model.GetMeshes();
+	for (UINT i = 0; i < meshes.size(); ++i)
+	{
+		shader.SetParameter("objCBuffer", objCBufferRef);
+		shader.SetParameter("passCBuffer", passRef);
+		// draw call
+		auto SRV = meshes[i].GetSRV();
+		if (!SRV.empty())
+		{
+			shader.SetParameter("diffuseMap", SRV[0]);
+			if (SRV.size() == 2)
+			{
+				shader.SetParameter("metallicMap", SRV[1]);
+			}
+			else
+			{
+				// binding NullDescriptor
+				shader.SetParameter("metallicMap", NullDescriptor);
+			}
+		}
+		else
+		{
+			
+
+			shader.SetParameter("diffuseMap", NullDescriptor);
+			shader.SetParameter("metallicMap", NullDescriptor);
+		}
+
+		if (bEnableIBLEnvLighting)
+		{
+			// pbr Maps
+			shader.SetParameter("diffuseMap", TextureManager::m_SrvMaps["Cerberus_A"]);
+			shader.SetParameter("metallicMap", TextureManager::m_SrvMaps["Cerberus_M"]);
+			shader.SetParameter("normalMap", TextureManager::m_SrvMaps["Cerberus_N"]);
+			shader.SetParameter("roughnessMap", TextureManager::m_SrvMaps["Cerberus_R"]);
+
+			// IBL Maps
+			shader.SetParameter("IrradianceMap", IBLIrradianceMap->GetSRV());
+			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+			for (UINT i = 0; i < IBLPrefilterMaps.size(); ++i)
+			{
+				SRVHandleList.push_back(IBLPrefilterMaps[i]->GetSRV());
+			}
+			shader.SetParameter("PrefilterMap", SRVHandleList);
+			shader.SetParameter("BrdfLUT2D", IBLBrdfLUT2D->GetSRV());
+		}
+
+
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
 		meshes[i].DrawMesh(gfxContext);
 	}
@@ -124,7 +198,6 @@ void TRender::CreateIBLEnvironmentMap()
 		//shader.SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
 		shader.SetParameter("passCBuffer", cubemapPassCBufferRef);
 		shader.SetParameter("equirectangularMap", texSRV);
-		shader.SetDescriptorCache(boxMesh.GetTD3D12DescriptorCache());
 		shader.BindParameters();
 		boxMesh.DrawMesh(g_CommandContext);
 	}
@@ -179,7 +252,6 @@ void TRender::CreateIBLIrradianceMap()
 		shader.SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
 		shader.SetParameter("passCBuffer", cubemapPassCBufferRef);
 		shader.SetParameter("EnvironmentMap", texSRV);
-		shader.SetDescriptorCache(boxMesh.GetTD3D12DescriptorCache());
 		shader.BindParameters();
 		boxMesh.DrawMesh(g_CommandContext);
 	}
@@ -237,7 +309,6 @@ void TRender::CreateIBLPrefilterMap()
 			shader.SetParameter("objCBuffer", cubemapObjCBufferRef); // don't need objCbuffer
 			shader.SetParameter("passCBuffer", cubemapPassCBufferRef);
 			shader.SetParameter("EnvironmentMap", texSRV);
-			shader.SetDescriptorCache(boxMesh.GetTD3D12DescriptorCache());
 			shader.BindParameters();
 			boxMesh.DrawMesh(g_CommandContext);
 		}
@@ -273,7 +344,6 @@ void TRender::CreateIBLLUT2D()
 		//gfxCmdList->ClearDepthStencilView(IBLIrradianceMap->GetDSV(), D3D12_CLEAR_FLAG_DEPTH, 1.0, 0, 0, nullptr);
 		gfxCmdList->OMSetRenderTargets(1, &IBLBrdfLUT2D->GetRTV(), TRUE, nullptr);
 
-		shader.SetDescriptorCache(fullQuadMesh.GetTD3D12DescriptorCache());
 		shader.BindParameters();
 		fullQuadMesh.DrawMesh(g_CommandContext);
 	}
@@ -282,6 +352,97 @@ void TRender::CreateIBLLUT2D()
 	g_CommandContext.Transition(IBLIrradianceMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 
 	g_CommandContext.ExecuteCommandLists();
+}
+
+void TRender::IBLRenderPass()
+{
+	// Record commands
+	g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
+	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
+
+	// update passCBuffer
+	PassCBuffer passCB;
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
+
+	passCB.lightPos = ImGuiManager::lightPos;
+	passCB.EyePosition = g_Camera.GetPosition3f();
+	passCB.lightColor = ImGuiManager::lightColor;
+	passCB.Intensity = ImGuiManager::Intensity;
+	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+	// mat CBuffer
+	auto matCBufferRef = TD3D12RHI::CreateConstantBuffer(&ImGuiManager::matCB, sizeof(MatCBuffer));
+
+	for (int i = 0; i < 3; i++)
+	{
+		for (int j = 0; j < 3; j++)
+		{
+			ObjCBuffer obj;
+			const XMVECTOR rotationAxisX = XMVectorSet(1, 0, 0, 0);
+			XMMATRIX rotationMat = XMMatrixRotationAxis(rotationAxisX, XMConvertToRadians(90));
+			auto scalingMat = XMMatrixScaling(0.05, 0.05, 0.05);
+			auto rotationAxisY = XMVectorSet(0, 1, 0, 0);
+			auto rotationMatY = rotationMat * XMMatrixRotationAxis(rotationAxisY, XMConvertToRadians(-45));
+
+			XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
+			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(rotationMatY * scalingMat * translationMatrix));
+			ModelManager::m_ModelMaps["Cerberus_LP"].SetObjCBuffer(obj);
+
+			DrawMeshIBL(g_CommandContext, ModelManager::m_ModelMaps["Cerberus_LP"], m_shaderMap["modelShader"], passCBufferRef);
+		}
+	}
+
+	// pbr sphere 
+	{
+		XMMATRIX scalingMat = XMMatrixScaling(ImGuiManager::scale * 0.5, ImGuiManager::scale * 0.5, ImGuiManager::scale * 0.5);
+		float rotate_angle = static_cast<float>(ImGuiManager::RotationY * 360);
+		const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
+		XMMATRIX rotationYMat = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
+		XMMATRIX translationMatrix = XMMatrixTranslation(ImGuiManager::modelPosition.x, ImGuiManager::modelPosition.y, ImGuiManager::modelPosition.z);
+		auto ModelMatrix = scalingMat * rotationYMat * translationMatrix;
+
+		ObjCBuffer obj;
+		XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(ModelMatrix));
+		auto objCBufferRef = CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
+		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
+		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
+
+		m_shaderMap["pbrShader"].SetParameter("objCBuffer", objCBufferRef);
+		m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
+		m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
+
+		// IBL SRV
+		m_shaderMap["pbrShader"].SetParameter("IrradianceMap", IBLIrradianceMap->GetSRV());
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+		for (UINT i = 0; i < IBLPrefilterMaps.size(); ++i)
+		{
+			SRVHandleList.push_back(IBLPrefilterMaps[i]->GetSRV());
+		}
+		m_shaderMap["pbrShader"].SetParameter("PrefilterMap", SRVHandleList);
+		m_shaderMap["pbrShader"].SetParameter("BrdfLUT2D", IBLBrdfLUT2D->GetSRV());
+
+		m_shaderMap["pbrShader"].BindParameters();
+		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+	}
+
+	// sky box
+	{
+		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
+		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["skyboxPSO"].GetPSO());
+
+		m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
+
+		if (bUseEquirectangularMap)
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", IBLEnvironmentMap->GetSRV());
+		else
+			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
+
+		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+		m_shaderMap["skyboxShader"].BindParameters();
+		ModelManager::m_MeshMaps["box"].DrawMesh(g_CommandContext);
+	}
 }
 
 void TRender::GbuffersPass()
@@ -386,7 +547,6 @@ void TRender::DeferredShadingPass()
 	shader.SetParameter("GBufferNormalMap", GBufferNormal->GetSRV());
 	shader.SetParameter("GBufferSpecularMap", GBufferSpecular->GetSRV());
 
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["FullQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 
@@ -423,12 +583,9 @@ void TRender::GbuffersDebug()
 		texSRV = NullDescriptor;
 		break;
 	}
-	
-	texSRV = m_ShadowMap->GetSRV();
 
 	shader.SetParameter("tex", texSRV);
 	
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
@@ -567,7 +724,6 @@ void TRender::LightGridDebug()
 	shader.SetParameter("LightGrid", LightGridMap->GetSRV());
 	shader.SetParameter("in_Frustums", RWStructuredBufferRef->GetSRV());
 
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
@@ -602,7 +758,6 @@ void TRender::LightPass()
 		m_shaderMap["lightShader"].SetParameter("objCBuffer", ObjCBufferRef);
 		m_shaderMap["lightShader"].SetParameter("passCBuffer", passCBufferRef);
 		m_shaderMap["lightShader"].SetParameter("Lights", light.GetStructuredBuffer()->GetSRV());
-		m_shaderMap["lightShader"].SetDescriptorCache(pointLight.GetTD3D12DescriptorCache());
 		m_shaderMap["lightShader"].BindParameters();
 		pointLight.DrawMesh(g_CommandContext);
 	}
@@ -667,10 +822,9 @@ void TRender::ShadowMapDebug()
 	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
 	gfxCmdList->SetPipelineState(pso.GetPSO());
 
-	auto texSRV = m_ShadowMap->GetSRV();
+	auto texSRV = m_VSSMTextures[4]->GetSRV();
 	shader.SetParameter("tex", texSRV);
 
-	shader.SetDescriptorCache(ModelManager::m_MeshMaps["DebugQuad"].GetTD3D12DescriptorCache());
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
@@ -692,6 +846,10 @@ void TRender::ScenePass()
 	case ShadowType::VSM:
 		shader = PSOManager::m_shaderMap["ShadowMapVSM"];
 		pso = PSOManager::m_gfxPSOMap["ShadowMapVSM"];
+		break;
+	case ShadowType::VSSM:
+		shader = PSOManager::m_shaderMap["ShadowMapVSSM"];
+		pso = PSOManager::m_gfxPSOMap["ShadowMapVSSM"];
 		break;
 	case ShadowType::ESM:
 		shader = PSOManager::m_shaderMap["ShadowMapESM"];
@@ -736,7 +894,64 @@ void TRender::ScenePass()
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
 }
 
-void TRender::GenerateVSMShadow()
+void TRender::GenerateSAT()
+{
+	// --------------- Get Summed Area Table ---------------
+	g_CommandContext.ResetCommandList();
+
+	auto computeCmdList = g_CommandContext.GetCommandList();
+
+	// Set PSO and RootSignature
+	auto pso = PSOManager::m_ComputePSOMap["localCS"];
+	auto shader = PSOManager::m_shaderMap["localCS"];
+	// Set Shader Parameter
+	computeCmdList->SetComputeRootSignature(pso.GetRootSignature());
+	computeCmdList->SetPipelineState(pso.GetPSO());
+
+	shader.SetParameter("InputTexture", m_ShadowMap->GetSRV());
+	shader.SetParameterUAV("OutputTexture", m_SATTexture->GetUAV());
+	shader.BindParameters();
+
+	UINT NumGroupsX = (UINT)ceilf(ShadowSize / 256.0f);
+	UINT NumGroupsY = ShadowSize;
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+	// Set PSO and RootSignature
+	auto HorzSATPSO = PSOManager::m_ComputePSOMap["HorzSAT"];
+	auto HorzSATShader = PSOManager::m_shaderMap["HorzSAT"];
+	// Set Shader Parameter
+	computeCmdList->SetComputeRootSignature(HorzSATPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(HorzSATPSO.GetPSO());
+
+	HorzSATShader.SetParameter("InputTexture", m_ShadowMap->GetSRV());
+	HorzSATShader.SetParameterUAV("OutputTexture", m_SATMiddleTexture->GetUAV());
+	HorzSATShader.BindParameters();
+
+	NumGroupsX = (UINT)ceilf(ShadowSize / 256.0f);
+	NumGroupsY = ShadowSize;
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+	g_CommandContext.Transition(m_SATMiddleTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(m_SATTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	auto VertSATPSO = PSOManager::m_ComputePSOMap["VertSAT"];
+	auto VertSATShader = PSOManager::m_shaderMap["VertSAT"];
+	// Set Shader Parameter
+	computeCmdList->SetComputeRootSignature(HorzSATPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(HorzSATPSO.GetPSO());
+	// Set Shader Parameter
+	VertSATShader.SetParameter("InputTexture", m_SATMiddleTexture->GetSRV());
+	VertSATShader.SetParameterUAV("OutputTexture", m_SATTexture->GetUAV());
+	VertSATShader.BindParameters();
+
+	NumGroupsX = (UINT)ceilf(ShadowSize / 256.0f);
+	NumGroupsY = ShadowSize;
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+	g_CommandContext.ExecuteCommandLists();
+}
+
+void TRender::GenerateVSM()
 {
 	// --------------- Get depth sqaure ---------------
 	g_CommandContext.ResetCommandList();
@@ -812,7 +1027,7 @@ void TRender::GenerateVSMShadow()
 	g_CommandContext.ExecuteCommandLists();
 }
 
-void TRender::GenerateESMShadow()
+void TRender::GenerateESM()
 {
 	// --------------- Get Exponential Shadow Mapping ---------------
 	g_CommandContext.ResetCommandList();
@@ -839,7 +1054,7 @@ void TRender::GenerateESMShadow()
 	g_CommandContext.ExecuteCommandLists();
 }
 
-void TRender::GenerateEVSMShadow()
+void TRender::GenerateEVSM()
 {
 	// --------------- Get Exponential Shadow Mapping ---------------
 	g_CommandContext.ResetCommandList();
@@ -863,6 +1078,95 @@ void TRender::GenerateEVSMShadow()
 	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
 	g_CommandContext.Transition(m_ESMTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 
+	g_CommandContext.ExecuteCommandLists();
+}
+
+void TRender::GenerateVSSM()
+{
+	// --------------- Get depth sqaure ---------------
+	g_CommandContext.ResetCommandList();
+
+	auto computeCmdList = g_CommandContext.GetCommandList();
+
+	// Set PSO and RootSignature
+	auto vsmPSO = PSOManager::m_ComputePSOMap["GenerateVSM"];
+	auto vsmShader = PSOManager::m_shaderMap["GenerateVSM"];
+
+	for (int mip = 0; mip < VSSMMaxRadius; mip++)
+	{
+		// update Gaussian Weights
+		auto GaussWeights = CalcGaussianWeights(float(mip+1)/2.0f);
+		int BlurRaidus = (int)GaussWeights.size() / 2;
+
+		BlurCBuffer blurCB;
+		blurCB.gBlurRadius = BlurRaidus;
+		size_t DataSize = GaussWeights.size() * sizeof(float);
+		memcpy_s(&blurCB.w0, DataSize, GaussWeights.data(), DataSize);
+		auto gaussWeightsCBRef = TD3D12RHI::CreateConstantBuffer(&blurCB, sizeof(BlurCBuffer));
+
+		g_CommandContext.Transition(m_VSSMTextures[mip]->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		// Set Shader Parameter
+	
+		computeCmdList->SetComputeRootSignature(vsmPSO.GetRootSignature());
+		computeCmdList->SetPipelineState(vsmPSO.GetPSO());
+		vsmShader.SetParameter("ShadowMap", m_ShadowMap->GetSRV());
+		vsmShader.SetParameterUAV("VSM", m_VSSMTextures[mip]->GetUAV());
+		vsmShader.BindParameters();
+
+		UINT NumGroupsX = (UINT)ceilf(ShadowSize / 16.0f);
+		UINT NumGroupsY = (UINT)ceilf(ShadowSize / 16.0f);
+		computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+
+		g_CommandContext.Transition(m_VSSMTextures[mip]->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+		// --------------- Gaussian Blur ---------------
+		// --------------- Horizontal Blur ---------------
+		// Set PSO and RootSignature
+		auto HorzBlurPSO = PSOManager::m_ComputePSOMap["HorzBlurVSM"];
+		auto HorzBlurShader = PSOManager::m_shaderMap["HorzBlurVSM"];
+		// Set PSO and RootSignature
+		computeCmdList->SetComputeRootSignature(HorzBlurPSO.GetRootSignature());
+		computeCmdList->SetPipelineState(HorzBlurPSO.GetPSO());
+		g_CommandContext.Transition(m_VSSMTextures[mip]->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+		g_CommandContext.Transition(m_VSMBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+		// Set Shader Parameter
+		HorzBlurShader.SetParameter("InputTexture", m_VSSMTextures[mip]->GetSRV());
+		HorzBlurShader.SetParameterUAV("OutputTexture", m_VSMBlurTexture->GetUAV());
+		HorzBlurShader.SetParameter("BlurCBuffer", gaussWeightsCBRef);
+		HorzBlurShader.BindParameters();
+
+		NumGroupsX = (UINT)ceilf(ShadowSize / 256.0f);
+		NumGroupsY = ShadowSize;
+		computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+		g_CommandContext.Transition(m_VSMBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+		g_CommandContext.Transition(m_VSSMTextures[mip]->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+		// --------------- Vertical Blur ---------------
+		// Set PSO and RootSignature
+		auto VertBlurPSO = PSOManager::m_ComputePSOMap["VertBlurVSM"];
+		auto VertBlurShader = PSOManager::m_shaderMap["VertBlurVSM"];
+
+		// Set PSO and RootSignature
+		computeCmdList->SetComputeRootSignature(VertBlurPSO.GetRootSignature());
+		computeCmdList->SetPipelineState(VertBlurPSO.GetPSO());
+
+		// Set Shader Parameter
+		VertBlurShader.SetParameter("InputTexture", m_VSMBlurTexture->GetSRV());
+		VertBlurShader.SetParameterUAV("OutputTexture", m_VSSMTextures[mip]->GetUAV());
+		VertBlurShader.SetParameter("BlurCBuffer", gaussWeightsCBRef);
+		VertBlurShader.BindParameters();
+
+		NumGroupsX = ShadowSize;
+		NumGroupsY = (UINT)ceilf(ShadowSize / 256.0f);
+		computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+		g_CommandContext.Transition(m_VSMBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+		g_CommandContext.Transition(m_VSSMTextures[mip]->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	}
 	g_CommandContext.ExecuteCommandLists();
 }
 
@@ -1076,6 +1380,21 @@ void TRender::CreateShadowResource()
 	// Create EVSM
 	m_EVSMTexture = std::make_unique<D3D12ColorBuffer>();
 	m_EVSMTexture->Create(L"EVSM Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);
+
+	// Create SAT
+	m_SATTexture = std::make_unique<D3D12ColorBuffer>();
+	m_SATTexture->Create(L"SAT Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32_FLOAT);
+
+	m_SATMiddleTexture = std::make_unique<D3D12ColorBuffer>();
+	m_SATMiddleTexture->Create(L"SAT Middle Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32_FLOAT);
+
+	for (int Mip = 0; Mip < VSSMMaxRadius; Mip++)
+	{
+		auto Texture = std::make_unique<D3D12ColorBuffer>();
+		Texture->Create(L"VSSM Texture", ShadowSize, ShadowSize, 1, DXGI_FORMAT_R32G32_FLOAT);
+		m_VSSMTextures.push_back(std::move(Texture));
+
+	}
 }
 
 std::vector<float> TRender::CalcGaussianWeights(float sigma)

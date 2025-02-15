@@ -55,26 +55,13 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(m_ModelMatrix));
 	ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(objCB);
 
-	PassCBuffer passCB;
-	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
-	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
-
-	passCB.lightPos = ImGuiManager::lightPos;
-	passCB.EyePosition = g_Camera.GetPosition3f();
-	passCB.lightColor = ImGuiManager::lightColor;
-	passCB.Intensity = ImGuiManager::Intensity;
-
-	passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+	
 	//memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
 
 	XMMATRIX m_LightMatrix = XMMatrixTranslation(ImGuiManager::lightPos.x, ImGuiManager::lightPos.y, ImGuiManager::lightPos.z);
 	ObjCBuffer lightObj;
 	XMStoreFloat4x4(&lightObj.ModelMat, XMMatrixTranspose(m_LightMatrix));
 	lightObjCBufferRef = CreateConstantBuffer(&lightObj, sizeof(ObjCBuffer));
-
-	// mat CBuffer
-	matCBufferRef = TD3D12RHI::CreateConstantBuffer(&matCB, sizeof(MatCBuffer));
-
 }
 
 void GameCore::OnRender()
@@ -117,11 +104,7 @@ void GameCore::UpdateImGui()
 		ImGuiManager::RenderAllItem();
 
 		ImGui::NewLine();
-		ImGui::Text("Model PBR");
-		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
-		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.001f, 1.0f);
-		ImGui::SliderFloat("Metallic", &matCB.metallic, 0.0f, 1.0f);
-
+		
 		if(ImGui::Checkbox("UseEquirectangularMap", &ImGuiManager::useCubeMap))
 		{
 			if (ImGuiManager::useCubeMap)
@@ -192,63 +175,8 @@ void GameCore::UpdateImGui()
 
 }
 
-void GameCore::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader)
-{
-	auto obj = model.GetObjCBuffer();
-	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
-
-	auto meshes = model.GetMeshes();
-	for (UINT i = 0; i < meshes.size(); ++i)
-	{
-		shader.SetParameter("objCBuffer", objCBufferRef);
-		shader.SetParameter("passCBuffer", passCBufferRef);
-		// draw call
-		//auto SRV = meshes[i].GetSRV();
-		//if (!SRV.empty())
-			//shader.SetParameter("diffuseMap", TextureManager::m_SrvMaps["Cerberus_A"]);
-		//else
-		//{
-			//shader.SetParameter("diffuseMap", NullDescriptor);
-		//}
-		//m_shader->SetParameter("specularMap", SRV[1]);
-		//m_shader->SetParameter("normalMap", SRV[2]);
-
-		// pbr Maps
-		shader.SetParameter("diffuseMap", TextureManager::m_SrvMaps["Cerberus_A"]);
-		shader.SetParameter("metallicMap", TextureManager::m_SrvMaps["Cerberus_M"]);
-		shader.SetParameter("normalMap", TextureManager::m_SrvMaps["Cerberus_N"]);
-		shader.SetParameter("roughnessMap", TextureManager::m_SrvMaps["Cerberus_R"]);
-
-		// IBL Maps
-		shader.SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
-		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
-		for (UINT i = 0; i < m_Render->GetIBLPrefilterMaps().size(); ++i)
-		{
-			SRVHandleList.push_back(m_Render->GetIBLPrefilterMap(i)->GetSRV());
-		}
-		shader.SetParameter("PrefilterMap", SRVHandleList);
-		shader.SetParameter("BrdfLUT2D", m_Render->GetIBLBrdfLUT2D()->GetSRV());
-
-		shader.SetDescriptorCache(meshes[i].GetTD3D12DescriptorCache());
-		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
-		meshes[i].DrawMesh(g_CommandContext);
-	}
-}
-
 void GameCore::LoadPipeline()
 {
-//	uint32_t dxgiFactoryFlags = 0;
-//#if defined(_DEBUG)
-//	{
-//		ComPtr<ID3D12Debug> debugController;
-//		if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&debugController))))
-//		{
-//			debugController->EnableDebugLayer();
-//			dxgiFactoryFlags |= DXGI_CREATE_FACTORY_DEBUG;
-//		}
-//	}
-//#endif
-
 	uint32_t useDebugLayers = 0;
 #if _DEBUG
 	// Default to true for debug builds
@@ -368,13 +296,8 @@ void GameCore::LoadAssets()
 	// Load Lights
 	LightManager::InitialzeLights();
 
-	// Render equirectangularMap To CubeMap
-	//m_RenderCubeMap = std::make_shared<SceneCaptureCube>(L"CubeMap", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
-	//m_RenderCubeMap->CreateCubeCamera({ 0, 0, 0 }, 0.1, 10);
-	//m_RenderCubeMap->DrawEquirectangularMapToCubeMap(g_CommandContext);
 	m_Render = std::make_unique<TRender>();
 	m_Render->Initalize();
-	
 	m_Render->CreateIBLEnvironmentMap();
 	m_Render->CreateIBLIrradianceMap();
 	m_Render->CreateIBLPrefilterMap();
@@ -385,9 +308,13 @@ void GameCore::LoadAssets()
 
 	// Shadow Map
 	m_Render->ShadowPass();
-	m_Render->GenerateVSMShadow();
-	m_Render->GenerateESMShadow();
-	m_Render->GenerateEVSMShadow();
+	m_Render->GenerateVSM();
+	m_Render->GenerateESM();
+	m_Render->GenerateEVSM();
+
+	m_Render->GenerateVSSM();
+
+	m_Render->GenerateSAT();
 
 	g_CommandContext.FlushCommandQueue();
 }
@@ -400,6 +327,7 @@ void GameCore::PopulateCommandList()
 	g_CommandContext.ResetCommandAllocator();
 	g_CommandContext.ResetCommandList();
 
+	m_Render->SetDescriptorHeaps();
 	
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 	{
@@ -453,75 +381,7 @@ void GameCore::PopulateCommandList()
 	}
 	else
 	{
-
-		// Record commands
-		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pso"].GetRootSignature());
-		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
-
-		for (int i = 0; i < 3; i++)
-		{
-			for (int j = 0; j < 3; j++)
-			{
-				ObjCBuffer obj;
-				const XMVECTOR rotationAxisX = XMVectorSet(1, 0, 0, 0);
-				XMMATRIX rotationMat = XMMatrixRotationAxis(rotationAxisX, XMConvertToRadians(90));
-				auto scalingMat = XMMatrixScaling(0.05, 0.05, 0.05);
-				auto rotationAxisY = XMVectorSet(0, 1, 0, 0);
-				auto rotationMatY = rotationMat * XMMatrixRotationAxis(rotationAxisY, XMConvertToRadians(-45));
-
-				XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i * 10, 0, j * 10);
-				XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(rotationMatY * scalingMat * translationMatrix));
-				ModelManager::m_ModelMaps["Cerberus_LP"].SetObjCBuffer(obj);
-
-				DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cerberus_LP"], m_shaderMap["modelShader"]);
-			}
-		}
-		
-		//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["modelShader"]);
-
-
-		// pbr sphere 
-		{
-			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["pbrPSO"].GetRootSignature());
-			g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pbrPSO"].GetPSO());
-
-			m_shaderMap["pbrShader"].SetParameter("objCBuffer", objCBufferRef);
-			m_shaderMap["pbrShader"].SetParameter("matCBuffer", matCBufferRef);
-			m_shaderMap["pbrShader"].SetParameter("passCBuffer", passCBufferRef);
-
-			// IBL SRV
-			m_shaderMap["pbrShader"].SetParameter("IrradianceMap", m_Render->GetIBLIrradianceMap()->GetSRV());
-			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
-			for (UINT i = 0; i < m_Render->GetIBLPrefilterMaps().size(); ++i)
-			{
-				SRVHandleList.push_back(m_Render->GetIBLPrefilterMap(i)->GetSRV());
-			}
-			m_shaderMap["pbrShader"].SetParameter("PrefilterMap", SRVHandleList);
-			m_shaderMap["pbrShader"].SetParameter("BrdfLUT2D", m_Render->GetIBLBrdfLUT2D()->GetSRV());
-
-			m_shaderMap["pbrShader"].SetDescriptorCache(ModelManager::m_MeshMaps["sphere"].GetTD3D12DescriptorCache());
-			m_shaderMap["pbrShader"].BindParameters();
-			ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
-		}
-
-		// sky box
-		{
-			g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["skyboxPSO"].GetRootSignature());
-			g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["skyboxPSO"].GetPSO());
-
-			m_shaderMap["skyboxShader"].SetParameter("objCBuffer", objCBufferRef); // don't need objCbuffer
-			m_shaderMap["skyboxShader"].SetParameter("passCBuffer", passCBufferRef);
-
-			if (m_Render->GetbUseEquirectangularMap())
-				m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLEnvironmemtMap()->GetSRV());
-			else
-				m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
-
-			//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
-			m_shaderMap["skyboxShader"].SetDescriptorCache(ModelManager::m_MeshMaps["box"].GetTD3D12DescriptorCache());
-			m_shaderMap["skyboxShader"].BindParameters();
-			ModelManager::m_MeshMaps["box"].DrawMesh(g_CommandContext);
-		}
+		m_Render->IBLRenderPass();
 	}
 
 	// Draw ImGui
@@ -537,7 +397,7 @@ void GameCore::WaitForPreviousFrame()
 {
 	g_CommandContext.FlushCommandQueue();
 	
-	DescriptorCache->Reset();
+	g_DescriptorCache->Reset();
 
 	g_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 }

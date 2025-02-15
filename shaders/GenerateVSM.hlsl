@@ -16,8 +16,8 @@ void CS(int3 dispatchThreadID : SV_DispatchThreadID)
     ESM[dispatchThreadID.xy] = exp(60 * Depth);
 #elif USE_EVSM    
     float Depth = ShadowMap[dispatchThreadID.xy];
-    float e1 = exp(60 * Depth);
-    float e2 = -exp(-60 * Depth);
+    float e1 = exp(30 * Depth);
+    float e2 = -exp(-30 * Depth);
     EVSM[dispatchThreadID.xy] = float4(e1, e1 * e1, e2, e2 * e2);
 #endif
 }   

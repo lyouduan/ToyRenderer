@@ -232,6 +232,12 @@ namespace PSOManager
 		TShader EVSMShader(ShadowMapInfo);
 		m_shaderMap["ShadowMapEVSM"] = EVSMShader;
 
+		ShadowShaderDefines.SetDefine("USE_EVSM", "0");
+		ShadowShaderDefines.SetDefine("USE_VSSM", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader VSSMShader(ShadowMapInfo);
+		m_shaderMap["ShadowMapVSSM"] = VSSMShader;
+
 		TShaderInfo VSMInfo;
 		VSMInfo.FileName = "shaders/GenerateVSM";
 		VSMInfo.bCreateVS = false;
@@ -277,6 +283,33 @@ namespace PSOManager
 		VertBlurVSM.CSEntryPoint = "VertBlurCS";
 		TShader VertBlurVSMhader(VertBlurVSM);
 		m_shaderMap["VertBlurVSM"] = VertBlurVSMhader;
+
+		TShaderInfo localCSSAT;
+		localCSSAT.FileName = "shaders/SAT";
+		localCSSAT.bCreateVS = false;
+		localCSSAT.bCreatePS = false;
+		localCSSAT.bCreateCS = true;
+		localCSSAT.CSEntryPoint = "localCS";
+		TShader localCSSATShader(localCSSAT);
+		m_shaderMap["localCS"] = localCSSATShader;
+
+		TShaderInfo HorzSAT;
+		HorzSAT.FileName = "shaders/SAT";
+		HorzSAT.bCreateVS = false;
+		HorzSAT.bCreatePS = false;
+		HorzSAT.bCreateCS = true;
+		HorzSAT.CSEntryPoint = "HorzCS";
+		TShader HorzSATShader(HorzSAT);
+		m_shaderMap["HorzSAT"] = HorzSATShader;
+
+		TShaderInfo VertSAT;
+		VertSAT.FileName = "shaders/SAT";
+		VertSAT.bCreateVS = false;
+		VertSAT.bCreatePS = false;
+		VertSAT.bCreateCS = true;
+		VertSAT.CSEntryPoint = "VertCS";
+		TShader VertSAThader(VertSAT);
+		m_shaderMap["VertSAT"] = VertSAThader;
 	}
 
 	void InitializeComputeShader()
@@ -551,6 +584,10 @@ namespace PSOManager
 		ShadowMapPso.Finalize();
 		m_gfxPSOMap["ShadowMapEVSM"] = ShadowMapPso;
 
+		ShadowMapPso.SetShader(&m_shaderMap["ShadowMapVSSM"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["ShadowMapVSSM"] = ShadowMapPso;
+
 		GraphicsPSO ShadowMapDebugPso(L"ShadowMapDebug PSO");
 		ShadowMapDebugPso.SetShader(&m_shaderMap["ShadowMapDebug"]);
 		ShadowMapDebugPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
@@ -602,5 +639,20 @@ namespace PSOManager
 		VertBlurVSMPSO.SetShader(&m_shaderMap["VertBlurVSM"]);
 		VertBlurVSMPSO.Finalize();
 		m_ComputePSOMap["VertBlurVSM"] = std::move(VertBlurVSMPSO);
+
+		ComputePSO HorzSATPSO;
+		HorzSATPSO.SetShader(&m_shaderMap["HorzSAT"]);
+		HorzSATPSO.Finalize();
+		m_ComputePSOMap["HorzSAT"] = std::move(HorzSATPSO);
+
+		ComputePSO VertSATPSO;
+		VertSATPSO.SetShader(&m_shaderMap["VertSAT"]);
+		VertSATPSO.Finalize();
+		m_ComputePSOMap["VertSAT"] = std::move(VertSATPSO);
+
+		ComputePSO localCSPSO;
+		localCSPSO.SetShader(&m_shaderMap["localCS"]);
+		localCSPSO.Finalize();
+		m_ComputePSOMap["localCS"] = std::move(localCSPSO);
 	}
 }

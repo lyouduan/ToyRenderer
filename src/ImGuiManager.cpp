@@ -19,10 +19,11 @@ namespace ImGuiManager
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;
-
 	DirectX::XMFLOAT3 lightPos = { 0.0, 10.0, -5.0 };
 	DirectX::XMFLOAT3 lightColor = { 1.0, 1.0, 1.0 };
 	float Intensity = 100;
+	
+	MatCBuffer matCB;
 
 	DirectX::XMFLOAT3 modelPosition = { 0.0f, 5.0f, 0.0f };
 
@@ -79,6 +80,16 @@ namespace ImGuiManager
 	{
 		RenderModelItem();
 		RenderLightItem();
+
+		RenderPBRIem();
+	}
+
+	void RenderPBRIem()
+	{
+		ImGui::Text("Model PBR");
+		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
+		ImGui::SliderFloat("Roughness", &matCB.Roughness, 0.001f, 1.0f);
+		ImGui::SliderFloat("Metallic", &matCB.metallic, 0.0f, 1.0f);
 	}
 
 	void RenderModelItem()
@@ -144,7 +155,7 @@ namespace ImGuiManager
 			Specular,
 			Count,
 		};*/
-		const char* items[] = { "NONE", "PCSS", "VSM", "ESM", "EVSM", "PCF"};
+		const char* items[] = { "NONE", "PCSS", "VSM", "VSSM", "ESM", "EVSM", "PCF"};
 
 		// 创建选择框
 		if (ImGui::BeginCombo("Select an option", items[ShadowType])) {
