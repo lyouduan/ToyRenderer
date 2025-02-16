@@ -204,6 +204,11 @@ namespace PSOManager
 		TShader NoShadowMapShader(ShadowMapInfo);
 		m_shaderMap["NoShadowMap"] = NoShadowMapShader;
 
+		ShadowShaderDefines.SetDefine("USE_CSM", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader CSMShader(ShadowMapInfo);
+		m_shaderMap["CSM"] = CSMShader;
+
 		ShadowShaderDefines.SetDefine("SHADOW_MAPPING", "1");
 		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
 		TShader ShadowMapShader(ShadowMapInfo);
@@ -563,6 +568,10 @@ namespace PSOManager
 		ShadowMapPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		ShadowMapPso.Finalize();
 		m_gfxPSOMap["NoShadowMap"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["CSM"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["CSM"] = ShadowMapPso;
 
 		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
 		ShadowMapPso.Finalize();

@@ -6,6 +6,7 @@
 #include "Display.h"
 #include "ImGuiManager.h"
 #include "Light.h"
+#include "RenderInfo.h"
 
 using namespace TD3D12RHI;
 using namespace PSOManager;
@@ -27,6 +28,7 @@ void TRender::Initalize()
 
 	CreateShadowResource();
 
+	CreateCSMResource();
 }
 
 void TRender::SetDescriptorHeaps()
@@ -82,15 +84,39 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			shader.SetParameter("VSMTexture", m_VSMTexture->GetSRV());
 			shader.SetParameter("ESMTexture", m_ESMTexture->GetSRV());
 			shader.SetParameter("EVSMTexture", m_EVSMTexture->GetSRV());
-			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
 
-			// IBL SRV
+			// VSSM
 			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
 			for (UINT i = 0; i < m_VSSMTextures.size(); ++i)
 			{
 				SRVHandleList.push_back(m_VSSMTextures[i]->GetSRV());
 			}
 			shader.SetParameter("VSSMTextures", SRVHandleList);
+
+			// CSM
+			SRVHandleList.clear();
+			LightInfo info = LightManager::DirectionalLight.GetLightInfo()[0];
+			for (UINT i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
+			{
+				SRVHandleList.push_back(m_CascadedShadowMap->GetSRV(i));
+				XMStoreFloat4x4(&info.CSMTransform[i], XMMatrixTranspose(m_CascadedShadowMap->GetShadowTransform(i)));
+			}
+			shader.SetParameter("CSMTextures", SRVHandleList);
+
+
+			LightManager::DirectionalLight.SetLightInfo(info);
+			LightManager::DirectionalLight.CreateStructuredBufferRef();
+			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
+
+
+			CSMCBuffer csm;
+			auto frustumVSFarZ = m_CascadedShadowMap->GetFrustumVSFarZ();
+			for (int i = 0; i < frustumVSFarZ.size(); ++i)
+			{
+				csm.frustumVSFarZ[i] = frustumVSFarZ[i];
+			}
+			auto CSMCBRef = TD3D12RHI::CreateConstantBuffer(&csm, sizeof(CSMCBuffer));
+			shader.SetParameter("CSMCBuffer", CSMCBRef);
 		}
 
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
@@ -822,7 +848,7 @@ void TRender::ShadowMapDebug()
 	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
 	gfxCmdList->SetPipelineState(pso.GetPSO());
 
-	auto texSRV = m_VSSMTextures[4]->GetSRV();
+	auto texSRV = m_CascadedShadowMap->GetSRV(0);
 	shader.SetParameter("tex", texSRV);
 
 	shader.BindParameters();
@@ -858,6 +884,10 @@ void TRender::ScenePass()
 	case ShadowType::EVSM:
 		shader = PSOManager::m_shaderMap["ShadowMapEVSM"];
 		pso = PSOManager::m_gfxPSOMap["ShadowMapEVSM"];
+		break;
+	case ShadowType::CSM:
+		shader = PSOManager::m_shaderMap["CSM"];
+		pso = PSOManager::m_gfxPSOMap["CSM"];
 		break;
 	default: // PCF
 		shader = PSOManager::m_shaderMap["ShadowMap"];
@@ -949,6 +979,60 @@ void TRender::GenerateSAT()
 	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
 
 	g_CommandContext.ExecuteCommandLists();
+}
+
+void TRender::CascadedShadowMapPass()
+{
+	// update frustum
+	XMFLOAT3 lightDir = XMFLOAT3{ 10.0f, -10.0f, 10.0f};
+	m_CascadedShadowMap->DivideFrustum(lightDir, g_Camera.GetNearZ(), g_Camera.GetFarZ());
+
+	auto shader = PSOManager::m_shaderMap["preDepthPass"];
+	auto pso = PSOManager::m_gfxPSOMap["preDepthPassPSO"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	for (int i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
+	{
+		// set viewport and scissorRect
+		gfxCmdList->RSSetViewports(1, m_CascadedShadowMap->GetViewport());
+		gfxCmdList->RSSetScissorRects(1, m_CascadedShadowMap->GetScissorRect());
+
+		// transition buffer state
+		g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12Resource(i), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		// set render target
+		gfxCmdList->ClearDepthStencilView(m_CascadedShadowMap->GetDSV(i), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+		gfxCmdList->OMSetRenderTargets(0, nullptr, false, &m_CascadedShadowMap->GetDSV(i));
+
+		// set PSO and RootSignature
+		gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+		gfxCmdList->SetPipelineState(pso.GetPSO());
+
+		// UpdateShadowCB
+		PassCBuffer passCB;
+		passCB.EyePosition = g_Camera.GetPosition3f();
+		passCB.lightPos = ImGuiManager::lightPos;
+
+		XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_CascadedShadowMap->GetLightView(i)));
+		XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_CascadedShadowMap->GetLightProj(i)));
+		auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+		// draw all mesh
+		for (int i = 0; i < 5; i++)
+		{
+			for (int j = 0; j < 5; j++)
+			{
+				ObjCBuffer obj;
+				XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
+				XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+				ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
+				DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
+			}
+		}
+		DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+
+		g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12Resource(i), D3D12_RESOURCE_STATE_DEPTH_READ);
+	}
+
 }
 
 void TRender::GenerateVSM()
@@ -1395,6 +1479,13 @@ void TRender::CreateShadowResource()
 		m_VSSMTextures.push_back(std::move(Texture));
 
 	}
+}
+
+void TRender::CreateCSMResource()
+{
+	
+	m_CascadedShadowMap = std::make_unique<CascadedShadowMap>(L"Cascaded ShadowMap", CSMSize, CSMSize, DXGI_FORMAT_D32_FLOAT, CSM_MAX_COUNT);
+
 }
 
 std::vector<float> TRender::CalcGaussianWeights(float sigma)

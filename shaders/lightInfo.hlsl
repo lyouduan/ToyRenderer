@@ -21,6 +21,7 @@ struct Light
     
     float4x4 ModelMat;
     float4x4 ShadowTransform;
+    float4x4 CSMTransform[4];
     uint  Type;
 };
 

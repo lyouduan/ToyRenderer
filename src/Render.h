@@ -7,6 +7,7 @@
 #include "D3D12DescriptorCache.h"
 #include "ModelLoader.h"
 #include "ShadowMap.h"
+#include "CascadedShadowMap.h"
 
 class SceneCaptureCube;
 
@@ -55,9 +56,11 @@ public:
 	void GenerateESM();
 	void GenerateEVSM();
 	void GenerateVSSM();
-
 	// TODO
 	void GenerateSAT();
+
+	void CascadedShadowMapPass();
+
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
@@ -103,6 +106,8 @@ private:
 	void CreateForwardPulsResource();
 
 	void CreateShadowResource();
+
+	void CreateCSMResource();
 
 	std::vector<float> CalcGaussianWeights(float sigma);
 
@@ -165,6 +170,13 @@ private:
 	// VSSM
 	const static UINT VSSMMaxRadius = 5;
 	std::vector<std::unique_ptr<D3D12ColorBuffer>> m_VSSMTextures;
+
+
+	// Cascaded shadow map
+	// ShadowMap
+	uint32_t CSMSize = 512;
+	std::unique_ptr<CascadedShadowMap> m_CascadedShadowMap;
+
 };
 
  

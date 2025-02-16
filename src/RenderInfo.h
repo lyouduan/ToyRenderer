@@ -2,6 +2,8 @@
 #include "stdafx.h"
 #include "D3D12Utils.h"
 
+#define CSM_MAX_COUNT 4
+
 enum class MeshType
 {
     ModelMesh,
@@ -16,6 +18,7 @@ enum class ShadowType
     VSSM,
     ESM,
     EVSM,
+    CSM,
     Count,
 };
 
@@ -64,6 +67,27 @@ struct MatCBuffer
 };
 
 __declspec(align(16))
+struct LightInfo
+{
+    XMFLOAT4 PositionW;
+    XMFLOAT4 DirectionW;
+    XMFLOAT4 PositionV;
+    XMFLOAT4 DirectionV;
+    XMFLOAT4 Color;
+
+    float SpotlightAngle;
+    float Range;
+    float Intensity;
+    float pad0;
+
+    XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 ShadowTransform = MATH::IdentityMatrix;
+    XMFLOAT4X4 CSMTransform[CSM_MAX_COUNT] = {MATH::IdentityMatrix};
+
+    int Type;
+};
+
+__declspec(align(16))
 struct BlurCBuffer
 {
     int gBlurRadius;
@@ -82,4 +106,9 @@ struct BlurCBuffer
     float w8;
     float w9;
     float w10;
+};
+
+struct CSMCBuffer
+{
+    float frustumVSFarZ[CSM_MAX_COUNT];
 };

@@ -1,6 +1,7 @@
 #pragma once
 #include <DirectXMath.h>
 #include "D3D12Buffer.h"
+#include "RenderInfo.h"
 
 using namespace DirectX;
 
@@ -10,25 +11,6 @@ enum ELightType
 	DirectionalLight,
 	PointLight,
 	SpotLight,
-};
-
-struct LightInfo
-{
-    XMFLOAT4 PositionW;
-    XMFLOAT4 DirectionW;
-    XMFLOAT4 PositionV;
-    XMFLOAT4 DirectionV;
-    XMFLOAT4 Color;
-
-    float SpotlightAngle;
-    float Range;
-    float Intensity;
-    float pad0;
-
-    XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
-    XMFLOAT4X4 ShadowTransform = MATH::IdentityMatrix;
-
-    int Type;
 };
 
 class Light
@@ -41,6 +23,13 @@ public:
     void SetLightInfo(std::vector<LightInfo>& lights)
     {
         m_lights = lights;
+    }
+
+    void SetLightInfo(LightInfo lightinfo)
+    {
+        std::vector<LightInfo> infos;
+        infos.push_back(lightinfo);
+        SetLightInfo(infos);
     }
 
     std::vector<LightInfo> GetLightInfo()

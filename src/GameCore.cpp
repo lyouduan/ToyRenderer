@@ -329,6 +329,8 @@ void GameCore::PopulateCommandList()
 
 	m_Render->SetDescriptorHeaps();
 	
+	m_Render->CascadedShadowMapPass();
+
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 	{
 		m_Render->GbuffersPass();

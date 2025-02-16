@@ -31,6 +31,10 @@ public:
 	float GetRoll() { return roll; }
 	float GetPitch() { return pitch; }
 	float GetYaw() { return yaw; }
+	float GetNearZ() { return mNearZ; }
+	float GetFarZ() { return mFarZ; }
+	float GetAspect() { return mAspect; }
+	float GetFovY() { return mFovY; }
 
 	void MoveCamera(float moveForward, float strafe, float vertical);
 	// after modifying camera position/orientation, call to rebuild the view matrix

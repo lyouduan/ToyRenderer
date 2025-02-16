@@ -26,6 +26,7 @@
     <ClCompile Include="3rdParty\imgui\imgui_draw.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_tables.cpp" />
     <ClCompile Include="3rdParty\imgui\imgui_widgets.cpp" />
+    <ClCompile Include="src\Graphic\CascadedShadowMap.cpp" />
     <ClCompile Include="src\Graphic\ShadowMap.cpp" />
     <ClCompile Include="src\Material\Light.cpp">
       <DebugInformationFormat Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">ProgramDatabase</DebugInformationFormat>
@@ -77,6 +78,7 @@
     <ClInclude Include="3rdParty\imgui\imstb_rectpack.h" />
     <ClInclude Include="3rdParty\imgui\imstb_textedit.h" />
     <ClInclude Include="3rdParty\imgui\imstb_truetype.h" />
+    <ClInclude Include="src\Graphic\CascadedShadowMap.h" />
     <ClInclude Include="src\Graphic\ShadowMap.h" />
     <ClInclude Include="src\Material\Light.h" />
     <ClInclude Include="src\Graphic\RenderTarget.h" />

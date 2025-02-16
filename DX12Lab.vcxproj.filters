@@ -144,6 +144,9 @@
     <ClCompile Include="src\Graphic\ShadowMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\Graphic\CascadedShadowMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\Graphic\Resource\D3D12Buffer.h">
@@ -300,6 +303,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\Graphic\ShadowMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\Graphic\CascadedShadowMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

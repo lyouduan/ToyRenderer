@@ -12,11 +12,21 @@
 
 #define VSSM_MAX_MIP_LEVEL 5
 
+#define CSM_MAX_COUNT 4
+
 Texture2D ShadowMap;
 Texture2D VSMTexture;
 Texture2D ESMTexture;
 Texture2D EVSMTexture;
 Texture2D VSSMTextures[VSSM_MAX_MIP_LEVEL];
+
+cbuffer CSMCBuffer
+{
+    float frustumVSFarZ[CSM_MAX_COUNT];
+};
+
+Texture2D CSMTextures[CSM_MAX_COUNT];
+
 
 static const float2 offsets[9] =
 {
@@ -196,6 +206,35 @@ float VSSM(float3 ShadowPos)
     return Result;
 }
 
+
+float CSM(float4 ShadowPosH, int cascadeIdx)
+{
+     // Complete projection by doing division by w.
+    ShadowPosH.xyz /= ShadowPosH.w;
+
+    // NDC space.
+    float3 ReceiverPos = ShadowPosH.xyz;
+    if (ReceiverPos.x < 0.0f || ReceiverPos.x > 1.0f || ReceiverPos.y < 0.0f || ReceiverPos.y > 1.0f)
+    {
+        return 0.0f;
+    }
+    
+    float curDepth = ShadowPosH.z;
+    
+    uint width, height, numMips;
+    CSMTextures[cascadeIdx].GetDimensions(0, width, height, numMips);
+    float2 tileSize = 1.0f / float2(width, height);
+    
+    float percentLit = 0.0f;
+    
+    float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, ShadowPosH.xy).r;
+    
+    if (depth + 0.001 > curDepth)
+        percentLit = 1.0;
+    
+    return percentLit;
+}
+
 float CalcVisibility(float4 ShadowPosH)
 {
     // Complete projection by doing division by w.
@@ -219,6 +258,7 @@ float CalcVisibility(float4 ShadowPosH)
     ShadowFactor = ESM(ReceiverPos);
 #elif USE_EVSM
     ShadowFactor = EVSM(ReceiverPos);
+
 #else
     float bias = 0.005;
     ShadowFactor = PCF(ReceiverPos, PCF_SAMPLER_PIXLE_RADIUS, bias);

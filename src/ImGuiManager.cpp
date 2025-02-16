@@ -155,7 +155,7 @@ namespace ImGuiManager
 			Specular,
 			Count,
 		};*/
-		const char* items[] = { "NONE", "PCSS", "VSM", "VSSM", "ESM", "EVSM", "PCF"};
+		const char* items[] = { "NONE", "PCSS", "VSM", "VSSM", "ESM", "EVSM","CSM", "PCF"};
 
 		// 创建选择框
 		if (ImGui::BeginCombo("Select an option", items[ShadowType])) {
