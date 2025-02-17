@@ -108,7 +108,8 @@ struct BlurCBuffer
     float w10;
 };
 
+__declspec(align(16))
 struct CSMCBuffer
 {
-    float frustumVSFarZ[CSM_MAX_COUNT];
+    XMFLOAT4 frustumVSFarZ;
 };

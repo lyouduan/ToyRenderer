@@ -103,20 +103,16 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			}
 			shader.SetParameter("CSMTextures", SRVHandleList);
 
+			CSMCBuffer csm;
+			auto frustumVSFarZ = m_CascadedShadowMap->GetFrustumVSFarZ();
+			csm.frustumVSFarZ = XMFLOAT4(frustumVSFarZ[0], frustumVSFarZ[1], frustumVSFarZ[2], frustumVSFarZ[3]);
+			auto CSMCBRef = TD3D12RHI::CreateConstantBuffer(&csm, sizeof(CSMCBuffer));
+			shader.SetParameter("CSMCBuffer", CSMCBRef);
+
 
 			LightManager::DirectionalLight.SetLightInfo(info);
 			LightManager::DirectionalLight.CreateStructuredBufferRef();
 			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
-
-
-			CSMCBuffer csm;
-			auto frustumVSFarZ = m_CascadedShadowMap->GetFrustumVSFarZ();
-			for (int i = 0; i < frustumVSFarZ.size(); ++i)
-			{
-				csm.frustumVSFarZ[i] = frustumVSFarZ[i];
-			}
-			auto CSMCBRef = TD3D12RHI::CreateConstantBuffer(&csm, sizeof(CSMCBuffer));
-			shader.SetParameter("CSMCBuffer", CSMCBRef);
 		}
 
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
@@ -849,6 +845,7 @@ void TRender::ShadowMapDebug()
 	gfxCmdList->SetPipelineState(pso.GetPSO());
 
 	auto texSRV = m_CascadedShadowMap->GetSRV(0);
+	//auto texSRV = m_ShadowMap->GetSRV();
 	shader.SetParameter("tex", texSRV);
 
 	shader.BindParameters();
@@ -1485,7 +1482,8 @@ void TRender::CreateCSMResource()
 {
 	
 	m_CascadedShadowMap = std::make_unique<CascadedShadowMap>(L"Cascaded ShadowMap", CSMSize, CSMSize, DXGI_FORMAT_D32_FLOAT, CSM_MAX_COUNT);
-
+	
+	
 }
 
 std::vector<float> TRender::CalcGaussianWeights(float sigma)

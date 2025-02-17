@@ -11,6 +11,10 @@ CascadedShadowMap::CascadedShadowMap(const std::wstring& name, uint32_t width, u
 	SetViewportAndScissorRect();
 
 	CreateShadowMaps(name);
+	m_FrustumVSFarZ.resize(m_CascadeCount);
+	m_LightProj.resize(m_CascadeCount);
+	m_LightView.resize(m_CascadeCount);
+	m_ShadowTransform.resize(m_CascadeCount);
 }
 
 CascadedShadowMap::~CascadedShadowMap()
@@ -27,46 +31,41 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 		0.5f, 0.5f, 0.0f, 1.0f);
 
 	float zLength = zFar - zNear;
-	float expScale[8] = { 0.1f, 0.2f, 0.3f, 0.4f, 1.0f, 1.0f, 1.0f, 1.0f };
-	float m_cascadeExponentScale = 1.5f;
+	float Scale[8] = { 0.1f, 0.2, 0.4f, 2.0f, 1.0f, 1.0f, 1.0f, 1.0f };
 
-	float expNormalizeFactor = 0.0f;
-	for (UINT i = 1; i < m_CascadeCount; i++)
+	float weights = 0.0f;
+	for (UINT i = 0; i < m_CascadeCount; i++)
 	{
-		expScale[i] = expScale[i - 1] * m_cascadeExponentScale;
-		expNormalizeFactor += expScale[i];
+		weights += Scale[i];
 	}
-	expNormalizeFactor = 1.0f / expNormalizeFactor;
+	weights = 1.0f / weights;
 
 	float percentage = 0.0f;
-
-	m_FrustumVSFarZ.clear();
-	m_LightProj.clear();
-	m_LightView.clear();
-
+	
 	for (UINT i = 0; i < m_CascadeCount; i++)
 	{
 		// 计算每一级 cascade 的百分比例值
-		float percentageOffset = expScale[i] * expNormalizeFactor;
+		float percentageOffset = Scale[i] * weights;
 
 		// 将比例值映射到 Frustum，从而求出各级 SubFrustum 的 zNear 和 zFar
 		float zCascadeNear = zNear + percentage * zLength;
 		percentage += percentageOffset;
 		float zCascadeFar = zNear + percentage * zLength;
-		m_FrustumVSFarZ.push_back(zCascadeFar);
+		m_FrustumVSFarZ[i] = zCascadeFar;
 
 		// Get World Space Frustum 
 		auto camera = TD3D12RHI::g_Camera;
-		XMMATRIX ProjMat = XMMatrixPerspectiveFovLH(45.0f, camera.GetAspect(), zCascadeNear, zCascadeFar);
+		XMMATRIX ProjMat = XMMatrixPerspectiveFovLH(camera.GetFovY(), camera.GetAspect(), zCascadeNear, zCascadeFar);
 		const auto frustumCorners = GetFrustumCorners(camera.GetViewMat(), ProjMat);
+		
 		XMVECTOR center = XMVectorSet(0.0, 0.0, 0.0, 0.0);
 		for (const auto& v : frustumCorners)
 			center += v;
 		// 求视锥体中心
 		float size = frustumCorners.size();
 		center /= size;
-		const auto LightView = XMMatrixLookAtLH(center - XMLoadFloat3(&lightDir), center, XMVectorSet(0.0, 1.0, 0.0, 0.0));
 
+		const auto LightView = XMMatrixLookAtLH(center - XMLoadFloat3(&lightDir), center, XMVectorSet(0.0, 1.0, 0.0, 0.0));
 
 		float minX = FLT_MAX;
 		float maxX = FLT_MIN;
@@ -75,9 +74,9 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 		float minZ = FLT_MAX;
 		float maxZ = FLT_MIN;
 
-		for (const auto& v : frustumCorners)
+		for (int i = 0; i < frustumCorners.size(); i++)
 		{
-			auto trf = XMVector4Transform(v, LightView);
+			XMVECTOR trf = XMVector4Transform(frustumCorners[i], LightView);
 			minX = min(minX, trf[0]);
 			maxX = max(maxX, trf[0]);
 			minY = min(minY, trf[1]);
@@ -85,23 +84,13 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 			minZ = min(minZ, trf[2]);
 			maxZ = max(maxZ, trf[2]);
 		}
-		// Tune this parameter according to the scene
-		constexpr float zMult = 5.0f;
-		if (minZ < 0)
-		{
-			minZ *= zMult;
-		}
-		else
-		{
-			minZ /= zMult;
-		}
 
-		const XMMATRIX lightOrthProj = XMMatrixOrthographicOffCenterLH(minX * 1.5, maxX * 1.5, minY * 1.5, maxY * 1.5, minZ, maxZ);
+		const XMMATRIX lightOrthProj = XMMatrixOrthographicLH(maxX- minX, maxY- minY, minZ, maxZ);
 		// Ortho Projection
 
-		m_LightView.push_back(LightView);
-		m_LightProj.push_back(lightOrthProj);
-		m_ShadowTransform.push_back(LightView * lightOrthProj * T);
+		m_LightView[i] = LightView;
+		m_LightProj[i] = lightOrthProj;
+		m_ShadowTransform[i] = LightView * lightOrthProj * T;
 	}
 }
 

@@ -173,10 +173,8 @@ private:
 
 
 	// Cascaded shadow map
-	// ShadowMap
 	uint32_t CSMSize = 512;
 	std::unique_ptr<CascadedShadowMap> m_CascadedShadowMap;
-
 };
 
  

@@ -19,7 +19,7 @@ struct PSInput
 {
     float4 position : SV_Position;
     float3 positionW : POSITION0;
-    float4 positionV : POSITION1;
+    float Depth : DEPTH;
     float3 normal : NORMAL;
     float2 tex : TEXCOORD0;
     float3 tangent : TEXCOORD1;
@@ -32,7 +32,8 @@ PSInput VSMain(VSInput vin)
     vout.positionW = mul(float4(vin.position.xyz, 1.0f), gModelMat);
 
 #if USE_CSM 
-    vout.positionV = mul(float4(vout.positionW, 1.0), gViewMat);
+    float4x4 MV = mul(gModelMat, gViewMat);
+    vout.Depth = mul(float4(vin.position.xyz, 1.0), MV).z;
 #endif
     
     float4x4 viewProj = mul(gViewMat, gProjMat);
@@ -87,17 +88,16 @@ float4 PSMain(PSInput pin) : SV_Target
 #if SHADOW_MAPPING       
         ShadowFactor = CalcVisibility(ShadowPos);
 #elif USE_CSM
-    
         int cascadeIdx = -1;
          for (int i = 0; i < CSM_MAX_COUNT; ++i)
         {
-            if (pin.position.z < frustumVSFarZ[i])
+            if (pin.Depth < frustumVSFarZ[i])
             {
                 cascadeIdx = i;
                 break;
             }
         }
-        
+      
         if (cascadeIdx != -1)
         {
             ShadowPos = mul(float4(pin.positionW, 1.0), light.CSMTransform[cascadeIdx]);

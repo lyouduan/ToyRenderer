@@ -22,7 +22,7 @@ Texture2D VSSMTextures[VSSM_MAX_MIP_LEVEL];
 
 cbuffer CSMCBuffer
 {
-    float frustumVSFarZ[CSM_MAX_COUNT];
+    float4 frustumVSFarZ;
 };
 
 Texture2D CSMTextures[CSM_MAX_COUNT];
