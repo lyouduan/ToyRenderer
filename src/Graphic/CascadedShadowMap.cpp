@@ -19,6 +19,13 @@ CascadedShadowMap::CascadedShadowMap(const std::wstring& name, uint32_t width, u
 
 CascadedShadowMap::~CascadedShadowMap()
 {
+	m_ShadowMaps.clear();
+
+	m_FrustumVSFarZ.clear();
+	m_LightProj.clear();
+	m_LightView.clear();
+	m_ShadowTransform.clear();
+
 }
 
 void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, float zFar)
@@ -55,8 +62,8 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 
 		// Get World Space Frustum 
 		auto camera = TD3D12RHI::g_Camera;
-		XMMATRIX ProjMat = XMMatrixPerspectiveFovLH(camera.GetFovY(), camera.GetAspect(), zCascadeNear, zCascadeFar);
-		const auto frustumCorners = GetFrustumCorners(camera.GetViewMat(), ProjMat);
+		XMMATRIX ProjMat = XMMatrixPerspectiveFovLH(XMConvertToRadians(camera.GetFovY()), camera.GetAspect(), zCascadeNear, zCascadeFar);
+		 auto frustumCorners = GetFrustumCorners(camera.GetViewMat(), ProjMat);
 		
 		XMVECTOR center = XMVectorSet(0.0, 0.0, 0.0, 0.0);
 		for (const auto& v : frustumCorners)
@@ -65,7 +72,7 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 		float size = frustumCorners.size();
 		center /= size;
 
-		const auto LightView = XMMatrixLookAtLH(center - XMLoadFloat3(&lightDir), center, XMVectorSet(0.0, 1.0, 0.0, 0.0));
+		const auto LightView = XMMatrixLookAtLH(- XMLoadFloat3(&lightDir), XMVectorSet(0.0, 0.0, 0.0, 0.0), XMVectorSet(0.0, 1.0, 0.0, 0.0));
 
 		float minX = FLT_MAX;
 		float maxX = FLT_MIN;
@@ -76,17 +83,50 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 
 		for (int i = 0; i < frustumCorners.size(); i++)
 		{
-			XMVECTOR trf = XMVector4Transform(frustumCorners[i], LightView);
-			minX = min(minX, trf[0]);
-			maxX = max(maxX, trf[0]);
-			minY = min(minY, trf[1]);
-			maxY = max(maxY, trf[1]);
-			minZ = min(minZ, trf[2]);
-			maxZ = max(maxZ, trf[2]);
+			frustumCorners[i] = XMVector4Transform(frustumCorners[i], LightView);
+			minX = min(minX, frustumCorners[i][0]);
+			maxX = max(maxX, frustumCorners[i][0]);
+			minY = min(minY, frustumCorners[i][1]);
+			maxY = max(maxY, frustumCorners[i][1]);
+			minZ = min(minZ, frustumCorners[i][2]);
+			maxZ = max(maxZ, frustumCorners[i][2]);
 		}
 
-		const XMMATRIX lightOrthProj = XMMatrixOrthographicLH(maxX- minX, maxY- minY, minZ, maxZ);
-		// Ortho Projection
+		XMVECTOR vLightCameraOrthographicMax = XMVectorSet(maxX, maxY, maxZ, 1.0f);
+		XMVECTOR vLightCameraOrthographicMin = XMVectorSet(minX, minY, minZ, 1.0f);
+
+		XMVECTOR vDiagonal = frustumCorners[4] - frustumCorners[7];
+		XMVECTOR vCrossDiagonal = frustumCorners[0] - frustumCorners[4];
+		vDiagonal = XMVector3Length(vDiagonal);
+		vCrossDiagonal = XMVector3Length(vCrossDiagonal);
+		FLOAT farDist =XMVectorGetX(vDiagonal);
+		FLOAT crossDist =XMVectorGetX(vCrossDiagonal);
+
+		float maxDist = farDist > crossDist ? farDist : crossDist;
+
+		XMVECTOR vBoarderOffset = (maxDist - (vLightCameraOrthographicMax - vLightCameraOrthographicMin)) * 0.5f;
+
+		vBoarderOffset *= XMVectorSet(1.0, 1.0, 0.0f, 0.0f);
+
+		vLightCameraOrthographicMax += vBoarderOffset;
+		vLightCameraOrthographicMin -= vBoarderOffset;
+
+		FLOAT fWorldUnitsPerTexel = maxDist / (float)m_Width;
+		XMVECTOR vWorldUnitsPerTexel = XMVectorSet(fWorldUnitsPerTexel, fWorldUnitsPerTexel, 0.0f, 0.0f);
+	
+		vLightCameraOrthographicMin /= vWorldUnitsPerTexel;
+		vLightCameraOrthographicMin = XMVectorFloor(vLightCameraOrthographicMin);
+		vLightCameraOrthographicMin *= vWorldUnitsPerTexel;
+
+		vLightCameraOrthographicMax /= vWorldUnitsPerTexel;
+		vLightCameraOrthographicMax = XMVectorFloor(vLightCameraOrthographicMax);
+		vLightCameraOrthographicMax *= vWorldUnitsPerTexel;
+		
+
+		const XMMATRIX lightOrthProj = XMMatrixOrthographicOffCenterLH(XMVectorGetX(vLightCameraOrthographicMin), XMVectorGetX(vLightCameraOrthographicMax),
+			XMVectorGetY(vLightCameraOrthographicMin), XMVectorGetY(vLightCameraOrthographicMax), 
+			minZ, maxZ);
+		//const XMMATRIX lightOrthProj = XMMatrixOrthographicLH(maxX-minX, maxY-minY, minZ, maxZ);
 
 		m_LightView[i] = LightView;
 		m_LightProj[i] = lightOrthProj;
@@ -121,7 +161,7 @@ void CascadedShadowMap::SetViewportAndScissorRect()
 std::vector<XMVECTOR> CascadedShadowMap::GetFrustumCorners(DirectX::XMMATRIX camera_view, DirectX::XMMATRIX camera_proj)
 {
 	auto viewProj = camera_view * camera_proj;
-	auto det = XMMatrixDeterminant(viewProj);
+	XMVECTOR det;
 	const XMMATRIX invViewProj = XMMatrixInverse(&det, viewProj);
 
 	std::vector<XMVECTOR> frustumCorners;
@@ -141,7 +181,10 @@ std::vector<XMVECTOR> CascadedShadowMap::GetFrustumCorners(DirectX::XMMATRIX cam
 	{
 		nearPlane[i] /= nearPlane[i][3];
 		frustumCorners.push_back(nearPlane[i]);
+	}
 
+	for (unsigned int i = 0; i < 4; ++i)
+	{
 		farPlane[i] /= farPlane[i][3];
 		frustumCorners.push_back(farPlane[i]);
 	}

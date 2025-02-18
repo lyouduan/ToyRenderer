@@ -6,6 +6,7 @@ class D3D12PixelBuffer
 {
 public:
 	D3D12PixelBuffer() : m_Width(0), m_Height(0), m_ArraySize(0), m_Format(DXGI_FORMAT_UNKNOWN) {}
+	~D3D12PixelBuffer();
 
 	uint32_t GetWidth(void) const { return m_Width; }
 	uint32_t GetHeight(void) const { return m_Height; }

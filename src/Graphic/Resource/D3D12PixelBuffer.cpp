@@ -4,6 +4,11 @@
 
 using namespace TD3D12RHI;
 
+D3D12PixelBuffer::~D3D12PixelBuffer()
+{
+    ResourceLocation.~TD3D12ResourceLocation();
+}
+
 D3D12_RESOURCE_DESC D3D12PixelBuffer::DescribeTex2D(uint32_t Width, uint32_t Height, uint32_t DepthOrArraySize, uint32_t NumMips, DXGI_FORMAT Format, UINT Flags)
 {
     m_Width = Width;

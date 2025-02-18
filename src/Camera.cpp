@@ -132,8 +132,7 @@ void Camera::Reset()
 
 void Camera::UpdateProjMat()
 {
-	//m_ProjMat = XMMatrixPerspectiveFovLH(m_VerticalFOV, m_AspectRatio, m_NearClip, m_FarClip);
-
+	//m_ProjMat = XMMatrixPerspectiveFovLH(XMConvertToRadians(mFovY), mAspect, mNearZ, mFarZ);
 	float fovRadians = XMConvertToRadians(mFovY);
 	float height = mNearZ * tan(fovRadians / 2.0);
 	float width = height * mAspect;

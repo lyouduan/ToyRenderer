@@ -5,7 +5,7 @@
 #include "sample.hlsl"
 
 #define PCF_SAMPLER_COUNT 30
-#define PCF_SAMPLER_PIXLE_RADIUS 5
+#define PCF_SAMPLER_PIXLE_RADIUS 3
 
 #define BLOCKER_SEARCH_SAMPLE_COUNT    10
 #define BLOCKER_SEARCH_PIXEL_RADIUS    5.0f 
@@ -229,10 +229,21 @@ float CSM(float4 ShadowPosH, int cascadeIdx)
     
     float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, ShadowPosH.xy).r;
     
-    if (depth + 0.001 > curDepth)
-        percentLit = 1.0;
+    //if (depth + 0.005 > curDepth)
+    //    percentLit = 1.0;
     
-    return percentLit;
+    for (int i = 0; i < PCF_SAMPLER_COUNT; ++i)
+    {
+        //float SampleUV = ShadowPos.xy + offsets[i] * tileSize;
+        float2 SampleUV = ShadowPosH.xy + (Hammersley(i, PCF_SAMPLER_COUNT) * 2.0f - 1.0f) * PCF_SAMPLER_PIXLE_RADIUS * tileSize;
+        float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, SampleUV).r;
+        if (depth + 0.01 > curDepth)
+            percentLit += 1;
+    }
+    
+    return percentLit / PCF_SAMPLER_COUNT;
+    
+    //return percentLit;
 }
 
 float CalcVisibility(float4 ShadowPosH)

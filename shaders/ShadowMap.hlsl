@@ -97,7 +97,7 @@ float4 PSMain(PSInput pin) : SV_Target
                 break;
             }
         }
-      
+        
         if (cascadeIdx != -1)
         {
             ShadowPos = mul(float4(pin.positionW, 1.0), light.CSMTransform[cascadeIdx]);
