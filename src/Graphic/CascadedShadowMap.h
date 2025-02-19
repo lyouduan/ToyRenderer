@@ -24,7 +24,7 @@ public:
 	DirectX::XMMATRIX GetLightProj(int i) const { return m_LightProj[i]; }
 	DirectX::XMMATRIX GetShadowTransform(int i) const { return m_ShadowTransform[i]; }
 
-	std::vector<float> GetFrustumVSFarZ() const { return m_FrustumVSFarZ; }
+	std::vector<XMFLOAT2> GetFrustumVSFarZ() const { return m_FrustumVSFarZ; }
 
 	uint32_t GetWidth(void) const { return m_Width; }
 	uint32_t GetHeight(void) const { return m_Height; }
@@ -50,7 +50,7 @@ private:
 	uint32_t m_CascadeCount;
 	std::vector<D3D12DepthBuffer> m_ShadowMaps;
 
-	std::vector<float> m_FrustumVSFarZ;
+	std::vector<XMFLOAT2> m_FrustumVSFarZ;
 
 	// Light Space from directional light
 	std::vector<DirectX::XMMATRIX> m_LightView;

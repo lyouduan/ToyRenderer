@@ -53,7 +53,7 @@ namespace TD3D12RHI
     {
         // create the dsv
         g_DepthBuffer.Create(L"Depth Buffer", g_DisplayWidth, g_DisplayHeight, DXGI_FORMAT_D32_FLOAT);
-        g_PreDepthPassBuffer.Create(L"pre-Pass Depth Buffer", 4096, 4096, DXGI_FORMAT_D32_FLOAT);
+        g_PreDepthPassBuffer.Create(L"pre-Pass Depth Buffer", g_DisplayWidth, g_DisplayHeight, DXGI_FORMAT_D16_UNORM);
     }
 
     void InitialzeAllocator()

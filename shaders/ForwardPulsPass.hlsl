@@ -59,6 +59,11 @@ float DoAttenuation(float range, float d)
     return 1.0f - smoothstep(range * 0.75f, range, d);
 }
 
+float2 UVToScreen(float2 UVPos, float2 ScreenSize)
+{
+    return UVPos * ScreenSize;
+}
+
 float4 PSMain(PSInput pin) : SV_Target
 {
 #if 0

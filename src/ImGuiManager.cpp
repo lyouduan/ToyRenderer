@@ -14,11 +14,14 @@ namespace ImGuiManager
 	bool show_demo_window = false;
 	bool useCubeMap = false;
 	bool bEnableDeferredRendering = false;
-	bool bEnableForwardPuls = true;
-	bool bEnableShadowMap = true;
+	bool bEnableForwardPuls = false;
+	bool bEnableShadowMap = false;
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;
+
+	float  cascadeBlendColor = 0.0f;
+
 	DirectX::XMFLOAT3 lightPos = { 0.0, 10.0, -5.0 };
 	DirectX::XMFLOAT3 lightColor = { 1.0, 1.0, 1.0 };
 	float Intensity = 100;
@@ -168,6 +171,8 @@ namespace ImGuiManager
 			}
 			ImGui::EndCombo();
 		}
+		if(ShadowType== (int)ShadowType::CSM)
+			ImGui::SliderFloat("CSM TransitionScale", (float*)&cascadeBlendColor, 0, 1); 
 	}
 
 	void DestroyImGui()

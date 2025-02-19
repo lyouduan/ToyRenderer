@@ -38,11 +38,8 @@ namespace LightManager
 				XMMATRIX tanslation = XMMatrixTranslation(light.PositionW.x, light.PositionW.y, light.PositionW.z);
 				XMStoreFloat4x4(&light.ModelMat, XMMatrixTranspose(tanslation));
 
-				XMVECTOR pos = XMLoadFloat4(&light.PositionW);
-				XMStoreFloat4(&light.PositionV, XMVector4Transform(pos, TD3D12RHI::g_Camera.GetViewMat()));
-
-				light.Intensity = 100;
-				light.Range = 50;
+				light.Intensity = 20;
+				light.Range = 10;
 
 				lights.push_back(light);
 			}

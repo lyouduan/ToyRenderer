@@ -31,6 +31,8 @@ enum class GBufferType
     Count,
 };
 
+
+// Constant Buffer
 __declspec(align(16))
 struct ObjCBuffer
 {
@@ -43,6 +45,7 @@ struct PassCBuffer
 {
     XMFLOAT4X4 ViewMat = MATH::IdentityMatrix;
     XMFLOAT4X4 ProjMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 invProjMat = MATH::IdentityMatrix;
     XMFLOAT3 EyePosition = { 0.0, 0.0, 0.0 };
     FLOAT Pad0 = 0.0;
 
@@ -66,26 +69,6 @@ struct MatCBuffer
     float metallic = 0.5;
 };
 
-__declspec(align(16))
-struct LightInfo
-{
-    XMFLOAT4 PositionW;
-    XMFLOAT4 DirectionW;
-    XMFLOAT4 PositionV;
-    XMFLOAT4 DirectionV;
-    XMFLOAT4 Color;
-
-    float SpotlightAngle;
-    float Range;
-    float Intensity;
-    float pad0;
-
-    XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
-    XMFLOAT4X4 ShadowTransform = MATH::IdentityMatrix;
-    XMFLOAT4X4 CSMTransform[CSM_MAX_COUNT] = {MATH::IdentityMatrix};
-
-    int Type;
-};
 
 __declspec(align(16))
 struct BlurCBuffer
@@ -111,5 +94,31 @@ struct BlurCBuffer
 __declspec(align(16))
 struct CSMCBuffer
 {
-    XMFLOAT4 frustumVSFarZ;
+    XMFLOAT2 frustumVSFarZ[CSM_MAX_COUNT];
+};
+
+__declspec(align(16))
+struct ScreenToViewParams
+{
+    XMFLOAT2 ScreenDimensions;
+    XMFLOAT2 InvScreenDimensions;
+};
+// ===============No-Constant Buffer===============
+
+struct LightInfo
+{
+    XMFLOAT4 PositionW;
+    XMFLOAT4 DirectionW;
+    XMFLOAT4 Color;
+
+    float SpotlightAngle;
+    float Range;
+    float Intensity;
+    float pad0;
+
+    XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 ShadowTransform = MATH::IdentityMatrix;
+    XMFLOAT4X4 CSMTransform[CSM_MAX_COUNT];
+
+    int Type;
 };

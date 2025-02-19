@@ -13,6 +13,7 @@ cbuffer passCBuffer
 {
     float4x4 gViewMat;
     float4x4 gProjMat;
+    float4x4 gInvProjMat;
     
     float3 gEyePosW;
     float gLightIndex;

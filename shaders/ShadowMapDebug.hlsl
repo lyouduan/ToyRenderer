@@ -36,11 +36,15 @@ float GetActualDepth(float depth, float zNear, float zFar)
 {
     // 计算实际深度
     float actualDepth = zNear * zFar / (zFar - depth * (zFar - zNear));
+    
+    actualDepth = (actualDepth - zNear) / (zFar - zNear);
     return actualDepth;
 }
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float3 color = tex.Sample(PointClampSampler, pin.tex).rrr;
-    return float4(color, 1.0);
+    float depth = tex.Sample(PointClampSampler, pin.tex).r;
+    //float3 color = GetActualDepth(depth, 0.1, 1000);
+    
+    return float4(depth, depth, depth, 1.0);
 }

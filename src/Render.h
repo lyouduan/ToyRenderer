@@ -33,8 +33,10 @@ public:
 
 	// Deferred rendering
 	void GbuffersPass();
+	void TiledBaseLightCulling();
 	void DeferredShadingPass();
 	void GbuffersDebug();
+
 
 	// ForwardPuls Rendering
 	void BuildTileFrustums();
@@ -101,7 +103,7 @@ private:
 
 	void CreateSceneCaptureCube();
 
-	void CreateGBuffers();
+	void CreateGBuffersResource();
 
 	void CreateForwardPulsResource();
 
@@ -135,11 +137,13 @@ private:
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;
 	std::unique_ptr<RenderTarget2D> GBufferNormal;
-	//std::unique_ptr<RenderTarget2D> GBufferDepth;
+	std::unique_ptr<D3D12DepthBuffer> GBufferDepth;
+	TD3D12RWStructuredBufferRef TileLightInfoListRef;
 
-	std::unique_ptr<TD3D12DescriptorCache> GBufferDescriptorCache;
+	std::unique_ptr<D3D12ColorBuffer> TiledDepthDebugTexture;
 
-	TD3D12RWStructuredBufferRef RWStructuredBufferRef;
+	// forward plus
+	TD3D12RWStructuredBufferRef FrustumSBRef;
 	TD3D12ConstantBufferRef ConstantBufferRef;
 	TD3D12ConstantBufferRef DispatchParamsCBRef;
 
@@ -173,7 +177,7 @@ private:
 
 
 	// Cascaded shadow map
-	uint32_t CSMSize = 512;
+	uint32_t CSMSize = 1024;
 	std::unique_ptr<CascadedShadowMap> m_CascadedShadowMap;
 };
 

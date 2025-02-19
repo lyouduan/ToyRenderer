@@ -165,6 +165,7 @@ void GameCore::UpdateImGui()
 		if (ImGuiManager::bEnableShadowMap)
 			ImGuiManager::ShadowTypeCombo();
 
+
 		// camera control
 		g_Camera.CamerImGui();
 
@@ -329,11 +330,13 @@ void GameCore::PopulateCommandList()
 
 	m_Render->SetDescriptorHeaps();
 	
-	m_Render->CascadedShadowMapPass();
+	if((ImGuiManager::ShadowType) == (int)ShadowType::CSM)
+		m_Render->CascadedShadowMapPass();
 
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 	{
 		m_Render->GbuffersPass();
+		m_Render->TiledBaseLightCulling();
 	}
 
 	if (m_Render->GetEnableForwardPulsPass())
@@ -366,7 +369,7 @@ void GameCore::PopulateCommandList()
 		{
 			m_Render->GbuffersDebug();
 		}
-
+		
 	}
 	else if (m_Render->GetEnableForwardPulsPass())
 	{

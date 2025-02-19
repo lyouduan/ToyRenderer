@@ -151,6 +151,7 @@ namespace PSOManager
 		TShader GBuffersPassShader(GBuffersPassInfo);
 		m_shaderMap["GBuffersPassShader"] = GBuffersPassShader;
 
+
 		TShaderInfo DeferredShadingInfo;
 		DeferredShadingInfo.FileName = "shaders/DeferredShading";
 		DeferredShadingInfo.bCreateVS = true;
@@ -337,6 +338,15 @@ namespace PSOManager
 		CullLightInfo.CSEntryPoint = "CS_main";
 		TShader CullLightShader(CullLightInfo);
 		m_shaderMap["CullLight"] = CullLightShader;
+
+		TShaderInfo TiledBaseLightCullingInfo;
+		TiledBaseLightCullingInfo.FileName = "shaders/TiledBaseLightCulling";
+		TiledBaseLightCullingInfo.bCreateVS = false;
+		TiledBaseLightCullingInfo.bCreatePS = false;
+		TiledBaseLightCullingInfo.bCreateCS = true;
+		TiledBaseLightCullingInfo.CSEntryPoint = "CS";
+		TShader TiledBaseLightCullingShader(TiledBaseLightCullingInfo);
+		m_shaderMap["LightCulling"] = TiledBaseLightCullingShader;
 	}
 
 	void InitializePSO()
@@ -623,6 +633,11 @@ namespace PSOManager
 		CullLightPSO.SetShader(&m_shaderMap["CullLight"]);
 		CullLightPSO.Finalize();
 		m_ComputePSOMap["CullLight"] = std::move(CullLightPSO);
+
+		ComputePSO LightCullingPSO;
+		LightCullingPSO.SetShader(&m_shaderMap["LightCulling"]);
+		LightCullingPSO.Finalize();
+		m_ComputePSOMap["LightCulling"] = std::move(LightCullingPSO);
 
 		ComputePSO VSMPSO;
 		VSMPSO.SetShader(&m_shaderMap["GenerateVSM"]);

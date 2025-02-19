@@ -22,7 +22,7 @@ Texture2D VSSMTextures[VSSM_MAX_MIP_LEVEL];
 
 cbuffer CSMCBuffer
 {
-    float4 frustumVSFarZ;
+    float2 frustumVSFarZ[CSM_MAX_COUNT];
 };
 
 Texture2D CSMTextures[CSM_MAX_COUNT];
@@ -227,7 +227,6 @@ float CSM(float4 ShadowPosH, int cascadeIdx)
     
     float percentLit = 0.0f;
     
-    float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, ShadowPosH.xy).r;
     
     //if (depth + 0.005 > curDepth)
     //    percentLit = 1.0;

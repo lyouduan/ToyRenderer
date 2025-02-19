@@ -1,4 +1,6 @@
 #include "Common.hlsl"
+#include "lightInfo.hlsl"
+#include "TiledBaseLightCulling.hlsl"
 
 struct VSInput
 {
@@ -21,6 +23,9 @@ Texture2D GBufferAlbedoMap;
 Texture2D GBufferNormalMap;
 Texture2D GBufferSpecularMap;
 
+StructuredBuffer<TileLightInfo> LightInfoList;
+
+
 PSInput VSMain(VSInput input)
 {
     PSInput vout;
@@ -29,7 +34,10 @@ PSInput VSMain(VSInput input)
     
     return vout;
 }
-
+float2 UVToScreen(float2 UVPos, float2 ScreenSize)
+{
+    return UVPos * ScreenSize;
+}
 float4 PSMain(PSInput pin) : SV_Target
 {
     // retrieve data from gbuffer
@@ -39,38 +47,48 @@ float4 PSMain(PSInput pin) : SV_Target
     float3 normal = GBufferNormalMap.Sample(LinearWrapSampler, pin.tex).rgb;
     float Specular = GBufferSpecularMap.Sample(LinearWrapSampler, pin.tex).r;
     
+    float3 N = normalize(normal);
+    float3 V = normalize(gEyePosW - worldPos);
+    
+    // Get the tile index of current pixel
+    float2 ScreenPos = UVToScreen(pin.tex, ScreenDimensions.xy);
+    uint TileX = floor(ScreenPos.x / TILE_BLOCK_SIZE);
+    uint TileY = floor(ScreenPos.y / TILE_BLOCK_SIZE);
+    uint TileCountX = ceil(ScreenDimensions.x / TILE_BLOCK_SIZE);
+    uint TileIndex = TileY * TileCountX + TileX;
+		
+    TileLightInfo LightInfo = LightInfoList[TileIndex];
+    
     // calculate lighting
-    
-    float3 color = float3(0.0, 0.0, 0.0);
-    
+    float3 totalDiffuse = float3(0.0, 0.0, 0.0);
+    float3 totalSpecular = float3(0.0, 0.0, 0.0);
+    for (int i = 0; i < LightInfo.LightCount; i++)
     {
-        float3 N = normalize(normal);
-        float3 V = normalize(gEyePosW - worldPos);
-        float3 R = reflect(-V, N);
+        uint LightIndex = LightInfo.LightIndices[i];
+        Light light = Lights[LightIndex];
     
-        float3 L = gLightPos - worldPos;
+        float3 L = light.PositionW.xyz - worldPos;
         float distance = length(L);
         L = L / distance;
-        
         float attenuation = 1.0 / (distance * distance);
-        float3 radiance = gIntensity * gLightColor;
         
-        // bllin-phong shading
-        float3 diffuse = saturate(dot(N, L)) * radiance * albedo;
+        float kd = saturate(dot(N, L));
+        float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
         
         float3 H = normalize(V + L);
         float ks = pow(saturate(dot(N, H)), 32);
-        float3 specular = radiance * ks * Specular;
+        float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
         
-        float3 ambient = diffuse * 0.2;
-        
-        color += diffuse + specular + ambient;
+        totalDiffuse += lightDiffuse * attenuation;
+        totalSpecular += lightSpecular * attenuation;
     }
     
-    // HDR
-    color = color / (color + float3(1.0, 1.0, 1.0));
-    // gamma correct
-    color = pow(color, 1.0 / 2.2);
+    float3 diffuse = totalDiffuse * albedo;
+    float3 specular = totalSpecular * Specular;
+    
+    float3 ambient = albedo * 0.5;
+    
+    float3 color = diffuse + specular + ambient;
     
     return float4(color, 1.0);
 }

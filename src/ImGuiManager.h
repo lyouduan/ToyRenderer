@@ -16,6 +16,8 @@ namespace ImGuiManager
 	extern int  ShadowType;
 	extern int  SceneType;
 
+	extern float  cascadeBlendColor;
+
 	extern MatCBuffer matCB;
 	
 	extern DirectX::XMFLOAT3 lightPos;

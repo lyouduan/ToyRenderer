@@ -337,6 +337,7 @@
     <None Include="shaders\GenerateVSM.hlsl" />
     <None Include="shaders\BlurVSM.hlsl" />
     <None Include="shaders\SAT.hlsl" />
+    <None Include="shaders\TiledBaseLightCulling.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

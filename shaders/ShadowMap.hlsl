@@ -67,6 +67,8 @@ float4 PSMain(PSInput pin) : SV_Target
     float3 totalDiffuse = float3(0.0, 0.0, 0.0);
     float3 totalSpecular = float3(0.0, 0.0, 0.0);
     
+    float4 CascadedArea = float4(0.0, 0.0, 0.0,0.0f);
+    
     for (int i = 0; i < 1; i++)
     {
         Light light = Lights[i];
@@ -84,18 +86,34 @@ float4 PSMain(PSInput pin) : SV_Target
         
         float ShadowFactor = 1.0;
         
-        
 #if SHADOW_MAPPING       
         ShadowFactor = CalcVisibility(ShadowPos);
 #elif USE_CSM
         int cascadeIdx = -1;
          for (int i = 0; i < CSM_MAX_COUNT; ++i)
         {
-            if (pin.Depth < frustumVSFarZ[i])
+            if (pin.Depth < frustumVSFarZ[i].y)
             {
                 cascadeIdx = i;
                 break;
             }
+        }
+        
+        if(cascadeIdx == 0) 
+        {
+        CascadedArea = float4(1.0, 0.0, 0.0,1.0);
+        }
+        else if(cascadeIdx == 1) 
+        {
+            CascadedArea = float4(0.0, 1.0, 0.0,1.0);
+        }
+        else if(cascadeIdx == 2) 
+        {
+            CascadedArea = float4(0.0, 0.0, 1.0,1.0);
+        }
+        else
+        {
+            CascadedArea = float4(1.0, 0.0, 1.0,1.0);
         }
         
         if (cascadeIdx != -1)
@@ -115,5 +133,5 @@ float4 PSMain(PSInput pin) : SV_Target
     
     float3 color = diffuse + specular + ambient;
     
-    return float4(color, 1.0);
+    return float4(lerp(color, CascadedArea.xyz, 0.1f), 1.0);
 }

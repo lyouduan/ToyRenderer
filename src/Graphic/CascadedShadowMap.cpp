@@ -2,8 +2,7 @@
 #include "Display.h"
 #include "Camera.h"
 #include <limits>
-
-
+#include "ImGuiManager.h"
 
 CascadedShadowMap::CascadedShadowMap(const std::wstring& name, uint32_t width, uint32_t height, DXGI_FORMAT format, uint32_t count)
 	: m_Width(width), m_Height(height), m_Format(format), m_CascadeCount(count)
@@ -48,7 +47,7 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 	weights = 1.0f / weights;
 
 	float percentage = 0.0f;
-	
+
 	for (UINT i = 0; i < m_CascadeCount; i++)
 	{
 		// 计算每一级 cascade 的百分比例值
@@ -58,19 +57,20 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 		float zCascadeNear = zNear + percentage * zLength;
 		percentage += percentageOffset;
 		float zCascadeFar = zNear + percentage * zLength;
-		m_FrustumVSFarZ[i] = zCascadeFar;
+		m_FrustumVSFarZ[i] = XMFLOAT2(zCascadeNear, zCascadeFar);
+
 
 		// Get World Space Frustum 
 		auto camera = TD3D12RHI::g_Camera;
 		XMMATRIX ProjMat = XMMatrixPerspectiveFovLH(XMConvertToRadians(camera.GetFovY()), camera.GetAspect(), zCascadeNear, zCascadeFar);
 		 auto frustumCorners = GetFrustumCorners(camera.GetViewMat(), ProjMat);
 		
-		XMVECTOR center = XMVectorSet(0.0, 0.0, 0.0, 0.0);
-		for (const auto& v : frustumCorners)
-			center += v;
-		// 求视锥体中心
-		float size = frustumCorners.size();
-		center /= size;
+		//XMVECTOR center = XMVectorSet(0.0, 0.0, 0.0, 0.0);
+		//for (const auto& v : frustumCorners)
+		//	center += v;
+		//// 求视锥体中心
+		//float size = frustumCorners.size();
+		//center /= size;
 
 		const auto LightView = XMMatrixLookAtLH(- XMLoadFloat3(&lightDir), XMVectorSet(0.0, 0.0, 0.0, 0.0), XMVectorSet(0.0, 1.0, 0.0, 0.0));
 
