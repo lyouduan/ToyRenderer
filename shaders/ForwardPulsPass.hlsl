@@ -15,8 +15,22 @@ TextureCube PrefilterMap[IBL_PREFILTER_ENVMAP_MIP_LEVEL];
 Texture2D BrdfLUT2D;
 
 // light grid 
-Texture2D<uint2> o_LightGrid;
-StructuredBuffer<uint> o_LightIndexList;
+//Texture2D<uint2> o_LightGrid;
+//StructuredBuffer<uint> o_LightIndexList;
+
+#define MAX_LIGHT_COUNT_IN_TILE 100
+struct TileLightInfo
+{
+    uint LightIndices[MAX_LIGHT_COUNT_IN_TILE];
+    uint LightCount;
+};
+StructuredBuffer<TileLightInfo> LightInfoList;
+
+cbuffer ScreenToViewParams
+{
+    float2 ScreenDimensions;
+    float2 InvScreenDimensions;
+}
 
 struct VSInput
 {
@@ -82,10 +96,14 @@ float4 PSMain(PSInput pin) : SV_Target
 #elif 1
     uint startOffset, lightCount;
 
-    uint2 tileIndex = uint2(floor(pin.position.xy / BLOCK_SIZE));
+
+    //uint2 tileIndex = uint2(floor(pin.position.xy / BLOCK_SIZE));
+    uint TileX = floor(pin.position.x / BLOCK_SIZE);
+    uint TileY = floor(pin.position.y / BLOCK_SIZE);
+    uint TileCountX = ceil(ScreenDimensions.x / BLOCK_SIZE);
+    uint TileIndex = TileY * TileCountX + TileX;
     
-    startOffset = o_LightGrid[tileIndex].x;
-    lightCount = o_LightGrid[tileIndex].y;
+    TileLightInfo lightInfo = LightInfoList[TileIndex];
     
     float3 albedo = diffuseMap.Sample(LinearWrapSampler, pin.tex).rgb;
     float metallic = metallicMap.Sample(LinearWrapSampler, pin.tex).r;
@@ -97,9 +115,9 @@ float4 PSMain(PSInput pin) : SV_Target
     // lighting
     float3 totalDiffuse = float3(0.0, 0.0, 0.0);
     float3 totalSpecular= float3(0.0, 0.0, 0.0);
-    for (int i = 0; i < lightCount; i++)
+    for (int i = 0; i < lightInfo.LightCount; i++)
     {
-        int lihgtIndex = o_LightIndexList[startOffset + i];
+        int lihgtIndex = lightInfo.LightIndices[i];
         
         Light light = Lights[lihgtIndex];
     

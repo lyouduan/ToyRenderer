@@ -1,6 +1,8 @@
 #ifndef CULLLIGHTINGCOMMON_H
 #define CULLLIGHTINGCOMMON_H
 
+#include "common.hlsl"
+
 #ifndef BLOCK_SIZE
 #pragma message("BLOCK_SIZE undefined. Default to 16.")
 #define BLOCK_SIZE 16// should be defined by the application.
@@ -47,23 +49,21 @@ struct Frustum
 
 
 // Transfrom functions
-
 cbuffer ScreenToViewParams
 {
-    float4x4 InverseProjection;
+    float2 ScreenDimensions;
     float2 InvScreenDimensions;
-    float2 padding;
 }
 
-float ConvertProjDepthToView(float z)
+float ConvertProjDepthToView(float z, float4x4 InvProjMat)
 {
-    z = 1.f / (z * InverseProjection._34 + InverseProjection._44);
+    z = 1.f / (z * InvProjMat._34 + InvProjMat._44);
     return z;
 }
 
-float4 ClipToView(float4 clip)
+float4 ClipToView(float4 clip, float4x4 InvProjMat)
 {
-    float4 view = mul(clip, InverseProjection);
+    float4 view = mul(clip, InvProjMat);
     
     view /= view.w;
     
@@ -71,7 +71,7 @@ float4 ClipToView(float4 clip)
 }
 
 // Convert screen space coordinates to view space
-float4 ScreenToView(float4 screen)
+float4 ScreenToView(float4 screen, float4x4 InvProjMat)
 {
     // Screen coordinates 2D: [-1, 1] * [-1, 1]
     // (0,0)x------------>
@@ -97,7 +97,7 @@ float4 ScreenToView(float4 screen)
     float4 clip = float4(float2(texCoord.x, 1.0f - texCoord.y) * 2 - 1.0, screen.z, screen.w);
     
     // convert to view space
-    return ClipToView(clip);
+    return ClipToView(clip, InvProjMat);
 }
 
 // Frustum Culling algorithm
@@ -139,7 +139,7 @@ bool SphereInsideFrustum(Sphere sphere, int3 GroupId, float zNear, float zFar)
     // Now convert the screen space points to view space
     for (int i = 0; i < 4; i++)
     {
-        viewSpace[i] = ScreenToView(screenSpace[i]).xyz;
+        viewSpace[i] = ScreenToView(screenSpace[i], gInvProjMat).xyz;
     }
 
     // Now build the frustum planes from the view space
@@ -168,7 +168,7 @@ bool SphereInsideFrustum(Sphere sphere, int3 GroupId, float zNear, float zFar)
     // far depth value will be approaching -infinity.
     if (sphere.c.z + sphere.r < zNear || sphere.c.z - sphere.r > zFar)
     {
-       return false;
+        return false;
     }
 
     // Then check frustum planes

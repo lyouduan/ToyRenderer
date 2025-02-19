@@ -39,7 +39,6 @@ public:
 
 
 	// ForwardPuls Rendering
-	void BuildTileFrustums();
 	void PrePassDepthBuffer();
 	void CullingLightPass();
 	void ForwardPlusPass();
@@ -101,6 +100,8 @@ public:
 
 private:
 
+	TD3D12ConstantBufferRef UpdatePassCbuffer();
+	
 	void CreateSceneCaptureCube();
 
 	void CreateGBuffersResource();
@@ -143,14 +144,8 @@ private:
 	std::unique_ptr<D3D12ColorBuffer> TiledDepthDebugTexture;
 
 	// forward plus
-	TD3D12RWStructuredBufferRef FrustumSBRef;
-	TD3D12ConstantBufferRef ConstantBufferRef;
+	TD3D12ConstantBufferRef ScreenInfoCBRef;
 	TD3D12ConstantBufferRef DispatchParamsCBRef;
-
-	TD3D12RWStructuredBufferRef LightIndexCounterCBRef;
-	TD3D12RWStructuredBufferRef LightIndexListCBRef;
-
-	std::unique_ptr<D3D12ColorBuffer> LightGridMap;
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;
 
 	// ShadowMap

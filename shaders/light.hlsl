@@ -5,6 +5,11 @@ Texture2D diffuseMap;
 Texture2D specularMap;
 Texture2D normalMap;
 
+cbuffer LightIndex
+{
+    uint lightIndex;
+};
+
 struct VSInput
 {
     float4 position : POSITION;
@@ -37,5 +42,5 @@ PSInput VSMain(VSInput vin)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    return float4(Lights[gLightIndex].Color.xyz, 1.0);
+    return float4(Lights[lightIndex].Color.xyz, 1.0);
 }

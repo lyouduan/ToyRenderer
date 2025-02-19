@@ -131,7 +131,7 @@ namespace ImGuiManager
 			Specular,
 			Count,
 		};*/
-		const char* items[] = { "Position", "Normal", "Albedo", "Specular"};
+		const char* items[] = { "Position", "Normal", "Albedo", "Specular", "LightMap"};
 
 		// 创建选择框
 		if (ImGui::BeginCombo("Select an option", items[GbufferType])) {

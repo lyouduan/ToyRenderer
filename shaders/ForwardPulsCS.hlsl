@@ -1,6 +1,8 @@
 #include "CullLightingCommon.hlsl"
 #include "lightInfo.hlsl"
 
+#define MAX_LIGHT_COUNT_IN_TILE 100
+
 #ifndef BLOCK_SIZE
 #pragma message("BLOCK_SIZE undefined. Default to 16.")
 #define BLOCK_SIZE 16// should be defined by the application.
@@ -35,20 +37,6 @@ RWStructuredBuffer<Frustum> out_Frustums;
 // This kernel is executed once per grid cell.
 // Each thread computes a frustum for a grid cell.
 
-cbuffer passCBuffer
-{
-    float4x4 gViewMat;
-    float4x4 gProjMat;
-    
-    float3 gEyePosW;
-    float pad0;
-    
-    float3 gLightPos;
-    float pad1;
-    float3 gLightColor;
-    float pad2;
-}
-
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_ComputeFrustums(ComputeShaderInput In)
 {
@@ -79,7 +67,7 @@ void CS_ComputeFrustums(ComputeShaderInput In)
     // Now convert the screen space points to view space
     for (int i = 0; i < 4; i++)
     {
-        viewSpace[i] = ScreenToView(screenSpace[i]).xyz;
+        viewSpace[i] = ScreenToView(screenSpace[i], gInvProjMat).xyz;
     }
 
     // Now build the frustum planes from the view space
@@ -122,48 +110,45 @@ globallycoherent RWStructuredBuffer<uint> o_LightIndexCounter;
 
 // Light index lists and light grids.
 RWStructuredBuffer<uint> o_LightIndexList;
-RWTexture2D<uint2> o_LightGrid;
 RWTexture2D<float4> DebugTexture;
 
 groupshared uint uMinDepth;
 groupshared uint uMaxDepth;
 
-groupshared Frustum GroupFrustum;
+// groupshared
+groupshared uint MinTileDepthInt;
+groupshared uint MaxTileDepthInt;
 
-// Opaque geometry light lists
-groupshared uint o_LightCount;
-groupshared uint o_LightIndexStartOffset;
-groupshared uint o_LightList[1024];
+groupshared uint TileLightIndices[MAX_LIGHT_COUNT_IN_TILE];
+groupshared uint TileLightCount;
 
-
-// Add the light to the visible light list for opaque geometry
-void o_AppendLight(uint lightIndex)
+struct TileLightInfo
 {
-    uint index = 0; // Index into the visible lights array.
-    InterlockedAdd(o_LightCount, 1, index); // make sure atomic add updated by a single thread a time in multi-threads
-    if(index < 1024)
-    {
-        o_LightList[index] = lightIndex;
-    }
-}
+    uint LightIndices[MAX_LIGHT_COUNT_IN_TILE];
+    uint LightCount;
+};
+RWStructuredBuffer<TileLightInfo> TileLightInfoList;
 
-void CalculateMinMaxDepthInLds(uint2 globalThreadIdx)
+float4 NDCToView(float4 NDCPos, float4x4 InvProj)
 {
-   
+    float4 View = mul(NDCPos, InvProj);
+    View /= View.w;
+ 
+    return View;
 }
 
 // Light Culling Compute Shader
 [numthreads(BLOCK_SIZE, BLOCK_SIZE, 1)]
 void CS_main(ComputeShaderInput In)
 {
-    // Countersq
-    uint i;
-
+    uint TileCountX = ceil(ScreenDimensions.x / BLOCK_SIZE);
+    uint TileIndex = In.groupID.y * TileCountX + In.groupID.x;
+    
     if (In.groupIndex == 0) // Avoid contention by other threads in the group.
     {
         uMinDepth = 0xFFFFFFFF;
         uMaxDepth = 0;
-        o_LightCount = 0;
+        TileLightCount = 0;
         //GroupFrustum = in_Frustums[In.groupID.x + (In.groupID.y * numThreadGroups.x)];
     }
     // Wait for all threads to finish.
@@ -174,33 +159,34 @@ void CS_main(ComputeShaderInput In)
     
      // Convert depth values to view space.
     //CalculateMinMaxDepthInLds(texCoord);
-    float depth = DepthTexture[texCoord].x;
-    uint z = asuint(depth);
     
-    {
-        InterlockedMin(uMinDepth, z);
-        InterlockedMax(uMaxDepth, z);
-    }
-    
+    float Depth = DepthTexture[texCoord].r;
+    uint DepthInt = asuint(Depth);
+	
+    InterlockedMin(uMinDepth, DepthInt);
+    InterlockedMax(uMaxDepth, DepthInt);
+	
     GroupMemoryBarrierWithGroupSync();
-
-    float fMinDepth = asfloat(uMinDepth);
-    float fMaxDepth = asfloat(uMaxDepth);
+    float MinTileDepth = asfloat(uMinDepth);
+    float MaxTileDepth = asfloat(uMaxDepth);
+ 
  
     // Clipping plane for minimum depth value 
     // (used for testing lights within the bounds of opaque geometry).
     //Plane minPlane = { float3(0, 0, 1), fMinDepth };
     //float fMinDepthVS = ClipToView(float4(0.0, 0.0, fMinDepth, 1.0));
     //float fMaxDepthVS = ClipToView(float4(0.0, 0.0, fMaxDepth, 1.0));
-    float fMinDepthVS = ConvertProjDepthToView(fMinDepth);
-    float fMaxDepthVS = ConvertProjDepthToView(fMaxDepth);
+   
+    float NearZ = NDCToView(float4(0, 0, MinTileDepth, 1.0f), gInvProjMat).z;
+    float FarZ = NDCToView(float4(0, 0, MaxTileDepth, 1.0f), gInvProjMat).z;
+    
     // Cull lights
     // Each thread in a group will cull 1 light until all light have been culled.
     
     float3 lightColor = float3(1.0, 1.0, 1.0);
-    for (i = In.groupIndex;  i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
+    for (int lightIndex = In.groupIndex; lightIndex < NUM_LIGHTS; lightIndex += BLOCK_SIZE * BLOCK_SIZE)
     {
-        Light light = Lights[i];
+        Light light = Lights[lightIndex];
        
         // Point light
         float3 lightPosVS = mul(float4(light.PositionW.xyz, 1), gViewMat).xyz;
@@ -210,11 +196,15 @@ void CS_main(ComputeShaderInput In)
         
         lightColor = float3(1.0, 1.0, 1.0);
         
-        if (SphereInsideFrustum(sphere, In.groupID, fMinDepthVS, fMaxDepthVS))
+        if (SphereInsideFrustum(sphere, In.groupID, NearZ, FarZ))
         {
             //lightColor = light.PositionW.xyz;
             // Add light to light list for transparent geometry.
-            o_AppendLight(i);
+            //o_AppendLight(i);
+            uint index = 0; // Index into the visible lights array.
+            InterlockedAdd(TileLightCount, 1, index); // make sure atomic add updated by a single thread a time in multi-threads
+            TileLightIndices[index] = lightIndex;
+            
             //if (!SphereInsidePlane(sphere, minPlane))
             //{
             //    // Add light to light list for opaque geometry
@@ -232,31 +222,32 @@ void CS_main(ComputeShaderInput In)
     if(In.groupIndex == 0)
     {
         // Update light grid for opaque geometry.
-        InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
-        o_LightGrid[In.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
-        
+        //InterlockedAdd(o_LightIndexCounter[0], o_LightCount, o_LightIndexStartOffset);
+        //o_LightGrid[In.groupID.xy] = uint2(o_LightIndexStartOffset, o_LightCount);
         // Update light grid for transparent geometry
         // TODO...
+        TileLightInfoList[TileIndex].LightCount = TileLightCount;
+        TileLightInfoList[TileIndex].LightIndices = TileLightIndices;
+
     }
     
     GroupMemoryBarrierWithGroupSync();
-    
+  
     // Now update the lightd index list (all threads).
     // For opaque geometry
-    for (i = In.groupIndex; i < NUM_LIGHTS; i += BLOCK_SIZE * BLOCK_SIZE)
+    for (int i = In.groupIndex; i < TileLightCount; i += BLOCK_SIZE * BLOCK_SIZE)
     {
-        o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
+        TileLightInfoList[TileIndex].LightIndices[i] = TileLightIndices[i];
+        
+        //o_LightIndexList[o_LightIndexStartOffset + i] = o_LightList[i];
+        //InterlockedAdd(o_LightIndexStartOffset, o_LightCount);
     }
     
     // ================= Debug ======================
     // Update the debug texture output.
-    if (o_LightCount > 0)
     {
-        DebugTexture[texCoord] = float4(1.0, 1.0, 1.0, 1.0f);
-    }
-    else
-    {
-        DebugTexture[texCoord] = float4(0.0, 0.0, 0.0, 1); // None
+        float perc = TileLightCount / (float) NUM_LIGHTS;
+        DebugTexture[texCoord] = float4(perc, perc, perc, 1.0f);
     }
 }
 

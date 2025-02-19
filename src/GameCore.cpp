@@ -139,10 +139,11 @@ void GameCore::UpdateImGui()
 				else
 					m_Render->SetbDebugGBuffers(false);
 			}
+
+			if (ImGuiManager::bDebugGBuffers)
+				ImGuiManager::RenderCombo();
 		}
-			
-		if(ImGuiManager::bDebugGBuffers)
-			ImGuiManager::RenderCombo();
+		
 
 		// forward puls
 		if (ImGui::Checkbox("Enable Forward Puls Rendering", &ImGuiManager::bEnableForwardPuls))
@@ -304,15 +305,11 @@ void GameCore::LoadAssets()
 	m_Render->CreateIBLPrefilterMap();
 	m_Render->CreateIBLLUT2D();
 
-	// Build Tile Frustums
-	m_Render->BuildTileFrustums();
-
 	// Shadow Map
 	m_Render->ShadowPass();
 	m_Render->GenerateVSM();
 	m_Render->GenerateESM();
 	m_Render->GenerateEVSM();
-
 	m_Render->GenerateVSSM();
 
 	m_Render->GenerateSAT();
