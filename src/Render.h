@@ -37,6 +37,7 @@ public:
 	void DeferredShadingPass();
 	void GbuffersDebug();
 
+	void SSAO();
 
 	// ForwardPuls Rendering
 	void PrePassDepthBuffer();
@@ -106,6 +107,8 @@ private:
 
 	void CreateGBuffersResource();
 
+	void CreateGBuffersPSO();
+
 	void CreateForwardPulsResource();
 
 	void CreateShadowResource();
@@ -143,9 +146,9 @@ private:
 
 	std::unique_ptr<D3D12ColorBuffer> TiledDepthDebugTexture;
 
+	std::unique_prt<D3D12ColorBuffer> SSAOTexture;
+
 	// forward plus
-	TD3D12ConstantBufferRef ScreenInfoCBRef;
-	TD3D12ConstantBufferRef DispatchParamsCBRef;
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;
 
 	// ShadowMap

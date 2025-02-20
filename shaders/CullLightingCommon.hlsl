@@ -49,12 +49,6 @@ struct Frustum
 
 
 // Transfrom functions
-cbuffer ScreenToViewParams
-{
-    float2 ScreenDimensions;
-    float2 InvScreenDimensions;
-}
-
 float ConvertProjDepthToView(float z, float4x4 InvProjMat)
 {
     z = 1.f / (z * InvProjMat._34 + InvProjMat._44);

@@ -146,6 +146,10 @@ void Camera::UpdateProjMat()
 	m_ProjMat.r[1] = m1;
 	m_ProjMat.r[2] = m2;
 	m_ProjMat.r[3] = m3;
+
+	// update InvProject
+	XMVECTOR det;
+	m_InvProjMat = XMMatrixInverse(&det, m_ProjMat);
 }
 
 void Camera::SetEyeAtUp(DirectX::XMVECTOR eye, DirectX::XMVECTOR at, DirectX::XMVECTOR up)

@@ -13,12 +13,6 @@ struct TileLightInfo
     uint LightCount;
 };
 
-cbuffer ScreenToViewParams
-{
-    float2 ScreenDimensions;
-    float2 InvScreenDimensions;
-}
-
 Texture2D DepthTexture;
 RWTexture2D<float2> TiledDepthDebugTexture;
 

@@ -23,6 +23,7 @@ void TRender::Initalize()
 	CreateSceneCaptureCube();
 
 	CreateGBuffersResource();
+	CreateGBuffersPSO(); // need initializing GBuffers first
 
 	CreateForwardPulsResource();
 
@@ -73,11 +74,7 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 
 		if (bEnableForwardPuls)
 		{
-			//shader.SetParameter("o_LightGrid", LightGridMap->GetSRV());
-			//shader.SetParameter("o_LightIndexList", LightIndexListCBRef->GetSRV());
 			shader.SetParameter("LightInfoList", TileLightInfoListRef->GetSRV());
-			shader.SetParameter("ScreenToViewParams", ScreenInfoCBRef);
-
 			shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
 		}
 
@@ -219,9 +216,7 @@ void TRender::CreateIBLEnvironmentMap()
 			auto camera = IBLEnvironmentMap->GetCamera(i);
 			XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(camera.GetViewMat()));
 			XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(camera.GetProjMat()));
-			XMVECTOR det;
-			XMMATRIX invProj = XMMatrixInverse(&det, g_Camera.GetProjMat());
-			XMStoreFloat4x4(&passcb.invProjMat, XMMatrixTranspose(invProj));
+			XMStoreFloat4x4(&passcb.invProjMat, XMMatrixTranspose(camera.GetInvProjMat()));
 
 		}
 		auto cubemapPassCBufferRef = TD3D12RHI::CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
@@ -276,9 +271,7 @@ void TRender::CreateIBLIrradianceMap()
 			auto camera = IBLIrradianceMap->GetCamera(i);
 			XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(camera.GetViewMat()));
 			XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(camera.GetProjMat()));
-			XMVECTOR det;
-			XMMATRIX invProj = XMMatrixInverse(&det, camera.GetProjMat());
-			XMStoreFloat4x4(&passcb.invProjMat, XMMatrixTranspose(invProj));
+			XMStoreFloat4x4(&passcb.invProjMat, XMMatrixTranspose(camera.GetInvProjMat()));
 		}
 		auto cubemapPassCBufferRef = TD3D12RHI::CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
 		auto cubemapObjCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
@@ -335,10 +328,7 @@ void TRender::CreateIBLPrefilterMap()
 				auto camera = IBLPrefilterMaps[Mip]->GetCamera(i);
 				XMStoreFloat4x4(&passcb.ViewMat, XMMatrixTranspose(camera.GetViewMat()));
 				XMStoreFloat4x4(&passcb.ProjMat, XMMatrixTranspose(camera.GetProjMat()));
-				XMVECTOR det;
-				XMMATRIX invProj = XMMatrixInverse(&det, camera.GetProjMat());
-				XMStoreFloat4x4(&passcb.invProjMat, XMMatrixTranspose(invProj));
-				// set roughness
+				XMStoreFloat4x4(&passcb.invProjMat, XMMatrixTranspose(camera.GetInvProjMat()));
 			}
 
 			auto cubemapPassCBufferRef = TD3D12RHI::CreateConstantBuffer(&passcb, sizeof(PassCBuffer));
@@ -399,18 +389,7 @@ void TRender::IBLRenderPass()
 	g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["pso"].GetPSO());
 
 	// update passCBuffer
-	PassCBuffer passCB;
-	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
-	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
-	XMVECTOR det;
-	XMMATRIX invProj = XMMatrixInverse(&det, g_Camera.GetProjMat());
-	XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(invProj));
-
-	passCB.lightPos = ImGuiManager::lightPos;
-	passCB.EyePosition = g_Camera.GetPosition3f();
-	passCB.lightColor = ImGuiManager::lightColor;
-	passCB.Intensity = ImGuiManager::Intensity;
-	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+	auto passCBufferRef = UpdatePassCbuffer();
 
 	// mat CBuffer
 	auto matCBufferRef = TD3D12RHI::CreateConstantBuffer(&ImGuiManager::matCB, sizeof(MatCBuffer));
@@ -583,7 +562,6 @@ void TRender::TiledBaseLightCulling()
 
 	shader.SetParameter("DepthTexture", GBufferDepth->GetSRV());
 	shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
-	shader.SetParameter("ScreenToViewParams", ScreenInfoCBRef);
 	shader.SetParameterUAV("TileLightInfoList", TileLightInfoListRef->GetUAV());
 	shader.SetParameterUAV("TiledDepthDebugTexture", TiledDepthDebugTexture->GetUAV());
 
@@ -611,7 +589,6 @@ void TRender::DeferredShadingPass()
 	gfxCmdList->SetPipelineState(pso.GetPSO());
 	
 	shader.SetParameter("passCBuffer", passCBufferRef);
-	shader.SetParameter("ScreenToViewParams", ScreenInfoCBRef);
 	shader.SetParameter("GBufferAlbedoMap", GBufferAlbedo->GetSRV());
 	shader.SetParameter("GBufferWorldPosMap", GBufferWorldPos->GetSRV());
 	shader.SetParameter("GBufferNormalMap", GBufferNormal->GetSRV());
@@ -661,6 +638,11 @@ void TRender::GbuffersDebug()
 	
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
+}
+
+void TRender::SSAO()
+{
+
 }
 
 void TRender::PrePassDepthBuffer()
@@ -722,8 +704,6 @@ void TRender::CullingLightPass()
 	
 	auto passCBufferRef = UpdatePassCbuffer();
 	shader.SetParameter("passCBuffer", passCBufferRef);
-	shader.SetParameter("ScreenToViewParams", ScreenInfoCBRef);
-	shader.SetParameter("DispatchParams", DispatchParamsCBRef);
 	shader.SetParameter("DepthTexture", g_PreDepthPassBuffer.GetSRV());
 	shader.SetParameter("Lights", LightManager::g_light.GetStructuredBuffer()->GetSRV());
 	shader.SetParameterUAV("TileLightInfoList", TileLightInfoListRef->GetUAV());
@@ -1297,12 +1277,13 @@ TD3D12ConstantBufferRef TRender::UpdatePassCbuffer()
 	PassCBuffer passCB;
 	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
 	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
-	XMVECTOR det;
-	XMMATRIX invProj = XMMatrixInverse(&det, g_Camera.GetProjMat());
-	XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(invProj));
+	XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(g_Camera.GetInvProjMat()));
 	passCB.EyePosition = g_Camera.GetPosition3f();
 	passCB.lightPos = ImGuiManager::lightPos;
-
+	passCB.lightColor = ImGuiManager::lightColor;
+	passCB.Intensity = ImGuiManager::Intensity;
+	passCB.ScreenDimensions = { (float)g_DisplayWidth, (float)g_DisplayHeight };
+	passCB.InvScreenDimensions = { 1.0f / (float)g_DisplayWidth, 1.0f / (float)g_DisplayHeight };
 	auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
 	return passCBufferRef;
@@ -1354,7 +1335,13 @@ void TRender::CreateGBuffersResource()
 	TiledDepthDebugTexture = std::make_unique<D3D12ColorBuffer>();
 	TiledDepthDebugTexture->Create(L"TiledDepthDebugTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R32G32_FLOAT);
 
+	// SSAO Map
+	SSAOTexture = std::make_unique<D3D12ColorBuffer>();
+	SSAOTexture->Create(L"SSAO Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
+}
 
+void TRender::CreateGBuffersPSO()
+{
 	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
 	{
 		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
@@ -1389,8 +1376,6 @@ void TRender::CreateGBuffersResource()
 	GBuffersPso.Finalize();
 	m_gfxPSOMap["GBuffersPso"] = GBuffersPso;
 
-
-
 	GraphicsPSO DeferredShadingPso(L"DeferredShading PSO");
 	DeferredShadingPso.SetShader(&m_shaderMap["DeferredShadingShader"]);
 	DeferredShadingPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
@@ -1408,28 +1393,6 @@ void TRender::CreateForwardPulsResource()
 {
 	UINT numGroupsX = (UINT)ceilf(g_DisplayWidth / 16.0f);
 	UINT numGroupsY = (UINT)ceilf(g_DisplayHeight / 16.0f);
-
-	ScreenToViewParams stv;
-	stv.ScreenDimensions = { (float)g_DisplayWidth, (float)g_DisplayHeight };
-	stv.InvScreenDimensions = { 1.0f/(float)g_DisplayWidth, 1.0f / (float)g_DisplayHeight };
-	ScreenInfoCBRef = TD3D12RHI::CreateConstantBuffer(&stv, sizeof(ScreenToViewParams));
-
-	struct DispatchParams
-	{
-		// Number of groups dispatched.
-		XMUINT3 numThreadGroups;
-		UINT pad0;
-
-		// Total number of threads dispatched.
-		// Note: This value may be less than the actual number of threads executed
-		// if the screen size is not evenly divisible by the block size
-		XMUINT3 numThreads;
-		UINT pad1;
-	};
-	
-	DispatchParams dp = { {numGroupsX, numGroupsY, 1}, 0, {numGroupsX * 16, numGroupsY * 16, 1}, 0};
-
-	DispatchParamsCBRef = TD3D12RHI::CreateConstantBuffer(&dp, sizeof(DispatchParams));
 
 	DebugMap = std::make_unique<D3D12ColorBuffer>();
 	DebugMap->Create(L"Debug Map", numGroupsX * 16, numGroupsY * 16, 1, DXGI_FORMAT_R32G32B32A32_FLOAT);

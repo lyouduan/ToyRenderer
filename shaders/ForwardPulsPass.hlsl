@@ -26,12 +26,6 @@ struct TileLightInfo
 };
 StructuredBuffer<TileLightInfo> LightInfoList;
 
-cbuffer ScreenToViewParams
-{
-    float2 ScreenDimensions;
-    float2 InvScreenDimensions;
-}
-
 struct VSInput
 {
     float4 position : POSITION;

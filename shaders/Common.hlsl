@@ -15,6 +15,9 @@ cbuffer passCBuffer
     float4x4 gProjMat;
     float4x4 gInvProjMat;
     
+    float2 ScreenDimensions;
+    float2 InvScreenDimensions;
+    
     float3 gEyePosW;
     float gLightIndex;
     

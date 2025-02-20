@@ -47,6 +47,10 @@ struct PassCBuffer
     XMFLOAT4X4 ViewMat = MATH::IdentityMatrix;
     XMFLOAT4X4 ProjMat = MATH::IdentityMatrix;
     XMFLOAT4X4 invProjMat = MATH::IdentityMatrix;
+
+    XMFLOAT2 ScreenDimensions = { 0.0, 0.0 };
+    XMFLOAT2 InvScreenDimensions = { 0.0, 0.0};
+
     XMFLOAT3 EyePosition = { 0.0, 0.0, 0.0 };
     FLOAT Pad0 = 0.0;
 

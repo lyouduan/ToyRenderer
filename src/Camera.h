@@ -19,6 +19,7 @@ public:
 
 	DirectX::XMMATRIX GetViewMat() const { return m_ViewMat; }
 	DirectX::XMMATRIX GetProjMat() const { return m_ProjMat; }
+	DirectX::XMMATRIX GetInvProjMat() const { return m_InvProjMat; }
 
 	DirectX::XMFLOAT3 GetRight3f() const { return mRight; }
 	DirectX::XMFLOAT3 GetUp3f() const { return mUp; }
@@ -66,6 +67,7 @@ private:
 
 	DirectX::XMMATRIX m_ViewMat = DirectX::XMMatrixIdentity();
 	DirectX::XMMATRIX m_ProjMat = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX m_InvProjMat = DirectX::XMMatrixIdentity();
 
 	// Euler Angle
 	bool viewDirty = true;
