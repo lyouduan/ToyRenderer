@@ -19,6 +19,8 @@ namespace ImGuiManager
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;
+	
+	SSAOParams ssaoParams = { 0.5f , 0.2f, 1.0f, 0.05f };
 
 	float  cascadeBlendColor = 0.0f;
 
@@ -84,10 +86,12 @@ namespace ImGuiManager
 		RenderModelItem();
 		RenderLightItem();
 
-		RenderPBRIem();
+		RenderPBRItem();
+
+		RenderSSAOItem();
 	}
 
-	void RenderPBRIem()
+	void RenderPBRItem()
 	{
 		ImGui::Text("Model PBR");
 		ImGui::ColorEdit4("baseColor", (float*)&matCB.DiffuseAlbedo);
@@ -119,6 +123,16 @@ namespace ImGuiManager
 		ImGui::SliderFloat("light intensity", (float*)&Intensity, 0, 1000); // Edit 3 floats representing a color
 		ImGui::SliderFloat3("light Position", (float*)&lightPos, -300, 300);
 		ImGui::ColorEdit3("light color", (float*)&lightColor); // Edit 3 floats representing a color
+	}
+
+	void RenderSSAOItem()
+	{
+		ImGui::NewLine();
+		ImGui::Text("SSAO Parameters");
+		ImGui::SliderFloat("OcclusionFadeEnd", &ssaoParams.OcclusionFadeEnd, 0.01, 1.0f);
+		ImGui::SliderFloat("OcclusionFadeStart", &ssaoParams.OcclusionFadeStart, 0.01, 1.0f);
+		ImGui::SliderFloat("OcclusionRadius", &ssaoParams.OcclusionRadius, 0.01, 1.0f);
+		ImGui::SliderFloat("SurfaceEpsilon", &ssaoParams.SurfaceEpsilon, 0.01, 1.0f);
 	}
 
 	void RenderCombo()

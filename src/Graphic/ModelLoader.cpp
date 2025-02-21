@@ -146,11 +146,11 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 		std::vector<TD3D12Texture> diffuseMaps = this->loadMaterialTextures(material, aiTextureType_DIFFUSE, "texture_diffuse", scene);
 		textures.insert(textures.end(), diffuseMaps.begin(), diffuseMaps.end());
 
-		std::vector<TD3D12Texture> specularMaps = this->loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular", scene);
-		textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
-
 		std::vector<TD3D12Texture> normalMaps = this->loadMaterialTextures(material, aiTextureType_HEIGHT, "texture_normal", scene);
 		textures.insert(textures.end(), normalMaps.begin(), normalMaps.end());
+
+		std::vector<TD3D12Texture> specularMaps = this->loadMaterialTextures(material, aiTextureType_SPECULAR, "texture_specular", scene);
+		textures.insert(textures.end(), specularMaps.begin(), specularMaps.end());
 	}
 
 	return Mesh(vertices, indices, textures);

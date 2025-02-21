@@ -103,11 +103,17 @@ struct CSMCBuffer
 };
 
 __declspec(align(16))
-struct ScreenToViewParams
+struct SSAOCBuffer
 {
-    XMFLOAT2 ScreenDimensions;
-    XMFLOAT2 InvScreenDimensions;
+    XMFLOAT4X4 ProjTex = MATH::IdentityMatrix;
+
+    // Coordinates given in view space.
+    float    OcclusionRadius;
+    float    OcclusionFadeStart;
+    float    OcclusionFadeEnd;
+    float    SurfaceEpsilon;
 };
+
 // ===============No-Constant Buffer===============
 
 struct LightInfo

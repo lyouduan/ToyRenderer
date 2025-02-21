@@ -37,7 +37,7 @@ public:
 	void DeferredShadingPass();
 	void GbuffersDebug();
 
-	void SSAO();
+	void SSAOPass();
 
 	// ForwardPuls Rendering
 	void PrePassDepthBuffer();
@@ -102,6 +102,7 @@ public:
 private:
 
 	TD3D12ConstantBufferRef UpdatePassCbuffer();
+	void UpdateSSAOPassCbuffer();
 	
 	void CreateSceneCaptureCube();
 
@@ -146,7 +147,10 @@ private:
 
 	std::unique_ptr<D3D12ColorBuffer> TiledDepthDebugTexture;
 
-	std::unique_prt<D3D12ColorBuffer> SSAOTexture;
+	std::unique_ptr<D3D12ColorBuffer> SSAOTexture;
+	std::unique_ptr<D3D12ColorBuffer> SSAOBlurTexture;
+
+	TD3D12ConstantBufferRef SSAOCBRef;
 
 	// forward plus
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;

@@ -4,6 +4,14 @@
 
 class TD3D12CommandContext;
 
+struct SSAOParams
+{
+	float    OcclusionRadius;
+	float    OcclusionFadeStart;
+	float    OcclusionFadeEnd;
+	float    SurfaceEpsilon;
+};
+
 namespace ImGuiManager
 {
 	extern bool show_demo_window;
@@ -19,6 +27,8 @@ namespace ImGuiManager
 	extern float  cascadeBlendColor;
 
 	extern MatCBuffer matCB;
+
+	extern SSAOParams ssaoParams;
 	
 	extern DirectX::XMFLOAT3 lightPos;
 	extern DirectX::XMFLOAT3 lightColor;
@@ -39,7 +49,8 @@ namespace ImGuiManager
 	void RenderAllItem();
 	void RenderModelItem();
 	void RenderLightItem();
-	void RenderPBRIem();
+	void RenderPBRItem();
+	void RenderSSAOItem();
 
 	void RenderCombo();
 	void ShadowTypeCombo();

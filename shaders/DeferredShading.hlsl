@@ -47,7 +47,7 @@ float4 PSMain(PSInput pin) : SV_Target
     float3 normal = GBufferNormalMap.Sample(LinearWrapSampler, pin.tex).rgb;
     float Specular = GBufferSpecularMap.Sample(LinearWrapSampler, pin.tex).r;
     
-    float3 N = normalize(normal);
+    float3 N = normalize(normal * 2.0 - 1.0);
     float3 V = normalize(gEyePosW - worldPos);
     
     // Get the tile index of current pixel

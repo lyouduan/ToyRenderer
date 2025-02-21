@@ -45,7 +45,7 @@ VSOutput VSMain(VSInput vin)
     vout.tex = vin.tex;
     
     // Assumes nonuniform scaling; otherwise, need to use inverse-transpose of world matrix.
-    float3x3 NormalMatrix = (float3x3) gModelMat;
+    float3x3 NormalMatrix = (float3x3) gInvTranModelMat;
     vout.normal = mul(vin.normal, NormalMatrix);
     
     return vout;

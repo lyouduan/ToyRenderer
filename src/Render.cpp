@@ -530,6 +530,9 @@ void TRender::GbuffersPass()
 			ObjCBuffer obj;
 			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
 			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+			XMVECTOR det;
+			auto invModelMat = XMMatrixTranspose(XMMatrixInverse(&det, translationMatrix)); // inverse Transpose
+			XMStoreFloat4x4(&obj.InvTranModelMat, XMMatrixTranspose(invModelMat));
 			ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
 			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
 		}
@@ -634,15 +637,98 @@ void TRender::GbuffersDebug()
 		break;
 	}
 
+	texSRV = SSAOTexture->GetSRV();
 	shader.SetParameter("tex", texSRV);
 	
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
 
-void TRender::SSAO()
+void TRender::SSAOPass()
 {
+	UpdateSSAOPassCbuffer();
 
+	auto shader = m_shaderMap["SSAO"];
+	auto pso = PSOManager::m_gfxPSOMap["SSAO"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	g_CommandContext.Transition(SSAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	D3D12_VIEWPORT m_Viewport = { 0.0, 0.0, (float)g_DisplayWidth, (float)g_DisplayHeight, 0.0, 1.0 };
+	D3D12_RECT m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
+	gfxCmdList->RSSetViewports(1, &m_Viewport);
+	gfxCmdList->RSSetScissorRects(1, &m_ScissorRect);
+
+	float clearColor[4] = { SSAOTexture->GetClearColor().x,SSAOTexture->GetClearColor().y,SSAOTexture->GetClearColor().z,SSAOTexture->GetClearColor().w };
+	gfxCmdList->ClearRenderTargetView(SSAOTexture->GetRTV(), (float*)clearColor, 0, nullptr);
+
+	gfxCmdList->OMSetRenderTargets(1, &SSAOTexture->GetRTV(), true, nullptr);
+
+	// set pso
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+
+	auto passCBufferRef = UpdatePassCbuffer();
+	shader.SetParameter("passCBuffer", passCBufferRef);
+	shader.SetParameter("cbSSAO", SSAOCBRef);
+	shader.SetParameter("NormalTexture", GBufferNormal->GetSRV());
+	shader.SetParameter("DepthTexture", GBufferDepth->GetSRV());
+	shader.BindParameters();
+
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+
+	// transit to generic read state
+	g_CommandContext.Transition(SSAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+
+
+	// ================== Blur SSAO ==========================
+		// --------------- Vertical Blur ---------------
+	// Set PSO and RootSignature
+	auto HorzBlurPSO = PSOManager::m_ComputePSOMap["HorzBlurVSM"];
+	auto HorzBlurShader = PSOManager::m_shaderMap["HorzBlurVSM"];
+	auto computeCmdList = g_CommandContext.GetCommandList();
+
+	g_CommandContext.Transition(SSAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// Set PSO and RootSignature
+	computeCmdList->SetComputeRootSignature(HorzBlurPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(HorzBlurPSO.GetPSO());
+	// Set Shader Parameter
+	HorzBlurShader.SetParameter("InputTexture", SSAOTexture->GetSRV());
+	HorzBlurShader.SetParameterUAV("OutputTexture", SSAOBlurTexture->GetUAV());
+	HorzBlurShader.SetParameter("BlurCBuffer", GaussWeightsCBRef);
+	HorzBlurShader.BindParameters();
+
+	auto NumGroupsX = (UINT)ceilf(SSAOTexture->GetWidth() / 256.0f);
+	auto NumGroupsY = SSAOTexture->GetHeight();
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+
+	g_CommandContext.Transition(SSAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(SSAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_UNORDERED_ACCESS);
+
+	// --------------- Vertical Blur ---------------
+	// Set PSO and RootSignature
+	auto VertBlurPSO = PSOManager::m_ComputePSOMap["VertBlurVSM"];
+	auto VertBlurShader = PSOManager::m_shaderMap["VertBlurVSM"];
+
+	// Set PSO and RootSignature
+	computeCmdList->SetComputeRootSignature(VertBlurPSO.GetRootSignature());
+	computeCmdList->SetPipelineState(VertBlurPSO.GetPSO());
+
+	// Set Shader Parameter
+	VertBlurShader.SetParameter("InputTexture", SSAOBlurTexture->GetSRV());
+	VertBlurShader.SetParameterUAV("OutputTexture", SSAOTexture->GetUAV());
+	VertBlurShader.SetParameter("BlurCBuffer", GaussWeightsCBRef);
+	VertBlurShader.BindParameters();
+
+	NumGroupsX = SSAOTexture->GetWidth();
+	NumGroupsY = (UINT)ceilf(SSAOTexture->GetHeight() / 256.0f);
+	computeCmdList->Dispatch(NumGroupsX, NumGroupsY, 1);
+
+	g_CommandContext.Transition(SSAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(SSAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void TRender::PrePassDepthBuffer()
@@ -1289,6 +1375,25 @@ TD3D12ConstantBufferRef TRender::UpdatePassCbuffer()
 	return passCBufferRef;
 }
 
+void TRender::UpdateSSAOPassCbuffer()
+{
+
+	XMMATRIX T(
+		0.5f, 0.0f, 0.0f, 0.0f,
+		0.0f, -0.5f, 0.0f, 0.0f,
+		0.0f, 0.0f, 1.0f, 0.0f,
+		0.5f, 0.5f, 0.0f, 1.0f);
+	XMMATRIX ProjTex = g_Camera.GetProjMat() * T;
+
+	SSAOCBuffer SSAOcb;
+	XMStoreFloat4x4(&SSAOcb.ProjTex, XMMatrixTranspose(ProjTex));
+	SSAOcb.OcclusionRadius = ImGuiManager::ssaoParams.OcclusionRadius;
+	SSAOcb.OcclusionFadeStart = ImGuiManager::ssaoParams.OcclusionFadeStart;
+	SSAOcb.OcclusionFadeEnd = ImGuiManager::ssaoParams.OcclusionFadeEnd;
+	SSAOcb.SurfaceEpsilon = ImGuiManager::ssaoParams.SurfaceEpsilon;
+	SSAOCBRef = TD3D12RHI::CreateConstantBuffer(&SSAOcb, sizeof(SSAOCBuffer));
+}
+
 void TRender::CreateSceneCaptureCube()
 {
 	IBLEnvironmentMap = std::make_unique<SceneCaptureCube>(L"IBL Environment Map", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -1330,7 +1435,6 @@ void TRender::CreateGBuffersResource()
 	};
 
 	TileLightInfoListRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(TileLightInfo), numGroupsX * numGroupsY);
-	
 
 	TiledDepthDebugTexture = std::make_unique<D3D12ColorBuffer>();
 	TiledDepthDebugTexture->Create(L"TiledDepthDebugTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R32G32_FLOAT);
@@ -1338,6 +1442,31 @@ void TRender::CreateGBuffersResource()
 	// SSAO Map
 	SSAOTexture = std::make_unique<D3D12ColorBuffer>();
 	SSAOTexture->Create(L"SSAO Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
+
+	SSAOBlurTexture = std::make_unique<D3D12ColorBuffer>();
+	SSAOBlurTexture->Create(L"SSAO Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
+
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+	};
+
+	GraphicsPSO SSAOPso(L"SSAO PSO");
+	SSAOPso.SetShader(&m_shaderMap["SSAO"]);
+	SSAOPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	SSAOPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	SSAOPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	CD3DX12_DEPTH_STENCIL_DESC dsvDesc = {};
+	dsvDesc.DepthEnable = FALSE;
+	SSAOPso.SetDepthStencilState(dsvDesc);
+	SSAOPso.SetSampleMask(UINT_MAX);
+	SSAOPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	SSAOPso.SetRenderTargetFormat(SSAOTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	SSAOPso.Finalize();
+	m_gfxPSOMap["SSAO"] = SSAOPso;
 }
 
 void TRender::CreateGBuffersPSO()

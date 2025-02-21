@@ -333,6 +333,7 @@ void GameCore::PopulateCommandList()
 	if (m_Render->GetEnableDeferredRendering() || m_Render->GetbDebugGBuffers())
 	{
 		m_Render->GbuffersPass();
+		m_Render->SSAOPass();
 		m_Render->TiledBaseLightCulling();
 	}
 

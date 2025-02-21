@@ -316,6 +316,17 @@ namespace PSOManager
 		VertSAT.CSEntryPoint = "VertCS";
 		TShader VertSAThader(VertSAT);
 		m_shaderMap["VertSAT"] = VertSAThader;
+
+		TShaderInfo SSAO;
+		SSAO.FileName = "shaders/SSAO";
+		SSAO.bCreateVS = true;
+		SSAO.bCreatePS = true;
+		SSAO.bCreateCS = false;
+		SSAO.VSEntryPoint = "VS";
+		SSAO.PSEntryPoint = "PS";
+		TShader SSAOShader(SSAO);
+		m_shaderMap["SSAO"] = SSAOShader;
+
 	}
 
 	void InitializeComputeShader()
@@ -544,45 +555,6 @@ namespace PSOManager
 		ForwardPulsPso.Finalize();
 		m_gfxPSOMap["ForwardPulsPass"] = ForwardPulsPso;
 
-		GraphicsPSO GBuffersPso(L"GBuffers PSO");
-		GBuffersPso.SetShader(&m_shaderMap["GBuffersPassShader"]);
-		GBuffersPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		GBuffersPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-		GBuffersPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		CD3DX12_DEPTH_STENCIL_DESC dsvDesc;
-		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
-		dsvDesc.DepthWriteMask = D3D12_DEPTH_WRITE_MASK_ALL;
-		dsvDesc.StencilEnable = FALSE;
-		GBuffersPso.SetDepthStencilState(dsvDesc);
-		GBuffersPso.SetSampleMask(UINT_MAX);
-		GBuffersPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-		//GBuffersPso.SetDepthTargetFormat(GBufferDepth->GetFormat());
-		DXGI_FORMAT GBuffersFormat[] =
-		{
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			DXGI_FORMAT_R16G16B16A16_FLOAT,
-			//DXGI_FORMAT_R16G16B16A16_FLOAT
-		};
-		GBuffersPso.SetRenderTargetFormats(_countof(GBuffersFormat), GBuffersFormat, GBufferDepth->GetFormat());
-		GBuffersPso.Finalize();
-		m_gfxPSOMap["GBuffersPso"] = GBuffersPso;
-
-
-
-		GraphicsPSO DeferredShadingPso(L"DeferredShading PSO");
-		DeferredShadingPso.SetShader(&m_shaderMap["DeferredShadingShader"]);
-		DeferredShadingPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-		DeferredShadingPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-		DeferredShadingPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		DeferredShadingPso.SetDepthStencilState(dsvDesc);
-		DeferredShadingPso.SetSampleMask(UINT_MAX);
-		DeferredShadingPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-		DeferredShadingPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, GBufferDepth->GetFormat());
-		DeferredShadingPso.Finalize();
-		m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
 
 		GenerateShadowPSO();
 
@@ -649,6 +621,9 @@ namespace PSOManager
 		ShadowMapDebugPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		ShadowMapDebugPso.Finalize();
 		m_gfxPSOMap["ShadowMapDebug"] = ShadowMapDebugPso;
+
+
+		
 	}
 
 	void GenerateComputePSO()
