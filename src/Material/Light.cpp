@@ -24,7 +24,7 @@ namespace LightManager
 		std::vector<LightInfo> lights;
 
 		LightInfo light;
-		light.Type = ELightType::SpotLight;
+		light.Type = (int)ELightType::PointLight;
 		std::srand(std::time(0));
 		for (int i = 1; i < 10; i++)
 		{
@@ -38,12 +38,21 @@ namespace LightManager
 				XMMATRIX tanslation = XMMatrixTranslation(light.PositionW.x, light.PositionW.y, light.PositionW.z);
 				XMStoreFloat4x4(&light.ModelMat, XMMatrixTranspose(tanslation));
 
-				light.Intensity = 20;
-				light.Range = 10;
+				light.Intensity = 50;
+				light.Range = 20;
 
 				lights.push_back(light);
 			}
 		}
+
+		XMFLOAT3 lightDir = XMFLOAT3{ 10.0f, -10.0f, 10.0f };
+		// directional light
+		LightInfo directionalLight;
+		directionalLight.Type = (int)ELightType::DirectionalLight;
+		directionalLight.Color = XMFLOAT4{ 1.0, 1.0, 1.0, 1.0 };
+		directionalLight.DirectionW = XMFLOAT4{ lightDir.x,lightDir.y,lightDir.z, 1.0f };
+		directionalLight.Intensity = 2;
+		lights.push_back(directionalLight);
 
 		g_light.SetLightInfo(lights);
 		g_light.CreateStructuredBufferRef();

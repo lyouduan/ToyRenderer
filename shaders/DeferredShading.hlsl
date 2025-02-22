@@ -67,26 +67,44 @@ float4 PSMain(PSInput pin) : SV_Target
         uint LightIndex = LightInfo.LightIndices[i];
         Light light = Lights[LightIndex];
     
-        float3 L = light.PositionW.xyz - worldPos;
-        float distance = length(L);
-        L = L / distance;
-        float attenuation = 1.0 / (distance * distance);
+        if(light.Type == 1) // directional light
+        {
+            float3 L = normalize(-light.DirectionW);
         
-        float kd = saturate(dot(N, L));
-        float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
+            float kd = saturate(dot(N, L));
+            float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
         
-        float3 H = normalize(V + L);
-        float ks = pow(saturate(dot(N, H)), 32);
-        float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
+            float3 H = normalize(V + L);
+            float ks = pow(saturate(dot(N, H)), 32);
+            float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
         
-        totalDiffuse += lightDiffuse * attenuation;
-        totalSpecular += lightSpecular * attenuation;
+            totalDiffuse += lightDiffuse;
+            totalSpecular += lightSpecular;
+        }
+        else if(light.Type == 2) // point light
+        {
+            float3 L = light.PositionW.xyz - worldPos;
+            float distance = length(L);
+            L = L / distance;
+            float attenuation = 1.0 / (distance * distance);
+        
+            float kd = saturate(dot(N, L));
+            float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
+        
+            float3 H = normalize(V + L);
+            float ks = pow(saturate(dot(N, H)), 32);
+            float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
+        
+            totalDiffuse += lightDiffuse * attenuation;
+            totalSpecular += lightSpecular * attenuation;
+        }
+       
     }
     
     float3 diffuse = totalDiffuse * albedo;
     float3 specular = totalSpecular * Specular;
     
-    float3 ambient = albedo * 0.5;
+    float3 ambient = albedo * 0.05;
     
     float3 color = diffuse + specular + ambient;
     

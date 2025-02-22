@@ -637,7 +637,6 @@ void TRender::GbuffersDebug()
 		break;
 	}
 
-	texSRV = PreColorTexture->GetSRV();
 	shader.SetParameter("tex", texSRV);
 	
 	shader.BindParameters();
@@ -922,6 +921,7 @@ void TRender::LightPass()
 
 	for(int i = 0; i < lights.size(); i++)
 	{
+		if (lights[i].Type == 1) break;
 		objCB.ModelMat = lights[i].ModelMat;
 		lightIndex.Index = i;
 

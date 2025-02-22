@@ -126,12 +126,17 @@ bool Intersect(uint LightIndex, uint3 GroupId, float MinTileZ, float MaxTileZ)
     Light light = Lights[LightIndex];
 	
     // PointLight
+    if(light.Type == 2)
     {
         TSphere LightSphere;
         LightSphere.Center = mul(float4(light.PositionW.xyz, 1.0f), gViewMat).xyz;
         LightSphere.Radius = light.Range;
 		
         return SphereInsideFrustum(LightSphere, Frustum);
+    }
+    else
+    {
+        return true;
     }
 }
 

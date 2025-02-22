@@ -3,7 +3,7 @@
 
 #ifndef NUM_LIGHTS
 #pragma message("NUM_LIGHTS undefined. Default to 81.")
-#define NUM_LIGHTS 81 // should be defined by the application.
+#define NUM_LIGHTS 82 // should be defined by the application.
 #endif
 
 struct Light

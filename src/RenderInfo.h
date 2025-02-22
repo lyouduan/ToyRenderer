@@ -139,6 +139,7 @@ struct SSAOCBuffer
 
 struct LightInfo
 {
+    
     XMFLOAT4 PositionW;
     XMFLOAT4 DirectionW;
     XMFLOAT4 Color;
