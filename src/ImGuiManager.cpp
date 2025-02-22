@@ -16,6 +16,7 @@ namespace ImGuiManager
 	bool bEnableDeferredRendering = false;
 	bool bEnableForwardPuls = false;
 	bool bEnableShadowMap = false;
+	bool bEnableTAA = false;
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;
@@ -84,6 +85,7 @@ namespace ImGuiManager
 	void RenderAllItem()
 	{
 		RenderModelItem();
+
 		RenderLightItem();
 
 		RenderPBRItem();
@@ -145,7 +147,7 @@ namespace ImGuiManager
 			Specular,
 			Count,
 		};*/
-		const char* items[] = { "Position", "Normal", "Albedo", "Specular", "LightMap"};
+		const char* items[] = { "Position", "Normal", "Albedo", "Specular", "Velocity", "LightMap"};
 
 		// 创建选择框
 		if (ImGui::BeginCombo("Select an option", items[GbufferType])) {

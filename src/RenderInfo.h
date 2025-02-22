@@ -28,6 +28,7 @@ enum class GBufferType
     Normal,
     Albedo,
     Specular,
+    Velocity,
     LightMap,
     Count,
 };
@@ -38,24 +39,44 @@ __declspec(align(16))
 struct ObjCBuffer
 {
     XMFLOAT4X4 ModelMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 PreModelMat = MATH::IdentityMatrix;
     XMFLOAT4X4 InvTranModelMat = MATH::IdentityMatrix;
 };
 
 __declspec(align(16))
 struct PassCBuffer
 {
+    /*
+       float4x4 gViewMat;
+       float4x4 gProjMat;
+       float4x4 gInvProjMat;
+       float4x4 gPreViewProjMat;
+
+       float2 ScreenDimensions;
+       float2 InvScreenDimensions;
+
+       float3 gEyePosW;
+       float gLightIndex;
+
+       float3 gLightPos;
+       float gRoughness;
+       float3 gLightColor;
+       float gIntensity;
+   */
+
     XMFLOAT4X4 ViewMat = MATH::IdentityMatrix;
     XMFLOAT4X4 ProjMat = MATH::IdentityMatrix;
     XMFLOAT4X4 invProjMat = MATH::IdentityMatrix;
+    XMFLOAT4X4 PreViewProjMat = MATH::IdentityMatrix;
 
     XMFLOAT2 ScreenDimensions = { 0.0, 0.0 };
     XMFLOAT2 InvScreenDimensions = { 0.0, 0.0};
 
     XMFLOAT3 EyePosition = { 0.0, 0.0, 0.0 };
-    FLOAT Pad0 = 0.0;
+    FLOAT lightIndex = 0.0;
 
     XMFLOAT3 lightPos = { 0.0, 10.0, 25.0 };
-    FLOAT Pad1 = 0.0;
+    FLOAT roughness = 0.0;
 
     XMFLOAT3 lightColor = { 1.0, 1.0, 1.0 };
     FLOAT Intensity = 100.0;

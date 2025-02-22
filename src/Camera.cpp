@@ -35,8 +35,10 @@ void Camera::SetLen(float fov, float aspectRatio, float nearZ, float farZ)
 
 void Camera::UpdateViewMat()
 {
+
 	if (viewDirty)
 	{
+		// Update
 		XMVECTOR R = XMLoadFloat3(&mRight);
 		XMVECTOR U = XMLoadFloat3(&mUp);
 		XMVECTOR L = XMLoadFloat3(&mLook);
@@ -73,7 +75,7 @@ void Camera::UpdateViewMat()
 		//	XMVectorSet(x, y, z, 1.0f)
 		//);
 
-		// 转成列优先
+		// 转成列优序
 		m_ViewMat = XMMatrixTranspose(M);
 	}
 
@@ -132,6 +134,7 @@ void Camera::Reset()
 
 void Camera::UpdateProjMat()
 {
+	// update 
 	//m_ProjMat = XMMatrixPerspectiveFovLH(XMConvertToRadians(mFovY), mAspect, mNearZ, mFarZ);
 	float fovRadians = XMConvertToRadians(mFovY);
 	float height = mNearZ * tan(fovRadians / 2.0);

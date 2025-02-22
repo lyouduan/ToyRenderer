@@ -44,7 +44,12 @@ void GameCore::OnUpdate(const GameTimer& gt)
 
 	m_ModelMatrix = scalingMat * rotationYMat * translationMatrix;
 
-	// update camera
+	// save previous camera datas
+	XMMATRIX view = g_Camera.GetViewMat();
+	XMMATRIX proj = g_Camera.GetProjMat();
+	g_Camera.SetPreViewProj(view * proj);
+
+	// update
 	g_Camera.UpdateViewMat();
 
 	ObjCBuffer obj;
@@ -54,7 +59,6 @@ void GameCore::OnUpdate(const GameTimer& gt)
 	ObjCBuffer objCB;
 	XMStoreFloat4x4(&objCB.ModelMat, XMMatrixTranspose(m_ModelMatrix));
 	ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(objCB);
-
 	
 	//memcpy(passCBufferRef->ResourceLocation.MappedAddress, &passCB, sizeof(PassCBuffer));
 
@@ -78,6 +82,8 @@ void GameCore::OnRender()
 	ThrowIfFailed(m_swapChain->Present(1, 0));
 
 	WaitForPreviousFrame();
+
+	m_Render->EndFrame();
 } 
 
 void GameCore::OnDestroy()
@@ -142,6 +148,18 @@ void GameCore::UpdateImGui()
 
 			if (ImGuiManager::bDebugGBuffers)
 				ImGuiManager::RenderCombo();
+
+			if (ImGui::Checkbox("Enable TAA", &ImGuiManager::bEnableTAA))
+			{
+				if (ImGuiManager::bEnableTAA)
+				{
+					m_Render->SetbEnableTAA(true);
+				}
+				else
+				{
+					m_Render->SetbEnableTAA(false);
+				}
+			}
 		}
 		
 
@@ -362,12 +380,11 @@ void GameCore::PopulateCommandList()
 	if (m_Render->GetEnableDeferredRendering())
 	{
 		m_Render->DeferredShadingPass();
-
-		if (m_Render->GetbDebugGBuffers())
-		{
-			m_Render->GbuffersDebug();
-		}
 		
+		
+		
+		if (m_Render->GetbEnableTAA())
+			m_Render->TAAPass();
 	}
 	else if (m_Render->GetEnableForwardPulsPass())
 	{
@@ -386,6 +403,9 @@ void GameCore::PopulateCommandList()
 	{
 		m_Render->IBLRenderPass();
 	}
+
+	if (m_Render->GetbDebugGBuffers())
+		m_Render->GbuffersDebug();
 
 	// Draw ImGui
 	ImGuiManager::EndRenderImGui(g_CommandContext);

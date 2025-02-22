@@ -1,4 +1,5 @@
 #include "Common.hlsl"
+#include "Utlis.hlsl"
 
 #ifndef PI 
 #define PI 3.1415926
@@ -42,45 +43,6 @@ PSInput VS(VSInput vin)
     vout.position = vin.position;
     vout.tex = vin.tex;
     return vout;
-}
-
-float4 UVToNDC(float2 UVPos, float Depth)
-{
-    return float4(2 * UVPos.x - 1, 1 - 2 * UVPos.y, Depth, 1.0f);
-}
-float4 NDCToView(float4 NDCPos, float4x4 InvProj)
-{
-    float4 View = mul(NDCPos, InvProj);
-    View /= View.w;
- 
-    return View;
-}
-float4 UVToView(float2 UV, float NDCDepth, float4x4 InvProj)
-{
-    float4 NDC = UVToNDC(UV, NDCDepth);
-	
-    float4 View = NDCToView(NDC, InvProj);
-	
-    return View;
-}
-float4 ViewToNDC(float4 ViewPos, float4x4 Proj)
-{
-    float4 NDC = mul(ViewPos, Proj);
-    NDC /= NDC.w;
-	
-    return NDC;
-}
-float2 NDCToUV(float4 NDCPos)
-{
-    return float2(0.5 + 0.5 * NDCPos.x, 0.5 - 0.5 * NDCPos.y);
-}
-float2 ViewToUV(float4 ViewPos, float4x4 Proj)
-{
-    float4 NDC = ViewToNDC(ViewPos, Proj);
-	
-    float2 UV = NDCToUV(NDC);
-	
-    return UV;
 }
 
 static const int gSampleCount = 16;

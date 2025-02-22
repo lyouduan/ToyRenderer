@@ -18,12 +18,21 @@ A toy  render written in C++ using DirectX 12.
 
 ## Feature
 
-- [x] PBR and  IBL
+- PBR and  IBL
 
 ![IBL](./screenshot/IBL.gif)
 
 
 ## TODO
 
-- [ ] Shadows
-- [ ] Deferred Rendering
+- [x] PBR and  IBL
+- [x] Shadows	
+  - [x] PCF、PCSS、VSM、VSSM、ESM、EVSM
+- [x] Cascaded Shadow Map
+- [x] Tiled Base Deferred Rendering
+- [x] Forward Plus Rendering
+- [x] SSAO
+- [ ] Temporal AA
+- [ ] FXAA
+- [ ] SSR
+- [ ] Bloom

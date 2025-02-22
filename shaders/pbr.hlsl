@@ -70,14 +70,14 @@ float4 PSMain(PSInput pin) : SV_Target
         
         //float NdotL = saturate(dot(N, L));
         //Lo += fr * radiance * NdotL;
-        Lo = DirectLighting(radiance, L, N, V, gRoughness, gMetallic, gDiffuseAlbedo.rgb, 1);
+        Lo = DirectLighting(radiance, L, N, V, Roughness, gMetallic, gDiffuseAlbedo.rgb, 1);
     }
     
     // IBL ambient light
     float3 ambient = 0.0;
     {
         float3 F0 = lerp(F0_DIELECTRIC.rrr, gDiffuseAlbedo.rgb, gMetallic);
-        float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, gRoughness);
+        float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, Roughness);
         float3 kS = F;
         float3 kD = 1.0 - kS;
         kD *= 1.0 - gMetallic;
@@ -86,11 +86,11 @@ float4 PSMain(PSInput pin) : SV_Target
         float3 diffuse = irradiance * gDiffuseAlbedo.rgb;
     
         // sample both the pre-filter map and the BRDF lut and combine them together as per the Split-Sum approximation to get the IBL specular part.
-        float3 prefilteredColor = GetPrefilteredColor(gRoughness, R);
+        float3 prefilteredColor = GetPrefilteredColor(Roughness, R);
     
         // LUT value
         float NdotV = saturate(dot(N, V));
-        float2 brdf = BrdfLUT2D.Sample(LinearWrapSampler, float2(NdotV, gRoughness)).rg;
+        float2 brdf = BrdfLUT2D.Sample(LinearWrapSampler, float2(NdotV, Roughness)).rg;
         float3 specular = prefilteredColor * (F * brdf.x + brdf.y);
         ambient = kD * diffuse + specular;
     }

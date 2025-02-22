@@ -327,6 +327,15 @@ namespace PSOManager
 		TShader SSAOShader(SSAO);
 		m_shaderMap["SSAO"] = SSAOShader;
 
+		TShaderInfo TAA;
+		TAA.FileName = "shaders/TAA";
+		TAA.bCreateVS = true;
+		TAA.bCreatePS = true;
+		TAA.bCreateCS = false;
+		TAA.VSEntryPoint = "VS";
+		TAA.PSEntryPoint = "PS";
+		TShader TAAShader(TAA);
+		m_shaderMap["TAA"] = TAAShader;
 	}
 
 	void InitializeComputeShader()
@@ -409,13 +418,12 @@ namespace PSOManager
 		DebugQuadPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
 		DebugQuadPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 		DebugQuadPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-		dsvDesc.DepthEnable = TRUE;
-		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS_EQUAL; // debug quad render first
+		dsvDesc.DepthEnable = FALSE;
 		DebugQuadPso.SetDepthStencilState(dsvDesc);
 		DebugQuadPso.SetSampleMask(UINT_MAX);
 		DebugQuadPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
 		//pso.SetDepthTargetFormat(g_DepthBuffer.GetFormat());
-		DebugQuadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		DebugQuadPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, DXGI_FORMAT_UNKNOWN);
 		DebugQuadPso.Finalize();
 		m_gfxPSOMap["DebugQuadPSO"] = DebugQuadPso;
 

@@ -9,6 +9,8 @@
 #include "ShadowMap.h"
 #include "CascadedShadowMap.h"
 
+#define TAA_SAMPLE_COUNT 8
+
 class SceneCaptureCube;
 
 class TRender
@@ -38,6 +40,7 @@ public:
 	void GbuffersDebug();
 
 	void SSAOPass();
+	void TAAPass();
 
 	// ForwardPuls Rendering
 	void PrePassDepthBuffer();
@@ -63,6 +66,9 @@ public:
 
 	void CascadedShadowMapPass();
 
+	void EndFrame();
+
+public:
 
 	std::unique_ptr<SceneCaptureCube>& GetIBLEnvironmemtMap() { return IBLEnvironmentMap; }
 	std::unique_ptr<SceneCaptureCube>& GetIBLIrradianceMap() { return IBLIrradianceMap; }
@@ -99,16 +105,24 @@ public:
 	bool GetbEnableShadowMap() { return bEnableShadowMap; }
 	void SetbEnableShadowMap(bool b) { bEnableShadowMap = b; }
 
+	bool GetbEnableTAA() { return bEnableTAA; }
+	void SetbEnableTAA(bool b) { bEnableTAA = b; }
+
 private:
 
 	TD3D12ConstantBufferRef UpdatePassCbuffer();
+
 	void UpdateSSAOPassCbuffer();
-	
+
+	void CreateInputLayouts();
+
 	void CreateSceneCaptureCube();
 
 	void CreateGBuffersResource();
 
 	void CreateGBuffersPSO();
+
+	void CreateTAAResoure();
 
 	void CreateForwardPulsResource();
 
@@ -116,15 +130,21 @@ private:
 
 	void CreateCSMResource();
 
+
 	std::vector<float> CalcGaussianWeights(float sigma);
 
 private:
+	UINT m_RenderFrameCount = 0;
+
+	std::vector<D3D12_INPUT_ELEMENT_DESC>  DefaultInputLayout;
 
 	// PBR and IBL
 	bool bUseEquirectangularMap = false;
 	bool bEnableIBLEnvLighting = true;
+	bool bEnableDeferredRendering = false;
 	bool bDebugGBuffers = false;
 	bool bEnableForwardPuls = false;
+	bool bEnableTAA = false;
 
 	bool bEnableShadowMap = false;
 	
@@ -136,21 +156,25 @@ private:
 
 	// Deferred Redenring
 	// GBuffer info
-	bool bEnableDeferredRendering = false;
 
 	std::unique_ptr<RenderTarget2D> GBufferAlbedo;
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;
 	std::unique_ptr<RenderTarget2D> GBufferNormal;
+	std::unique_ptr<RenderTarget2D> GBufferVelocity;
 	std::unique_ptr<D3D12DepthBuffer> GBufferDepth;
 	TD3D12RWStructuredBufferRef TileLightInfoListRef;
 
 	std::unique_ptr<D3D12ColorBuffer> TiledDepthDebugTexture;
 
+	// SSAO
 	std::unique_ptr<D3D12ColorBuffer> SSAOTexture;
 	std::unique_ptr<D3D12ColorBuffer> SSAOBlurTexture;
-
 	TD3D12ConstantBufferRef SSAOCBRef;
+
+	// TAA 
+	std::unique_ptr<D3D12ColorBuffer> CacheColorTexture;
+	std::unique_ptr<D3D12ColorBuffer> PreColorTexture;
 
 	// forward plus
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;

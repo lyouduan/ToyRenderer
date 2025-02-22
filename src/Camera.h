@@ -21,6 +21,9 @@ public:
 	DirectX::XMMATRIX GetProjMat() const { return m_ProjMat; }
 	DirectX::XMMATRIX GetInvProjMat() const { return m_InvProjMat; }
 
+	void SetPreViewProj(DirectX::XMMATRIX vp) { m_PreViewProjMat = vp; }
+	DirectX::XMMATRIX GetPreViewProjMat() const { return m_PreViewProjMat; }
+
 	DirectX::XMFLOAT3 GetRight3f() const { return mRight; }
 	DirectX::XMFLOAT3 GetUp3f() const { return mUp; }
 	DirectX::XMFLOAT3 GetLook3f() const { return mLook; }
@@ -68,6 +71,7 @@ private:
 	DirectX::XMMATRIX m_ViewMat = DirectX::XMMatrixIdentity();
 	DirectX::XMMATRIX m_ProjMat = DirectX::XMMatrixIdentity();
 	DirectX::XMMATRIX m_InvProjMat = DirectX::XMMatrixIdentity();
+	DirectX::XMMATRIX m_PreViewProjMat = DirectX::XMMatrixIdentity();
 
 	// Euler Angle
 	bool viewDirty = true;

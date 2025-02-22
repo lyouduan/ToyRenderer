@@ -46,6 +46,11 @@ public:
 		m_RTVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
 		m_SRVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
 		m_UAVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+
+		clearColor[0] = ClearColor.x;
+		clearColor[1] = ClearColor.y;
+		clearColor[2] = ClearColor.z;
+		clearColor[3] = ClearColor.w;
 	}
 
 	void CreateFromSwapChain(const std::wstring& name, ID3D12Resource* BaseResource);
@@ -64,9 +69,18 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV(void) { return m_UAVHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetUAV(void) const { return m_UAVHandle; }
 
-	void SetClearColor(DirectX::XMFLOAT4 ClearColor) { m_ClearColor = ClearColor; }
+	void SetClearColor(DirectX::XMFLOAT4 ClearColor) 
+	{
+		m_ClearColor = ClearColor;
+		clearColor[0] = ClearColor.x;
+		clearColor[1] = ClearColor.y;
+		clearColor[2] = ClearColor.z;
+		clearColor[3] = ClearColor.w;
+	}
 
-	DirectX::XMFLOAT4 GetClearColor() { return m_ClearColor; }
+	//DirectX::XMFLOAT4 GetClearColor() { return m_ClearColor; }
+
+	float* GetClearColor() { return (float*)clearColor; }
 
 	void Destroy();
 
@@ -96,6 +110,7 @@ private:
 	void CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, uint32_t ArraySize, uint32_t NumMips = 1);
 
 	DirectX::XMFLOAT4 m_ClearColor;
+	float clearColor[4];
 
 	D3D12_CPU_DESCRIPTOR_HANDLE m_RTVHandle;
 	D3D12_CPU_DESCRIPTOR_HANDLE m_SRVHandle;
@@ -153,6 +168,11 @@ public:
 		for(UINT i = 0; i < _countof(m_RTVHandle); i++)
 			m_RTVHandle[i].ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
 		m_SRVHandle.ptr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN;
+
+		clearColor[0] = ClearColor.x;
+		clearColor[1] = ClearColor.y;
+		clearColor[2] = ClearColor.z;
+		clearColor[3] = ClearColor.w;
 	}
 
 	void Create(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t NumMips, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
@@ -163,9 +183,18 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) { return m_SRVHandle; }
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(void) const { return m_SRVHandle; }
 
-	void SetClearColor(DirectX::XMFLOAT4 ClearColor) { m_ClearColor = ClearColor; }
+	//void SetClearColor(DirectX::XMFLOAT4 ClearColor) { m_ClearColor = ClearColor; }
+	//DirectX::XMFLOAT4 GetClearClolor() const { return m_ClearColor; }
 
-	DirectX::XMFLOAT4 GetClearClolor() const { return m_ClearColor; }
+	void SetClearColor(DirectX::XMFLOAT4 ClearColor)
+	{
+		m_ClearColor = ClearColor;
+		clearColor[0] = ClearColor.x;
+		clearColor[1] = ClearColor.y;
+		clearColor[2] = ClearColor.z;
+		clearColor[3] = ClearColor.w;
+	}
+	float* GetClearColor() { return (float*)clearColor; }
 
 private:
 
@@ -193,6 +222,7 @@ private:
 	void CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, uint32_t ArraySize, uint32_t NumMips = 1);
 
 	DirectX::XMFLOAT4 m_ClearColor;
+	float clearColor[4];
 
 	D3D12_CPU_DESCRIPTOR_HANDLE m_RTVHandle[6];
 	D3D12_CPU_DESCRIPTOR_HANDLE m_SRVHandle;

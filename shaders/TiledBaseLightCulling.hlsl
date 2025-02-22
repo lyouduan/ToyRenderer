@@ -1,5 +1,7 @@
 #include "lightInfo.hlsl"
 #include "common.hlsl"
+#include "Utlis.hlsl"
+
 #ifndef TILE_BLOCK_SIZE
 #pragma message("TILE_BLOCK_SIZE undefined. Default to 16.")
 #define TILE_BLOCK_SIZE 16// should be defined by the application.
@@ -64,34 +66,6 @@ struct TFrustum
     float FarZ;
 };
 
-float4 NDCToView(float4 NDCPos, float4x4 InvProj)
-{
-    float4 View = mul(NDCPos, InvProj);
-    View /= View.w;
- 
-    return View;
-}
-
-float2 ScreenToUV(float2 ScreenPos, float2 ScreenSize)
-{
-    return ScreenPos /= ScreenSize;
-}
-
-float4 UVToNDC(float2 UVPos, float Depth)
-{
-    return float4(2 * UVPos.x - 1, 1 - 2 * UVPos.y, Depth, 1.0f);
-}
-
-float4 ScreenToView(float2 ScreenPos, float2 ScreenSize, float NDCDepth, float4x4 InvProj)
-{
-    float2 UV = ScreenToUV(ScreenPos, ScreenSize);
-	
-    float4 NDC = UVToNDC(UV, NDCDepth);
-	
-    float4 View = NDCToView(NDC, InvProj);
-	
-    return View;
-}
 // If the sphere is fully or partially contained within the frustum, return true.
 bool SphereInsideFrustum(TSphere Sphere, TFrustum Frustum)
 {

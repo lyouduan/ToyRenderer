@@ -7,9 +7,12 @@
 #include "ImGuiManager.h"
 #include "Light.h"
 #include "RenderInfo.h"
+#include "Sampler.h"
+#include <sstream>
 
 using namespace TD3D12RHI;
 using namespace PSOManager;
+
 TRender::TRender()
 {
 }
@@ -20,10 +23,13 @@ TRender::~TRender()
 
 void TRender::Initalize()
 {
+	CreateInputLayouts();
+
 	CreateSceneCaptureCube();
 
 	CreateGBuffersResource();
 	CreateGBuffersPSO(); // need initializing GBuffers first
+	CreateTAAResoure();
 
 	CreateForwardPulsResource();
 
@@ -314,7 +320,7 @@ void TRender::CreateIBLPrefilterMap()
 
 		ObjCBuffer obj;
 		PassCBuffer passcb;
-		passcb.Pad0 = (float)Mip / (float)(IBLPrefilterMaxMipLevel - 1);
+		passcb.roughness = (float)Mip / (float)(IBLPrefilterMaxMipLevel - 1);
 
 		for (UINT i = 0; i < 6; i++)
 		{
@@ -476,14 +482,16 @@ void TRender::GbuffersPass()
 	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(GBufferSpecular->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(GBufferWorldPos->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(GBufferVelocity->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 	g_CommandContext.Transition(GBufferDepth->GetD3D12Resource(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 
 	// clear renderTargets
-	float clearColor[4] = { GBufferAlbedo->GetClearColor().x,GBufferAlbedo->GetClearColor().y,GBufferAlbedo->GetClearColor().z,GBufferAlbedo->GetClearColor().w };
-	gfxCmdList->ClearRenderTargetView(GBufferAlbedo->GetRTV(), (float*)&clearColor, 0, nullptr);
-	gfxCmdList->ClearRenderTargetView(GBufferNormal->GetRTV(), (float*)&clearColor, 0, nullptr);
-	gfxCmdList->ClearRenderTargetView(GBufferSpecular->GetRTV(),  (float*)&clearColor, 0, nullptr);
-	gfxCmdList->ClearRenderTargetView(GBufferWorldPos->GetRTV(),  (float*)&clearColor, 0, nullptr);
+	float* clearColor = GBufferAlbedo->GetClearColor();
+	gfxCmdList->ClearRenderTargetView(GBufferAlbedo->GetRTV(), (float*)clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferNormal->GetRTV(), (float*)clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferSpecular->GetRTV(),  (float*)clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferWorldPos->GetRTV(),  (float*)clearColor, 0, nullptr);
+	gfxCmdList->ClearRenderTargetView(GBufferVelocity->GetRTV(),  (float*)clearColor, 0, nullptr);
 
 	gfxCmdList->ClearDepthStencilView(GBufferDepth->GetDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0f, 0, 0, nullptr);
 
@@ -493,6 +501,7 @@ void TRender::GbuffersPass()
 	RtvDescriptors.push_back(GBufferSpecular->GetRTV());
 	RtvDescriptors.push_back(GBufferWorldPos->GetRTV());
 	RtvDescriptors.push_back(GBufferNormal->GetRTV());
+	RtvDescriptors.push_back(GBufferVelocity->GetRTV());
 
 	CD3DX12_CPU_DESCRIPTOR_HANDLE CpuHandle;
 	CD3DX12_GPU_DESCRIPTOR_HANDLE GpuHandle;
@@ -503,38 +512,25 @@ void TRender::GbuffersPass()
 	gfxCmdList->SetGraphicsRootSignature(m_gfxPSOMap["GBuffersPso"].GetRootSignature());
 	gfxCmdList->SetPipelineState(m_gfxPSOMap["GBuffersPso"].GetPSO());
 
-
 	auto passCBufferRef = UpdatePassCbuffer();
+	// draw all mesh
 
-	// draw all mesh
-	//for (int i = 0; i < 3; i++)
-	//{
-	//	for (int j = 0; j < 3; j++)
-	//	{
-	//		ObjCBuffer obj;
-	//		XMMATRIX translationMatrix = XMMatrixTranslation(-10 + i*10, 0, j*10);
-	//		XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
-	//		ModelManager::m_ModelMaps["nanosuit"].SetObjCBuffer(obj);
-	//
-	//		DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
-	//	}
-	//}
-	//
-	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["wall"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
-	
-	// draw all mesh
+	auto& Cylinder = ModelManager::m_ModelMaps["Cylinder"];
 	for (int i = 0; i < 5; i++)
 	{
 		for (int j = 0; j < 5; j++)
 		{
 			ObjCBuffer obj;
+			// record previous frame data
+			obj.PreModelMat = Cylinder.GetObjCBuffer().ModelMat;
+
 			XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
 			XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
 			XMVECTOR det;
 			auto invModelMat = XMMatrixTranspose(XMMatrixInverse(&det, translationMatrix)); // inverse Transpose
 			XMStoreFloat4x4(&obj.InvTranModelMat, XMMatrixTranspose(invModelMat));
-			ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
-			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
+			Cylinder.SetObjCBuffer(obj);
+			DrawMesh(g_CommandContext, Cylinder, m_shaderMap["GBuffersPassShader"], passCBufferRef);
 		}
 	}
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
@@ -544,6 +540,7 @@ void TRender::GbuffersPass()
 	g_CommandContext.Transition(GBufferNormal->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(GBufferSpecular->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(GBufferWorldPos->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(GBufferVelocity->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(GBufferDepth->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
@@ -629,6 +626,9 @@ void TRender::GbuffersDebug()
 	case GBufferType::Specular:
 		texSRV = GBufferSpecular->GetSRV();
 		break;
+	case GBufferType::Velocity:
+		texSRV = GBufferVelocity->GetSRV();
+		break;
 	case GBufferType::LightMap:
 		texSRV = TiledDepthDebugTexture->GetSRV();
 		break;
@@ -637,7 +637,7 @@ void TRender::GbuffersDebug()
 		break;
 	}
 
-	texSRV = SSAOTexture->GetSRV();
+	texSRV = PreColorTexture->GetSRV();
 	shader.SetParameter("tex", texSRV);
 	
 	shader.BindParameters();
@@ -659,7 +659,7 @@ void TRender::SSAOPass()
 	gfxCmdList->RSSetViewports(1, &m_Viewport);
 	gfxCmdList->RSSetScissorRects(1, &m_ScissorRect);
 
-	float clearColor[4] = { SSAOTexture->GetClearColor().x,SSAOTexture->GetClearColor().y,SSAOTexture->GetClearColor().z,SSAOTexture->GetClearColor().w };
+	float* clearColor = SSAOTexture->GetClearColor();
 	gfxCmdList->ClearRenderTargetView(SSAOTexture->GetRTV(), (float*)clearColor, 0, nullptr);
 
 	gfxCmdList->OMSetRenderTargets(1, &SSAOTexture->GetRTV(), true, nullptr);
@@ -729,6 +729,54 @@ void TRender::SSAOPass()
 
 	g_CommandContext.Transition(SSAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(SSAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+}
+
+void TRender::TAAPass()
+{
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+	if (m_RenderFrameCount > 0)
+	{
+		auto shader = m_shaderMap["TAA"];
+		auto pso = PSOManager::m_gfxPSOMap["TAA"];
+
+		// Save current color result to CacheColorTexture.
+		g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+		g_CommandContext.Transition(CacheColorTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_DEST);
+		gfxCmdList->CopyResource(CacheColorTexture->GetResource(), m_renderTragetrs[g_frameIndex].GetResource());
+		g_CommandContext.Transition(CacheColorTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+		g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+		// Set the viewport and scissor rect
+		D3D12_VIEWPORT m_Viewport = { 0.0, 0.0, (float)g_DisplayWidth, (float)g_DisplayHeight, 0.0, 1.0 };
+		D3D12_RECT m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
+		gfxCmdList->RSSetViewports(1, &m_Viewport);
+		gfxCmdList->RSSetScissorRects(1, &m_ScissorRect);
+
+		gfxCmdList->ClearRenderTargetView(m_renderTragetrs[g_frameIndex].GetRTV(), (float*)ImGuiManager::clearColor, 0, nullptr);
+
+		gfxCmdList->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), true, nullptr);
+
+		// set pso
+		gfxCmdList->SetPipelineState(pso.GetPSO());
+		gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+
+		auto passCBufferRef = UpdatePassCbuffer();
+		shader.SetParameter("passCBuffer", passCBufferRef);
+		shader.SetParameter("ColorTexture", CacheColorTexture->GetSRV());
+		shader.SetParameter("PrevColorTexture", PreColorTexture->GetSRV());
+		shader.SetParameter("GBufferVelocity", GBufferVelocity->GetSRV());
+		shader.SetParameter("GbufferDepth", GBufferDepth->GetSRV());
+		shader.BindParameters();
+
+		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+	}
+
+	// Copy back-buffer to PrevColorTexture.
+	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+	g_CommandContext.Transition(PreColorTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_DEST);
+	gfxCmdList->CopyResource(PreColorTexture->GetResource(), m_renderTragetrs[g_frameIndex].GetResource());
+	g_CommandContext.Transition(PreColorTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
 }
 
 void TRender::PrePassDepthBuffer()
@@ -1139,6 +1187,15 @@ void TRender::CascadedShadowMapPass()
 
 }
 
+void TRender::EndFrame()
+{
+	m_RenderFrameCount++;
+
+	std::wstringstream ss;
+	ss << L"渲染总帧数[ " << m_RenderFrameCount << " ]\n";
+	OutputDebugStringW(ss.str().c_str());
+}
+
 void TRender::GenerateVSM()
 {
 	// --------------- Get depth sqaure ---------------
@@ -1360,10 +1417,30 @@ void TRender::GenerateVSSM()
 
 TD3D12ConstantBufferRef TRender::UpdatePassCbuffer()
 {
+	XMMATRIX view = g_Camera.GetViewMat();
+	XMMATRIX proj = g_Camera.GetProjMat();
+
+	if (bEnableTAA)
+	{
+		UINT SampleIdx = m_RenderFrameCount % TAA_SAMPLE_COUNT;
+		double JitterX = Halton_2[SampleIdx] / (double)g_DisplayWidth;
+		double JitterY = Halton_3[SampleIdx] / (double)g_DisplayHeight;
+		
+		proj.r[2][0] += (float)JitterX;
+		proj.r[2][1] += (float)JitterY;
+	}
+
+	//XMMATRIX ViewProj = view * proj;
+	XMVECTOR det;
+	XMMATRIX invProj = XMMatrixInverse(&det, proj);
+	XMMATRIX preViewProj = g_Camera.GetPreViewProjMat();
+
 	PassCBuffer passCB;
-	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(g_Camera.GetViewMat()));
-	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(g_Camera.GetProjMat()));
-	XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(g_Camera.GetInvProjMat()));
+	XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(view));
+	XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(proj));
+	XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(invProj));
+	XMStoreFloat4x4(&passCB.PreViewProjMat, XMMatrixTranspose(preViewProj));
+
 	passCB.EyePosition = g_Camera.GetPosition3f();
 	passCB.lightPos = ImGuiManager::lightPos;
 	passCB.lightColor = ImGuiManager::lightColor;
@@ -1394,6 +1471,23 @@ void TRender::UpdateSSAOPassCbuffer()
 	SSAOCBRef = TD3D12RHI::CreateConstantBuffer(&SSAOcb, sizeof(SSAOCBuffer));
 }
 
+void TRender::CreateInputLayouts()
+{
+	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	{
+		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
+		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
+	};
+
+	for (int i = 0; i < _countof(inputElementDescs); i++)
+	{
+		DefaultInputLayout.push_back(inputElementDescs[i]);
+	}
+
+}
+
 void TRender::CreateSceneCaptureCube()
 {
 	IBLEnvironmentMap = std::make_unique<SceneCaptureCube>(L"IBL Environment Map", 256, 256, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
@@ -1420,6 +1514,7 @@ void TRender::CreateGBuffersResource()
 	GBufferSpecular = std::make_unique<RenderTarget2D>(L"Gbuffer Specular", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	GBufferWorldPos = std::make_unique<RenderTarget2D>(L"Gbuffer WorldPosition", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
 	GBufferNormal = std::make_unique<RenderTarget2D>(L"Gbuffer Normal", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16B16A16_FLOAT);
+	GBufferVelocity = std::make_unique<RenderTarget2D>(L"Gbuffer Velocity", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16G16_FLOAT);
 
 	GBufferDepth = std::make_unique<D3D12DepthBuffer>();
 	GBufferDepth->Create(L"Gbuffer Depth", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_D32_FLOAT);
@@ -1454,34 +1549,14 @@ void TRender::CreateGBuffersResource()
 		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
 	};
 
-	GraphicsPSO SSAOPso(L"SSAO PSO");
-	SSAOPso.SetShader(&m_shaderMap["SSAO"]);
-	SSAOPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
-	SSAOPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-	SSAOPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-	CD3DX12_DEPTH_STENCIL_DESC dsvDesc = {};
-	dsvDesc.DepthEnable = FALSE;
-	SSAOPso.SetDepthStencilState(dsvDesc);
-	SSAOPso.SetSampleMask(UINT_MAX);
-	SSAOPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	SSAOPso.SetRenderTargetFormat(SSAOTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
-	SSAOPso.Finalize();
-	m_gfxPSOMap["SSAO"] = SSAOPso;
 }
 
 void TRender::CreateGBuffersPSO()
 {
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
-	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-	};
-
+	
 	GraphicsPSO GBuffersPso(L"GBuffers PSO");
 	GBuffersPso.SetShader(&m_shaderMap["GBuffersPassShader"]);
-	GBuffersPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	GBuffersPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
 	GBuffersPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 	GBuffersPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
 	CD3DX12_DEPTH_STENCIL_DESC dsvDesc;
@@ -1495,11 +1570,11 @@ void TRender::CreateGBuffersPSO()
 	//GBuffersPso.SetDepthTargetFormat(GBufferDepth->GetFormat());
 	DXGI_FORMAT GBuffersFormat[] =
 	{
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		DXGI_FORMAT_R16G16B16A16_FLOAT,
-		//DXGI_FORMAT_R16G16B16A16_FLOAT
+		GBufferAlbedo->GetFormat(),
+		GBufferSpecular->GetFormat(),
+		GBufferWorldPos->GetFormat(),
+		GBufferNormal->GetFormat(),
+		GBufferVelocity->GetFormat()
 	};
 	GBuffersPso.SetRenderTargetFormats(_countof(GBuffersFormat), GBuffersFormat, GBufferDepth->GetFormat());
 	GBuffersPso.Finalize();
@@ -1507,7 +1582,7 @@ void TRender::CreateGBuffersPSO()
 
 	GraphicsPSO DeferredShadingPso(L"DeferredShading PSO");
 	DeferredShadingPso.SetShader(&m_shaderMap["DeferredShadingShader"]);
-	DeferredShadingPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+	DeferredShadingPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
 	DeferredShadingPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
 	DeferredShadingPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
 	DeferredShadingPso.SetDepthStencilState(dsvDesc);
@@ -1516,6 +1591,42 @@ void TRender::CreateGBuffersPSO()
 	DeferredShadingPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, GBufferDepth->GetFormat());
 	DeferredShadingPso.Finalize();
 	m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
+
+	GraphicsPSO SSAOPso(L"SSAO PSO");
+	SSAOPso.SetShader(&m_shaderMap["SSAO"]);
+	SSAOPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
+	SSAOPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	SSAOPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	dsvDesc.DepthEnable = FALSE;
+	SSAOPso.SetDepthStencilState(dsvDesc);
+	SSAOPso.SetSampleMask(UINT_MAX);
+	SSAOPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	SSAOPso.SetRenderTargetFormat(SSAOTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	SSAOPso.Finalize();
+	m_gfxPSOMap["SSAO"] = SSAOPso;
+}
+
+void TRender::CreateTAAResoure()
+{
+	CacheColorTexture = std::make_unique<D3D12ColorBuffer>();
+	CacheColorTexture->Create(L"CacheColorTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	PreColorTexture = std::make_unique<D3D12ColorBuffer>();
+	PreColorTexture->Create(L"PreColorTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	GraphicsPSO TAAPso(L"TAA PSO");
+	TAAPso.SetShader(&m_shaderMap["TAA"]);
+	TAAPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
+	TAAPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	TAAPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	CD3DX12_DEPTH_STENCIL_DESC dsvDesc = {};
+	dsvDesc.DepthEnable = FALSE;
+	TAAPso.SetDepthStencilState(dsvDesc);
+	TAAPso.SetSampleMask(UINT_MAX);
+	TAAPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	TAAPso.SetRenderTargetFormat(CacheColorTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	TAAPso.Finalize();
+	m_gfxPSOMap["TAA"] = TAAPso;
 }
 
 void TRender::CreateForwardPulsResource()

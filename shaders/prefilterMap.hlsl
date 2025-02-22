@@ -1,24 +1,5 @@
+#include "common.hlsl"
 #include "sample.hlsl"
-
-cbuffer objCBuffer : register(b0)
-{
-    float4x4 ModelMat;
-    float4x4 gInvTranModelMat;
-}
-
-cbuffer passCBuffer : register(b1)
-{
-    float4x4 gViewMat;
-    float4x4 gProjMat;
-    
-    float3 gEyePosW;
-    float gRoughness;
-    
-    float3 gLightPos;
-    float pad1;
-    float3 gLightColor;
-    float pad2;
-}
 
 struct VSInput
 {
@@ -38,12 +19,6 @@ struct PSInput
 
 TextureCube EnvironmentMap: register(t0);
 
-SamplerState PointWrapSampler : register(s0);
-SamplerState PointClampSampler : register(s1);
-SamplerState LinearWrapSampler : register(s2);
-SamplerState LinearClampSampler : register(s3);
-SamplerState AnisotropicWrapSampler : register(s4);
-SamplerState AnisotropicClampSampler : register(s5);
 
 PSInput VSMain(VSInput vin)
 {

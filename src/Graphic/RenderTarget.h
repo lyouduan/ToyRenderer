@@ -36,7 +36,12 @@ public:
 
 	void CreateDepthBuffer();
 
-	DirectX::XMFLOAT4 GetClearColor() { return RenderMap.GetClearColor(); }
+	float* GetClearColor() { return RenderMap.GetClearColor(); }
+
+	uint32_t GetWidth(void) const { return m_Width; }
+	uint32_t GetHeight(void) const { return m_Height; }
+	const DXGI_FORMAT& GetFormat(void) const { return m_Format; }
+
 private:
 
 	void SetViewportAndScissorRect();
