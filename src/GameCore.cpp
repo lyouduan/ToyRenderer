@@ -162,6 +162,7 @@ void GameCore::UpdateImGui()
 			}
 		}
 		
+		
 
 		// forward puls
 		if (ImGui::Checkbox("Enable Forward Puls Rendering", &ImGuiManager::bEnableForwardPuls))
@@ -184,6 +185,19 @@ void GameCore::UpdateImGui()
 		if (ImGuiManager::bEnableShadowMap)
 			ImGuiManager::ShadowTypeCombo();
 
+
+		// Post processing FXAA
+		if (ImGui::Checkbox("Enable FXAA", &ImGuiManager::bEnableFXAA))
+		{
+			if (ImGuiManager::bEnableFXAA)
+			{
+				m_Render->SetbEnableFXAA(true);
+			}
+			else
+			{
+				m_Render->SetbEnableFXAA(false);
+			}
+		}
 
 		// camera control
 		g_Camera.CamerImGui();
@@ -406,6 +420,9 @@ void GameCore::PopulateCommandList()
 
 	if (m_Render->GetbDebugGBuffers())
 		m_Render->GbuffersDebug();
+
+	if(m_Render->GetbEnableFXAA())
+		m_Render->FXAAPass();
 
 	// Draw ImGui
 	ImGuiManager::EndRenderImGui(g_CommandContext);

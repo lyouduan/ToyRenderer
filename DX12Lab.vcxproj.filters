@@ -308,6 +308,9 @@
     <ClInclude Include="src\Graphic\CascadedShadowMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\Utils\Sampler.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="shaders\modelShader.hlsl" />
@@ -338,6 +341,10 @@
     <None Include="shaders\BlurVSM.hlsl" />
     <None Include="shaders\SAT.hlsl" />
     <None Include="shaders\TiledBaseLightCulling.hlsl" />
+    <None Include="shaders\SSAO.hlsl" />
+    <None Include="shaders\Utlis.hlsl" />
+    <None Include="shaders\TAA.hlsl" />
+    <None Include="shaders\FXAA.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

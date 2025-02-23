@@ -36,6 +36,8 @@ void TRender::Initalize()
 	CreateShadowResource();
 
 	CreateCSMResource();
+
+	CreateFXAAResource();
 }
 
 void TRender::SetDescriptorHeaps()
@@ -1187,6 +1189,44 @@ void TRender::CascadedShadowMapPass()
 
 }
 
+void TRender::FXAAPass()
+{
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	// copy render target to FXAA
+	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+	g_CommandContext.Transition(FXAATexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_DEST);
+	gfxCmdList->CopyResource(FXAATexture->GetResource(), m_renderTragetrs[g_frameIndex].GetResource());
+	g_CommandContext.Transition(FXAATexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	// set viewport and scissorRect
+	D3D12_VIEWPORT m_Viewport = { 0.0, 0.0, (float)g_DisplayWidth, (float)g_DisplayHeight, 0.0, 1.0 };
+	D3D12_RECT m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
+	gfxCmdList->RSSetViewports(1, &m_Viewport);
+	gfxCmdList->RSSetScissorRects(1, &m_ScissorRect);
+
+	gfxCmdList->ClearRenderTargetView(m_renderTragetrs[g_frameIndex].GetRTV(), (float*)ImGuiManager::clearColor, 0, nullptr);
+	gfxCmdList->OMSetRenderTargets(1, &m_renderTragetrs[g_frameIndex].GetRTV(), true, nullptr);
+
+	// set PSO and rootSignature
+	auto shader = m_shaderMap["FXAA"];
+	auto pso = PSOManager::m_gfxPSOMap["FXAA"];
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+
+	// binding shader resoures
+	auto passcbRef = UpdatePassCbuffer();
+	shader.SetParameter("passCBuffer", passcbRef);
+	shader.SetParameter("ColorTexture", FXAATexture->GetSRV());
+	shader.BindParameters();
+
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+
+	// Transition
+	//g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+}
+
 void TRender::EndFrame()
 {
 	m_RenderFrameCount++;
@@ -1703,6 +1743,27 @@ void TRender::CreateCSMResource()
 {
 	
 	m_CascadedShadowMap = std::make_unique<CascadedShadowMap>(L"Cascaded ShadowMap", CSMSize, CSMSize, DXGI_FORMAT_D32_FLOAT, CSM_MAX_COUNT);
+}
+
+void TRender::CreateFXAAResource()
+{
+	FXAATexture = std::make_unique<D3D12ColorBuffer>();
+	FXAATexture->Create(L"FXAA Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
+
+	// PSO
+	GraphicsPSO FXAAPso(L"FXAA PSO");
+	FXAAPso.SetShader(&m_shaderMap["FXAA"]);
+	FXAAPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
+	FXAAPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	FXAAPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	CD3DX12_DEPTH_STENCIL_DESC dsvDesc = {};
+	dsvDesc.DepthEnable = FALSE;
+	FXAAPso.SetDepthStencilState(dsvDesc);
+	FXAAPso.SetSampleMask(UINT_MAX);
+	FXAAPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	FXAAPso.SetRenderTargetFormat(FXAATexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	FXAAPso.Finalize();
+	m_gfxPSOMap["FXAA"] = FXAAPso;
 }
 
 std::vector<float> TRender::CalcGaussianWeights(float sigma)

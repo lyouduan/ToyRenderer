@@ -32,7 +32,7 @@ A toy  render written in C++ using DirectX 12.
 - [x] Tiled Base Deferred Rendering
 - [x] Forward Plus Rendering
 - [x] SSAO
-- [ ] Temporal AA
-- [ ] FXAA
+- [x] Temporal AA
+- [x] FXAA
 - [ ] SSR
 - [ ] Bloom

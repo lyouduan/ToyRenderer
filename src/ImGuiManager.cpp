@@ -17,6 +17,7 @@ namespace ImGuiManager
 	bool bEnableForwardPuls = false;
 	bool bEnableShadowMap = false;
 	bool bEnableTAA = false;
+	bool bEnableFXAA = false;
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;

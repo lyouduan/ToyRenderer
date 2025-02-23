@@ -64,7 +64,11 @@ public:
 	// TODO
 	void GenerateSAT();
 
+	// CSM
 	void CascadedShadowMapPass();
+
+	// post processing
+	void FXAAPass();
 
 	void EndFrame();
 
@@ -108,6 +112,9 @@ public:
 	bool GetbEnableTAA() { return bEnableTAA; }
 	void SetbEnableTAA(bool b) { bEnableTAA = b; }
 
+	bool GetbEnableFXAA() { return bEnableFXAA; }
+	void SetbEnableFXAA(bool b) { bEnableFXAA = b; }
+
 private:
 
 	TD3D12ConstantBufferRef UpdatePassCbuffer();
@@ -130,6 +137,7 @@ private:
 
 	void CreateCSMResource();
 
+	void CreateFXAAResource();
 
 	std::vector<float> CalcGaussianWeights(float sigma);
 
@@ -145,6 +153,7 @@ private:
 	bool bDebugGBuffers = false;
 	bool bEnableForwardPuls = false;
 	bool bEnableTAA = false;
+	bool bEnableFXAA = false;
 
 	bool bEnableShadowMap = false;
 	
@@ -205,6 +214,9 @@ private:
 	// Cascaded shadow map
 	uint32_t CSMSize = 1024;
 	std::unique_ptr<CascadedShadowMap> m_CascadedShadowMap;
+
+	// FXAA 
+	std::unique_ptr<D3D12ColorBuffer> FXAATexture;
 };
 
  

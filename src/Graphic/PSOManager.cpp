@@ -172,7 +172,6 @@ namespace PSOManager
 		TShader preDepthPassShader(preDepthPassInfo);
 		m_shaderMap["preDepthPass"] = preDepthPassShader;
 
-
 		TShaderInfo ForwardPulsPassInfo;
 		ForwardPulsPassInfo.FileName = "shaders/ForwardPulsPass";
 		ForwardPulsPassInfo.bCreateVS = true;
@@ -183,6 +182,25 @@ namespace PSOManager
 		TShader ForwardPulsPassShader(ForwardPulsPassInfo);
 		m_shaderMap["ForwardPulsPass"] = ForwardPulsPassShader;
 
+		TShaderInfo TAA;
+		TAA.FileName = "shaders/TAA";
+		TAA.bCreateVS = true;
+		TAA.bCreatePS = true;
+		TAA.bCreateCS = false;
+		TAA.VSEntryPoint = "VS";
+		TAA.PSEntryPoint = "PS";
+		TShader TAAShader(TAA);
+		m_shaderMap["TAA"] = TAAShader;
+
+		TShaderInfo FXAAInfo;
+		FXAAInfo.FileName = "shaders/FXAA";
+		FXAAInfo.bCreateVS = true;
+		FXAAInfo.bCreatePS = true;
+		FXAAInfo.bCreateCS = false;
+		FXAAInfo.VSEntryPoint = "VS";
+		FXAAInfo.PSEntryPoint = "PS";
+		TShader FXAAShader(FXAAInfo);
+		m_shaderMap["FXAA"] = FXAAShader;
 
 		GenerateShadowShader();
 
@@ -326,16 +344,6 @@ namespace PSOManager
 		SSAO.PSEntryPoint = "PS";
 		TShader SSAOShader(SSAO);
 		m_shaderMap["SSAO"] = SSAOShader;
-
-		TShaderInfo TAA;
-		TAA.FileName = "shaders/TAA";
-		TAA.bCreateVS = true;
-		TAA.bCreatePS = true;
-		TAA.bCreateCS = false;
-		TAA.VSEntryPoint = "VS";
-		TAA.PSEntryPoint = "PS";
-		TShader TAAShader(TAA);
-		m_shaderMap["TAA"] = TAAShader;
 	}
 
 	void InitializeComputeShader()

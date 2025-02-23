@@ -20,6 +20,7 @@ namespace ImGuiManager
 	extern bool bEnableForwardPuls;
 	extern bool bEnableShadowMap;
 	extern bool bEnableTAA;
+	extern bool bEnableFXAA;
 	extern bool bDebugGBuffers;
 	extern int  GbufferType;
 	extern int  ShadowType;
