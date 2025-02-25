@@ -22,7 +22,7 @@ namespace ImGuiManager
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;
 	
-	SSAOParams ssaoParams = { 0.5f , 0.2f, 1.0f, 0.05f };
+	SSAOParams ssaoParams = { 0.03f , 0.01f, 0.03f, 0.001f };
 
 	float  cascadeBlendColor = 0.0f;
 
@@ -148,7 +148,7 @@ namespace ImGuiManager
 			Specular,
 			Count,
 		};*/
-		const char* items[] = { "Position", "Normal", "Albedo", "Specular", "Velocity", "LightMap"};
+		const char* items[] = { "Position", "Normal", "Albedo", "Specular","SSAO", "Velocity", "LightMap"};
 
 		// 创建选择框
 		if (ImGui::BeginCombo("Select an option", items[GbufferType])) {

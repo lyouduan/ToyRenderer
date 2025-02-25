@@ -28,6 +28,7 @@ enum class GBufferType
     Normal,
     Albedo,
     Specular,
+    SSAO,
     Velocity,
     LightMap,
     Count,

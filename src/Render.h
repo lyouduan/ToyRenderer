@@ -40,6 +40,7 @@ public:
 	void GbuffersDebug();
 
 	void SSAOPass();
+	void HBAOPass();
 	void TAAPass();
 
 	// ForwardPuls Rendering
@@ -127,6 +128,8 @@ private:
 
 	void CreateGBuffersResource();
 
+	void CreateAOResource();
+
 	void CreateGBuffersPSO();
 
 	void CreateTAAResoure();
@@ -165,7 +168,6 @@ private:
 
 	// Deferred Redenring
 	// GBuffer info
-
 	std::unique_ptr<RenderTarget2D> GBufferAlbedo;
 	std::unique_ptr<RenderTarget2D> GBufferSpecular;
 	std::unique_ptr<RenderTarget2D> GBufferWorldPos;
@@ -180,6 +182,12 @@ private:
 	std::unique_ptr<D3D12ColorBuffer> SSAOTexture;
 	std::unique_ptr<D3D12ColorBuffer> SSAOBlurTexture;
 	TD3D12ConstantBufferRef SSAOCBRef;
+	TD3D12StructuredBufferRef ssaoKernelSBRef;
+	TD3D12StructuredBufferRef randomSBRef;
+
+	// HBAO
+	std::unique_ptr<D3D12ColorBuffer> HBAOTexture;
+	std::unique_ptr<D3D12ColorBuffer> HBAOBlurTexture;
 
 	// TAA 
 	std::unique_ptr<D3D12ColorBuffer> CacheColorTexture;

@@ -345,6 +345,8 @@
     <None Include="shaders\Utlis.hlsl" />
     <None Include="shaders\TAA.hlsl" />
     <None Include="shaders\FXAA.hlsl" />
+    <None Include="shaders\HBAO.hlsl" />
+    <None Include="shaders\BilateralBlur.hlsl" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="textures\WoodCrate01.dds" />

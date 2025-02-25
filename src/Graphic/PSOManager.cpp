@@ -344,6 +344,26 @@ namespace PSOManager
 		SSAO.PSEntryPoint = "PS";
 		TShader SSAOShader(SSAO);
 		m_shaderMap["SSAO"] = SSAOShader;
+
+		TShaderInfo HBAO;
+		HBAO.FileName = "shaders/HBAO";
+		HBAO.bCreateVS = true;
+		HBAO.bCreatePS = true;
+		HBAO.bCreateCS = false;
+		HBAO.VSEntryPoint = "VS";
+		HBAO.PSEntryPoint = "PS";
+		TShader HBAOShader(HBAO);
+		m_shaderMap["HBAO"] = HBAOShader;
+
+		TShaderInfo HBAOBlur;
+		HBAOBlur.FileName = "shaders/BilateralBlur";
+		HBAOBlur.bCreateVS = true;
+		HBAOBlur.bCreatePS = true;
+		HBAOBlur.bCreateCS = false;
+		HBAOBlur.VSEntryPoint = "VS";
+		HBAOBlur.PSEntryPoint = "PS";
+		TShader HBAOBlurShader(HBAOBlur);
+		m_shaderMap["HBAOBlur"] = HBAOBlurShader;
 	}
 
 	void InitializeComputeShader()

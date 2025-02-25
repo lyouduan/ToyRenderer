@@ -366,6 +366,7 @@ void GameCore::PopulateCommandList()
 	{
 		m_Render->GbuffersPass();
 		m_Render->SSAOPass();
+		m_Render->HBAOPass();
 		m_Render->TiledBaseLightCulling();
 	}
 

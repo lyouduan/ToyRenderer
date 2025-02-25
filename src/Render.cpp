@@ -8,7 +8,10 @@
 #include "Light.h"
 #include "RenderInfo.h"
 #include "Sampler.h"
+#include "D3D12Texture.h"
+
 #include <sstream>
+#include <random>
 
 using namespace TD3D12RHI;
 using namespace PSOManager;
@@ -28,7 +31,11 @@ void TRender::Initalize()
 	CreateSceneCaptureCube();
 
 	CreateGBuffersResource();
+
 	CreateGBuffersPSO(); // need initializing GBuffers first
+
+	CreateAOResource();
+
 	CreateTAAResoure();
 
 	CreateForwardPulsResource();
@@ -535,6 +542,8 @@ void TRender::GbuffersPass()
 			DrawMesh(g_CommandContext, Cylinder, m_shaderMap["GBuffersPassShader"], passCBufferRef);
 		}
 	}
+
+	//DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["nanosuit"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
 	DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], m_shaderMap["GBuffersPassShader"], passCBufferRef);
 
 	// transit to generic read state
@@ -628,6 +637,9 @@ void TRender::GbuffersDebug()
 	case GBufferType::Specular:
 		texSRV = GBufferSpecular->GetSRV();
 		break;
+	case GBufferType::SSAO:
+		texSRV = HBAOTexture->GetSRV();
+		break;
 	case GBufferType::Velocity:
 		texSRV = GBufferVelocity->GetSRV();
 		break;
@@ -638,7 +650,7 @@ void TRender::GbuffersDebug()
 		texSRV = NullDescriptor;
 		break;
 	}
-
+	//texSRV = HBAOTexture->GetSRV();
 	shader.SetParameter("tex", texSRV);
 	
 	shader.BindParameters();
@@ -673,7 +685,10 @@ void TRender::SSAOPass()
 	shader.SetParameter("passCBuffer", passCBufferRef);
 	shader.SetParameter("cbSSAO", SSAOCBRef);
 	shader.SetParameter("NormalTexture", GBufferNormal->GetSRV());
+	shader.SetParameter("WorldPosTexture", GBufferWorldPos->GetSRV());
 	shader.SetParameter("DepthTexture", GBufferDepth->GetSRV());
+	shader.SetParameter("ssaoKernel", ssaoKernelSBRef->GetSRV());
+
 	shader.BindParameters();
 
 	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
@@ -730,6 +745,62 @@ void TRender::SSAOPass()
 
 	g_CommandContext.Transition(SSAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(SSAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+}
+
+void TRender::HBAOPass()
+{
+	auto shader = m_shaderMap["HBAO"];
+	auto pso = PSOManager::m_gfxPSOMap["HBAO"];
+	auto gfxCmdList = g_CommandContext.GetCommandList();
+
+	g_CommandContext.Transition(HBAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	D3D12_VIEWPORT m_Viewport = { 0.0, 0.0, (float)g_DisplayWidth, (float)g_DisplayHeight, 0.0, 1.0 };
+	D3D12_RECT m_ScissorRect = { 0, 0, (int)m_Viewport.Width, (int)m_Viewport.Height };
+	gfxCmdList->RSSetViewports(1, &m_Viewport);
+	gfxCmdList->RSSetScissorRects(1, &m_ScissorRect);
+
+	float* clearColor = HBAOTexture->GetClearColor();
+	gfxCmdList->ClearRenderTargetView(HBAOTexture->GetRTV(), (float*)clearColor, 0, nullptr);
+
+	gfxCmdList->OMSetRenderTargets(1, &HBAOTexture->GetRTV(), true, nullptr);
+
+	// set pso
+	gfxCmdList->SetPipelineState(pso.GetPSO());
+	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+
+	auto passCBufferRef = UpdatePassCbuffer();
+	shader.SetParameter("passCBuffer", passCBufferRef);
+	shader.SetParameter("DepthTexture", GBufferDepth->GetSRV());
+	shader.SetParameter("NormalTexture", GBufferNormal->GetSRV());
+	shader.SetParameter("RandomSB", randomSBRef->GetSRV());
+	shader.BindParameters();
+
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+
+	g_CommandContext.Transition(HBAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+	g_CommandContext.Transition(HBAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_DEST);
+	gfxCmdList->CopyResource(HBAOBlurTexture->GetResource(), HBAOTexture->GetResource());
+	g_CommandContext.Transition(HBAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+	g_CommandContext.Transition(HBAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	auto blurshader = m_shaderMap["HBAOBlur"];
+	auto blurpso = PSOManager::m_gfxPSOMap["HBAOBlur"];
+
+	gfxCmdList->ClearRenderTargetView(HBAOTexture->GetRTV(), (float*)clearColor, 0, nullptr);
+	gfxCmdList->OMSetRenderTargets(1, &HBAOTexture->GetRTV(), true, nullptr);
+	// set pso
+	gfxCmdList->SetPipelineState(blurpso.GetPSO());
+	gfxCmdList->SetGraphicsRootSignature(blurpso.GetRootSignature());
+
+	passCBufferRef = UpdatePassCbuffer();
+	blurshader.SetParameter("passCBuffer", passCBufferRef);
+	blurshader.SetParameter("DepthTexture", GBufferDepth->GetSRV());
+	blurshader.SetParameter("HBAOTexture", HBAOBlurTexture->GetSRV());
+	blurshader.BindParameters();
+	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
+
+	g_CommandContext.Transition(HBAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void TRender::TAAPass()
@@ -1573,7 +1644,10 @@ void TRender::CreateGBuffersResource()
 
 	TiledDepthDebugTexture = std::make_unique<D3D12ColorBuffer>();
 	TiledDepthDebugTexture->Create(L"TiledDepthDebugTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R32G32_FLOAT);
+}
 
+void TRender::CreateAOResource()
+{
 	// SSAO Map
 	SSAOTexture = std::make_unique<D3D12ColorBuffer>();
 	SSAOTexture->Create(L"SSAO Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
@@ -1581,14 +1655,83 @@ void TRender::CreateGBuffersResource()
 	SSAOBlurTexture = std::make_unique<D3D12ColorBuffer>();
 	SSAOBlurTexture->Create(L"SSAO Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
 
-	D3D12_INPUT_ELEMENT_DESC inputElementDescs[] =
+	// SSAO kernel
+	std::uniform_real_distribution<float> randomFloats(0.0f, 1.0f);
+	std::default_random_engine generator;
+	std::vector<XMFLOAT3> ssaoKernel;
+	for (unsigned int i = 0; i < 64; i++)
 	{
-		{"POSITION", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 0, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"NORMAL", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 12, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TANGENT", 0, DXGI_FORMAT_R32G32B32_FLOAT, 0, 24, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0},
-		{"TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT, 0, 36, D3D12_INPUT_CLASSIFICATION_PER_VERTEX_DATA, 0}
-	};
+		XMFLOAT3 sample(
+			randomFloats(generator) * 2.0f - 1.0f,
+			randomFloats(generator) * 2.0f - 1.0f,
+			randomFloats(generator)
+		);
+		XMVECTOR sampleVec = XMVector3Normalize(XMLoadFloat3(&sample));
+		sampleVec *= randomFloats(generator);
+		float scale = (float)i / 64.0f;
+		scale = std::lerp(0.1f, 1.0f, scale * scale);
+		sampleVec *= scale;
+		XMStoreFloat3(&sample, sampleVec);
+		ssaoKernel.push_back(sample);
+	}
+	ssaoKernelSBRef = TD3D12RHI::CreateStructuredBuffer(ssaoKernel.data(), sizeof(XMFLOAT3), ssaoKernel.size());
 
+	std::vector<XMFLOAT3> ssaoNoise;
+	for (unsigned int i = 0; i < 16; i++)
+	{
+		XMFLOAT3 noise(
+			randomFloats(generator) * 2.0 - 1.0,
+			randomFloats(generator) * 2.0 - 1.0,
+			randomFloats(generator));
+		ssaoNoise.push_back(noise);
+	}
+	randomSBRef = TD3D12RHI::CreateStructuredBuffer(&ssaoNoise[0], sizeof(XMFLOAT3), ssaoNoise.size());
+
+
+	HBAOTexture = std::make_unique<D3D12ColorBuffer>();
+	HBAOTexture->Create(L"HBAO Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
+	HBAOBlurTexture = std::make_unique<D3D12ColorBuffer>();
+	HBAOBlurTexture->Create(L"HBAO Blur Texture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R16_FLOAT);
+
+	GraphicsPSO SSAOPso(L"SSAO PSO");
+	SSAOPso.SetShader(&m_shaderMap["SSAO"]);
+	SSAOPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
+	SSAOPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	SSAOPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	CD3DX12_DEPTH_STENCIL_DESC dsvDesc = {};
+	dsvDesc.DepthEnable = FALSE;
+	SSAOPso.SetDepthStencilState(dsvDesc);
+	SSAOPso.SetSampleMask(UINT_MAX);
+	SSAOPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	SSAOPso.SetRenderTargetFormat(SSAOTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	SSAOPso.Finalize();
+	m_gfxPSOMap["SSAO"] = SSAOPso;
+
+	GraphicsPSO HBAOPso(L"HBAO PSO");
+	HBAOPso.SetShader(&m_shaderMap["HBAO"]);
+	HBAOPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
+	HBAOPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	HBAOPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	dsvDesc.DepthEnable = FALSE;
+	HBAOPso.SetDepthStencilState(dsvDesc);
+	HBAOPso.SetSampleMask(UINT_MAX);
+	HBAOPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	HBAOPso.SetRenderTargetFormat(HBAOTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	HBAOPso.Finalize();
+	m_gfxPSOMap["HBAO"] = HBAOPso;
+
+	GraphicsPSO HBAOBlurPso(L"HBAO Blur PSO");
+	HBAOBlurPso.SetShader(&m_shaderMap["HBAOBlur"]);
+	HBAOBlurPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
+	HBAOBlurPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+	HBAOBlurPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+	dsvDesc.DepthEnable = FALSE;
+	HBAOBlurPso.SetDepthStencilState(dsvDesc);
+	HBAOBlurPso.SetSampleMask(UINT_MAX);
+	HBAOBlurPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+	HBAOBlurPso.SetRenderTargetFormat(HBAOBlurTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
+	HBAOBlurPso.Finalize();
+	m_gfxPSOMap["HBAOBlur"] = HBAOBlurPso;
 }
 
 void TRender::CreateGBuffersPSO()
@@ -1631,19 +1774,6 @@ void TRender::CreateGBuffersPSO()
 	DeferredShadingPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, GBufferDepth->GetFormat());
 	DeferredShadingPso.Finalize();
 	m_gfxPSOMap["DeferredShadingPso"] = DeferredShadingPso;
-
-	GraphicsPSO SSAOPso(L"SSAO PSO");
-	SSAOPso.SetShader(&m_shaderMap["SSAO"]);
-	SSAOPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
-	SSAOPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
-	SSAOPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
-	dsvDesc.DepthEnable = FALSE;
-	SSAOPso.SetDepthStencilState(dsvDesc);
-	SSAOPso.SetSampleMask(UINT_MAX);
-	SSAOPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
-	SSAOPso.SetRenderTargetFormat(SSAOTexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
-	SSAOPso.Finalize();
-	m_gfxPSOMap["SSAO"] = SSAOPso;
 }
 
 void TRender::CreateTAAResoure()

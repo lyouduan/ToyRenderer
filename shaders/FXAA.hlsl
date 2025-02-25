@@ -36,7 +36,7 @@ PSInput VS(VSInput vin)
 
 float rgb2luma(float3 color)
 {
-    return sqrt(dot(color, float3(0.299, 0.587, 0.114)));
+    return sqrt(dot(color, float3(0.213, 0.715, 0.072)));
 }
 
 float4 PS(PSInput pin) : SV_Target
@@ -73,7 +73,7 @@ float4 PS(PSInput pin) : SV_Target
         finalColor = float4(colorCenter, 1.0f);
         return finalColor;
     }
-       
+    
     // compute the luma values at the diagonal neighbors
     float lumaDownLeft  = rgb2luma(ColorTexture.Sample(LinearClampSampler, pin.tex + offset[4] * InvScreenDimensions).rgb);
     float lumaUpRight   = rgb2luma(ColorTexture.Sample(LinearClampSampler, pin.tex + offset[5] * InvScreenDimensions).rgb);

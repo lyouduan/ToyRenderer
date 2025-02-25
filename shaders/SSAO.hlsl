@@ -7,6 +7,9 @@
 
 Texture2D NormalTexture;
 Texture2D DepthTexture;
+Texture2D WorldPosTexture;
+
+StructuredBuffer<float3> ssaoKernel;
 
 cbuffer cbSSAO
 {
@@ -45,7 +48,7 @@ PSInput VS(VSInput vin)
     return vout;
 }
 
-static const int gSampleCount = 16;
+static const int gSampleCount = 64;
 
 // Determines how much the point R occludes the point P as a function of DistZ.
 float OcclusionFunction(float DistZ)
@@ -72,6 +75,15 @@ float OcclusionFunction(float DistZ)
     return Occlusion;
 }
 
+// 生成伪随机噪声
+float3 GenerateNoise(float2 texCoord)
+{
+    float noiseX = frac(sin(dot(texCoord, float2(12.9898, 78.233))) * 43758.5453);
+    float noiseY = frac(sin(dot(texCoord, float2(93.9898, 47.233))) * 24634.6345);
+    float noiseZ = frac(sin(dot(texCoord, float2(32.1234, 11.5678))) * 16216.8796);
+    return normalize(float3(noiseX, noiseY, noiseZ) * 2.0 - 1.0);
+}
+
 float PS(PSInput pin) : SV_Target
 {
     // Get viewspace normal
@@ -82,6 +94,11 @@ float PS(PSInput pin) : SV_Target
     // reconstruct P in view space 
     float depth = DepthTexture.Sample(PointClampSampler, pin.tex).r;
     float3 P = UVToView(pin.tex, depth, gInvProjMat).xyz;
+    
+    //float3 randomVec = GenerateNoise(pin.tex);
+    //float3 tangent = normalize(randomVec - normalV * dot(randomVec, normalV));
+    //float3 bitangent = cross(normalV, tangent);
+    //float3x3 TBN = float3x3(tangent, bitangent, normalV);
     
     float Occlusion = 0.0f;
     
@@ -95,11 +112,12 @@ float PS(PSInput pin) : SV_Target
         float Radius = sqrt(1.0f - Offset.y * Offset.y); // Radius at y
         float Theta = Phi * i; // Golden angle increment
         Offset.x = Radius * cos(Theta);
-        Offset.y = Radius * sin(Theta);
+        Offset.z = Radius * sin(Theta);
         
+        //float3 sampleDir = normalize(mul(ssaoKernel[i], TBN));
+        //float3 Q = P + sampleDir * gOcclusionRadius;
         // Flip offset if it is behind P
         float Flip = sign(dot(Offset, normalV));
-        
         // Sample point Q
         float3 Q = P + Flip * gOcclusionRadius * Offset;
         
