@@ -5,9 +5,10 @@
 #define PI 3.1415926
 #endif
 
-static const float NUM_STEPS = 6;
-static const float NUM_DIRECTIONS = 6;
-static const float u_AOStrength = 5;
+static const float NUM_STEPS = 4;
+static const float NUM_DIRECTIONS = 8;
+static const float RADIUS = 8;
+static const float u_AOStrength = 3.9;
 
 Texture2D NormalTexture;
 Texture2D DepthTexture;
@@ -86,85 +87,22 @@ float2 RotateDirections(float2 Dir, float2 CosSin)
                   Dir.x * CosSin.y + Dir.y * CosSin.x);
 }
 
-float2 SnapUVOffset(float2 uv)
-{
-    return round(uv * ScreenDimensions) * InvScreenDimensions;
-}
-
-float TanToSin(float x)
-{
-    return x * (1.0f / (float)(x * x + 1.0));
-}
-
-float InvLength(float2 V)
-{
-    return 1.0f / (float)(dot(V, V));
-}
-
-float Tangent(float3 V)
-{
-    return V.z * InvLength(V.xy);
-}
-
-float Tangent(float3 P, float3 S)
-{
-    return -(P.z - S.z) * InvLength(S.xy - P.xy);
-}
-
-float BiasedTangent(float3 V)
-{
-    float TanBias = tan(30.0 * PI / 180.0);
-    return V.z * InvLength(V.xy) + TanBias;
-}
-
-
 float Falloff(float d2)
 {
     float NegInvR2 = -1.0 / (0.3 * 0.3);
     return d2 * NegInvR2 + 1.0f;
 }
 
-float HorizonOcclusion(float2 deltaUV, float3 P, float3 dPdu, float3 dPdv, float randStep, float numSamples, float2 uv)
-{
-    float ao = 0;
-    uv += SnapUVOffset(randStep * deltaUV);
-    
-    float3 T = deltaUV.x * dPdu + deltaUV.y * dPdv;
-    float tanH = BiasedTangent(T);
-    float sinH = TanToSin(tanH);
-    
-    float tanS;
-    float d2;
-    float3 S;
-    float R2 = 0.3 * 0.3;
-    [loop]
-    for (float s = 1; s <= numSamples; ++s)
-    {
-        uv += deltaUV;
-        S = GetViewPos(uv);
-        tanS = Tangent(P, S);
-        d2 = Length2(S - P);
-        if (d2 < R2 && tanS > tanH)
-        {
-            float sinS = TanToSin(tanS);
-            ao += Falloff(d2) * (sinS - sinH);
-            tanH = tanS;
-            sinH = sinS;
-        }
-    }
-    
-    return ao;
-
-}
 
 float ComputeAO(float3 P, float3 N, float3 S)
 {
     float3 V = S - P;
     float VdotV = dot(V, V);
-    float NdotV = dot(N, V) * 1.0 / sqrt(VdotV);
+    float NdotV = dot(N, V) * (1.0 / sqrt(VdotV));
 
-  // Use saturate(x) instead of max(x,0.f) because that is faster on Kepler
-    return clamp(NdotV - 0.01, 0, 1) * clamp(Falloff(VdotV), 0, 1);
+   // Use saturate(x) instead of max(x,0.f) because that is faster on Kepler
+    //return clamp(NdotV - 0.01, 0, 1) * clamp(Falloff(VdotV), 0, 1);
+    return saturate(NdotV - 0.1) * saturate(Falloff(VdotV));
 }
 
 float3 ReconstructNormal(float2 UV, float3 P)
@@ -176,6 +114,14 @@ float3 ReconstructNormal(float2 UV, float3 P)
     return normalize(cross(MinDiff(P, Pr, Pl), MinDiff(P, Pt, Pb)));
 }
 
+static const float2x2 UNIFORM_DIRECTIONS[4] =
+{
+    float2x2(cos(0), sin(0), -sin(0), cos(0)),
+  float2x2(cos(PI * 0.5), sin(PI * 0.5), -sin(PI * 0.5), cos(PI * 0.5)),
+  float2x2(cos(PI), sin(PI), -sin(PI), cos(PI)),
+  float2x2(cos(PI * 3.0 / 2.0), sin(PI * 3.0 / 2.0), -sin(PI * 3.0 / 2.0), cos(PI * 3.0 / 2.0))
+};
+
 float PS(PSInput pin) : SV_Target
 {
     // Get viewspace normal
@@ -185,62 +131,34 @@ float PS(PSInput pin) : SV_Target
     
     // reconstruct P in view space 
     float3 P = GetViewPos(pin.tex);
-    //float3 normalV = ReconstructNormal(pin.tex, P);
     
-    // Sample nerighboring pixels
-    float3 Pr = GetViewPos(pin.tex + float2( 1, 0) * InvScreenDimensions);
-    float3 Pl = GetViewPos(pin.tex + float2(-1, 0) * InvScreenDimensions);
-    float3 Pt = GetViewPos(pin.tex + float2( 0, 1) * InvScreenDimensions);
-    float3 Pb = GetViewPos(pin.tex + float2( 0,-1) * InvScreenDimensions);
-    
-    // calculate the tangent basis vectors using the minimu difference
-    float3 dPdu = MinDiff(P, Pr, Pl);
-    float3 dPdv = MinDiff(P, Pt, Pb) * (ScreenDimensions.y * InvScreenDimensions.x);
-    
-    // Get the random samples from the noise
-    //float3 random = GenerateNoise(pin.tex);
-   
-    float R = 0.3;
-    float2 FocalLen = float2(1, 1);
-    float2 rayRadiusUV = (0.5 * R * FocalLen) / P.z;
-    float rayRadiusPix = rayRadiusUV.x * ScreenDimensions.x;
-    rayRadiusPix = max(rayRadiusPix, 1.0);
-    
-    float ao = 1.0;
-   // Divide by NUM_STEPS+1 so that the farthest samples are not fully attenuated
-    
-    if (rayRadiusPix > 1.0)
+    float ao = 0.0;
+        
+    float alpha = 2.0 * PI / NUM_DIRECTIONS;
+    float StepSizePixels = RADIUS / (NUM_STEPS + 1) * InvScreenDimensions;
+    for (float DirectionIndex = 0.0; DirectionIndex < NUM_DIRECTIONS; ++DirectionIndex)
     {
-        ao = 0.0;
-        float StepSizePixels = rayRadiusPix / (NUM_STEPS + 1);
-        float alpha = 2.0 * PI / NUM_DIRECTIONS;
-        
-        for (float DirectionIndex = 0.0; DirectionIndex < NUM_DIRECTIONS; ++DirectionIndex)
-        {
-            int randomIdx = (DirectionIndex / NUM_DIRECTIONS) * 16;
-            float3 random = RandomSB[randomIdx];
+        int randomIdx = (DirectionIndex / NUM_DIRECTIONS) * 16;
+        float3 random = RandomSB[randomIdx];
     
-            
-            float Angle = alpha * DirectionIndex;
-            //Compute normalized 2D direction
-            float2 Direction = RotateDirections(float2(cos(Angle), sin(Angle)), random.xy);
-            
-            // Jitter starting sample within the first step
-            float RayPixels = (random.z * StepSizePixels + 1.0);
-            
-            for (float StepIndex = 0; StepIndex < NUM_STEPS; ++StepIndex)
-            {
-                float2 SnappedUV = round(RayPixels * Direction) * InvScreenDimensions + pin.tex;
-                float3 S = GetViewPos(SnappedUV);
+        //Compute normalized 2D direction
+        float Angle = alpha * DirectionIndex;
+        float2 Direction = RotateDirections(float2(cos(Angle), sin(Angle)), random.xy);
+
+        // Jitter starting sample within the first step
+        float RayPixels = (random.z * StepSizePixels + 1.0);
+        for (float StepIndex = 0; StepIndex < NUM_STEPS; ++StepIndex)
+        {
+            float2 SnappedUV = round(RayPixels * Direction) * InvScreenDimensions + pin.tex;
+            float3 S = GetViewPos(SnappedUV);
                 
-                RayPixels += StepSizePixels;
-                
-                ao += ComputeAO(P, normalV, S);
-            }
+            RayPixels += StepSizePixels;
+            ao += ComputeAO(P, normalV, S);
         }
-        ao *= u_AOStrength / (NUM_DIRECTIONS * NUM_STEPS);
-        ao =  clamp(1.0 - ao * 2.0, 0, 1);
     }
-        
+    
+    ao *= u_AOStrength * 1.0 / (NUM_DIRECTIONS * NUM_STEPS);
+    ao = saturate(1.0 - ao);
+    
     return ao;
 }

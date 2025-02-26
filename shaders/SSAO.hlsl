@@ -48,7 +48,7 @@ PSInput VS(VSInput vin)
     return vout;
 }
 
-static const int gSampleCount = 64;
+static const int gSampleCount =64;
 
 // Determines how much the point R occludes the point P as a function of DistZ.
 float OcclusionFunction(float DistZ)

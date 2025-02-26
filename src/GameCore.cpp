@@ -396,8 +396,9 @@ void GameCore::PopulateCommandList()
 	{
 		m_Render->DeferredShadingPass();
 		
-		
-		
+		if (m_Render->GetbDebugGBuffers())
+			m_Render->GbuffersDebug();
+
 		if (m_Render->GetbEnableTAA())
 			m_Render->TAAPass();
 	}
@@ -419,9 +420,7 @@ void GameCore::PopulateCommandList()
 		m_Render->IBLRenderPass();
 	}
 
-	if (m_Render->GetbDebugGBuffers())
-		m_Render->GbuffersDebug();
-
+	
 	if(m_Render->GetbEnableFXAA())
 		m_Render->FXAAPass();
 

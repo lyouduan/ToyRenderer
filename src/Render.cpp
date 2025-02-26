@@ -638,7 +638,7 @@ void TRender::GbuffersDebug()
 		texSRV = GBufferSpecular->GetSRV();
 		break;
 	case GBufferType::SSAO:
-		texSRV = HBAOTexture->GetSRV();
+		texSRV = SSAOTexture->GetSRV();
 		break;
 	case GBufferType::Velocity:
 		texSRV = GBufferVelocity->GetSRV();
@@ -650,7 +650,7 @@ void TRender::GbuffersDebug()
 		texSRV = NullDescriptor;
 		break;
 	}
-	//texSRV = HBAOTexture->GetSRV();
+	texSRV = HBAOTexture->GetSRV();
 	shader.SetParameter("tex", texSRV);
 	
 	shader.BindParameters();
@@ -688,6 +688,7 @@ void TRender::SSAOPass()
 	shader.SetParameter("WorldPosTexture", GBufferWorldPos->GetSRV());
 	shader.SetParameter("DepthTexture", GBufferDepth->GetSRV());
 	shader.SetParameter("ssaoKernel", ssaoKernelSBRef->GetSRV());
+	shader.SetParameter("RandomSB", randomSBRef->GetSRV());
 
 	shader.BindParameters();
 
@@ -778,6 +779,7 @@ void TRender::HBAOPass()
 
 	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 
+#if 1
 	g_CommandContext.Transition(HBAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_SOURCE);
 	g_CommandContext.Transition(HBAOBlurTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_DEST);
 	gfxCmdList->CopyResource(HBAOBlurTexture->GetResource(), HBAOTexture->GetResource());
@@ -800,6 +802,7 @@ void TRender::HBAOPass()
 	blurshader.BindParameters();
 	ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
 
+#endif
 	g_CommandContext.Transition(HBAOTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
@@ -1674,6 +1677,7 @@ void TRender::CreateAOResource()
 		XMStoreFloat3(&sample, sampleVec);
 		ssaoKernel.push_back(sample);
 	}
+	ssaoKernel[2].x = 0.5f;
 	ssaoKernelSBRef = TD3D12RHI::CreateStructuredBuffer(ssaoKernel.data(), sizeof(XMFLOAT3), ssaoKernel.size());
 
 	std::vector<XMFLOAT3> ssaoNoise;
@@ -1682,10 +1686,10 @@ void TRender::CreateAOResource()
 		XMFLOAT3 noise(
 			randomFloats(generator) * 2.0 - 1.0,
 			randomFloats(generator) * 2.0 - 1.0,
-			randomFloats(generator));
+			randomFloats(generator) * 2.0 - 1.0);
 		ssaoNoise.push_back(noise);
 	}
-	randomSBRef = TD3D12RHI::CreateStructuredBuffer(&ssaoNoise[0], sizeof(XMFLOAT3), ssaoNoise.size());
+	randomSBRef = TD3D12RHI::CreateStructuredBuffer(ssaoNoise.data(), sizeof(XMFLOAT3), ssaoNoise.size());
 
 
 	HBAOTexture = std::make_unique<D3D12ColorBuffer>();

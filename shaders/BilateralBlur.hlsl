@@ -33,14 +33,14 @@ PSInput VS(VSInput vin)
     return vout;
 }
 
-static const float KERNEL_RADIUS = 15;
+static const float KERNEL_RADIUS = 10;
 
 float BlurFunction(float2 uv, float r, float cneter_c, float center_d, inout float w_total)
 {
     float ao = HBAOTexture.Sample(PointClampSampler, uv).r;
     float depth = DepthTexture.Sample(PointClampSampler, uv).r;
     
-    float sigma = KERNEL_RADIUS * 0.5;
+    float sigma = float(KERNEL_RADIUS) * 0.5;
     
     float blurFalloff = 1.f / (2.f * sigma * sigma);
     
@@ -49,7 +49,7 @@ float BlurFunction(float2 uv, float r, float cneter_c, float center_d, inout flo
     
     w_total += w;
     
-    return cneter_c * w;
+    return ao * w;
 }
 
 float PS(PSInput pin) : SV_Target
@@ -60,7 +60,7 @@ float PS(PSInput pin) : SV_Target
     float center_c = ao;
     float center_d = depth;
     
-    float c_total = ao;
+    float c_total = center_c;
     float w_total = 1.0;
   
     for (float r = 1; r <= KERNEL_RADIUS; ++r)
