@@ -113,5 +113,15 @@ float RadicalInverse_VdC(uint bits)
     return float(bits) * 2.3283064365386963e-10; // / 0x100000000
 }
 
+float3 UniformOnSphere(float2 Xi)
+{
+    float t = 2 * sqrt(Xi.x * (1 - Xi.x));
+    float phi = 2 * PI * Xi.y;
 
+    float x = cos(phi) * t;
+    float y = sin(phi) * t;
+    float z = 1 - 2 * Xi.x;
+
+    return float3(x, y, z);
+}
 #endif // !MATH_SAMPLE_H

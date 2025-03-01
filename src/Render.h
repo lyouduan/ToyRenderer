@@ -30,6 +30,7 @@ public:
 	void CreateIBLIrradianceMap();
 	void CreateIBLPrefilterMap();
 	void CreateIBLLUT2D();
+	void CreateSphereHarmonics();
 
 	void IBLRenderPass();
 
@@ -142,7 +143,10 @@ private:
 
 	void CreateFXAAResource();
 
+	void CreateSHResource();
+
 	std::vector<float> CalcGaussianWeights(float sigma);
+
 
 private:
 	UINT m_RenderFrameCount = 0;
@@ -165,6 +169,9 @@ private:
 	std::unique_ptr<SceneCaptureCube> IBLIrradianceMap;
 	std::vector<std::unique_ptr<SceneCaptureCube>> IBLPrefilterMaps;
 	std::unique_ptr<RenderTarget2D> IBLBrdfLUT2D;
+
+	// Sphere harmonics
+	TD3D12RWStructuredBufferRef SHBasisRef;
 
 	// Deferred Redenring
 	// GBuffer info

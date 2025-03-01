@@ -111,6 +111,16 @@ namespace PSOManager
 		TShader pbrShader(pbrInfo);
 		m_shaderMap["pbrShader"] = pbrShader;
 
+		TShaderInfo SHpbrInfo;
+		SHpbrInfo.FileName = "shaders/SHpbr";
+		SHpbrInfo.bCreateVS = true;
+		SHpbrInfo.bCreatePS = true;
+		SHpbrInfo.bCreateCS = false;
+		SHpbrInfo.VSEntryPoint = "VSMain";
+		SHpbrInfo.PSEntryPoint = "PSMain";
+		TShader SHpbrShader(SHpbrInfo);
+		m_shaderMap["SHpbr"] = SHpbrShader;
+
 		TShaderInfo lightInfo;
 		lightInfo.FileName = "shaders/light";
 		lightInfo.bCreateVS = true;
@@ -130,6 +140,7 @@ namespace PSOManager
 		irradianceMapInfo.PSEntryPoint = "PSMain";
 		TShader irradianceMapShader(irradianceMapInfo);
 		m_shaderMap["irradianceMapShader"] = irradianceMapShader;
+
 
 		TShaderInfo prefilterMapInfo;
 		prefilterMapInfo.FileName = "shaders/prefilterMap";
@@ -385,6 +396,16 @@ namespace PSOManager
 		TiledBaseLightCullingInfo.CSEntryPoint = "CS";
 		TShader TiledBaseLightCullingShader(TiledBaseLightCullingInfo);
 		m_shaderMap["LightCulling"] = TiledBaseLightCullingShader;
+
+
+		TShaderInfo SHCSInfo;
+		SHCSInfo.FileName = "shaders/SphereHarmonics";
+		SHCSInfo.bCreateVS = false;
+		SHCSInfo.bCreatePS = false;
+		SHCSInfo.bCreateCS = true;
+		SHCSInfo.CSEntryPoint = "CS";
+		TShader SHCSShader(SHCSInfo);
+		m_shaderMap["SH"] = SHCSShader;
 	}
 
 	void InitializePSO()
@@ -499,6 +520,20 @@ namespace PSOManager
 		pbrPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
 		pbrPso.Finalize();
 		m_gfxPSOMap["pbrPSO"] = pbrPso;
+
+		GraphicsPSO SHpbrPso(L"SH prb PSO");
+		SHpbrPso.SetShader(&m_shaderMap["SHpbr"]);
+		SHpbrPso.SetInputLayout(_countof(inputElementDescs), inputElementDescs);
+		SHpbrPso.SetRasterizerState(CD3DX12_RASTERIZER_DESC(D3D12_DEFAULT));
+		SHpbrPso.SetBlendState(CD3DX12_BLEND_DESC(D3D12_DEFAULT));
+		dsvDesc.DepthEnable = TRUE;
+		dsvDesc.DepthFunc = D3D12_COMPARISON_FUNC_LESS;
+		SHpbrPso.SetDepthStencilState(dsvDesc);
+		SHpbrPso.SetSampleMask(UINT_MAX);
+		SHpbrPso.SetPrimitiveTopologyType(D3D12_PRIMITIVE_TOPOLOGY_TYPE_TRIANGLE);
+		SHpbrPso.SetRenderTargetFormat(DXGI_FORMAT_R8G8B8A8_UNORM, g_DepthBuffer.GetFormat());
+		SHpbrPso.Finalize();
+		m_gfxPSOMap["SHpbrPSO"] = SHpbrPso;
 
 		GraphicsPSO lightPso(L"light PSO");
 		lightPso.SetShader(&m_shaderMap["lightShader"]);
@@ -713,5 +748,11 @@ namespace PSOManager
 		localCSPSO.SetShader(&m_shaderMap["localCS"]);
 		localCSPSO.Finalize();
 		m_ComputePSOMap["localCS"] = std::move(localCSPSO);
+
+
+		ComputePSO SHPSO;
+		SHPSO.SetShader(&m_shaderMap["SH"]);
+		SHPSO.Finalize();
+		m_ComputePSOMap["SH"] = std::move(SHPSO);
 	}
 }

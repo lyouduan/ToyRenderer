@@ -302,7 +302,7 @@ void TShader::GetShaderParameter(Microsoft::WRL::ComPtr<ID3DBlob> PassBlob, ESha
 		}
 		else if (ResourceType == D3D_SHADER_INPUT_TYPE::D3D_SIT_SAMPLER)
 		{
-			assert(ShaderType == EShaderType::PIXEL_SHADER);
+			//assert(ShaderType == EShaderType::PIXEL_SHADER);
 
 			TShaderSamplerParameter Param;
 			Param.Name = ShaderVarName;

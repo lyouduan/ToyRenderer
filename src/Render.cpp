@@ -30,6 +30,8 @@ void TRender::Initalize()
 
 	CreateSceneCaptureCube();
 
+	CreateSHResource();
+
 	CreateGBuffersResource();
 
 	CreateGBuffersPSO(); // need initializing GBuffers first
@@ -179,6 +181,8 @@ void TRender::DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, 
 			shader.SetParameter("normalMap", TextureManager::m_SrvMaps["Cerberus_N"]);
 			shader.SetParameter("roughnessMap", TextureManager::m_SrvMaps["Cerberus_R"]);
 
+			shader.SetParameter("SH_Coefficients", SHBasisRef->GetSRV()); //
+
 			// IBL Maps
 			shader.SetParameter("IrradianceMap", IBLIrradianceMap->GetSRV());
 			std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
@@ -304,6 +308,9 @@ void TRender::CreateIBLIrradianceMap()
 	//g_CommandContext.Transition(IBLIrradianceMap->GetD3D12DepthBuffer(), D3D12_RESOURCE_STATE_COMMON);
 
 	g_CommandContext.ExecuteCommandLists();
+
+
+	CreateSphereHarmonics();
 }
 
 void TRender::CreateIBLPrefilterMap()
@@ -397,6 +404,34 @@ void TRender::CreateIBLLUT2D()
 	g_CommandContext.ExecuteCommandLists();
 }
 
+void TRender::CreateSphereHarmonics()
+{
+	g_CommandContext.ResetCommandList();
+
+	auto pso = PSOManager::m_ComputePSOMap["SH"];
+	auto ComputeList = g_CommandContext.GetCommandList();
+
+	g_CommandContext.Transition(IBLIrradianceMap->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+
+	ComputeList->SetComputeRootSignature(pso.GetRootSignature());
+	ComputeList->SetPipelineState(pso.GetPSO());
+
+	XMUINT2 SampleSize = { 16, 16 };
+	auto SampleCBRef = TD3D12RHI::CreateConstantBuffer(&SampleSize, sizeof(XMUINT2));
+
+	auto shader = PSOManager::m_shaderMap["SH"];
+	shader.SetParameterUAV("SH_Coefficients", SHBasisRef->GetUAV()); // don't need objCbuffer
+	shader.SetParameter("IrradianceMap", IBLIrradianceMap->GetSRV());
+	shader.SetParameter("SampleSizeBuffer", SampleCBRef);
+	shader.BindParameters();
+
+	UINT THREAD_NUM_X = ceil(SampleSize.x / 16);
+	UINT THREAD_NUM_Y = ceil(SampleSize.y / 16);
+	ComputeList->Dispatch(THREAD_NUM_X, THREAD_NUM_Y, 1);
+
+	g_CommandContext.ExecuteCommandLists();
+}
+
 void TRender::IBLRenderPass()
 {
 	// Record commands
@@ -458,7 +493,46 @@ void TRender::IBLRenderPass()
 		m_shaderMap["pbrShader"].SetParameter("PrefilterMap", SRVHandleList);
 		m_shaderMap["pbrShader"].SetParameter("BrdfLUT2D", IBLBrdfLUT2D->GetSRV());
 
+		m_shaderMap["pbrShader"].SetParameter("SH_Coefficients", SHBasisRef->GetSRV()); //
+
 		m_shaderMap["pbrShader"].BindParameters();
+		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
+	}
+
+	// SH pbr
+	// pbr sphere 
+	{
+		XMMATRIX scalingMat = XMMatrixScaling(ImGuiManager::scale * 0.5, ImGuiManager::scale * 0.5, ImGuiManager::scale * 0.5);
+		float rotate_angle = static_cast<float>(ImGuiManager::RotationY * 360);
+		const XMVECTOR rotationAxis = XMVectorSet(0, 1, 0, 0);
+		XMMATRIX rotationYMat = XMMatrixRotationAxis(rotationAxis, XMConvertToRadians(rotate_angle));
+		XMMATRIX translationMatrix = XMMatrixTranslation(ImGuiManager::modelPosition.x + 2, ImGuiManager::modelPosition.y, ImGuiManager::modelPosition.z);
+		auto ModelMatrix = scalingMat * rotationYMat * translationMatrix;
+
+		ObjCBuffer obj;
+		XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(ModelMatrix));
+		auto objCBufferRef = CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+		
+		g_CommandContext.GetCommandList()->SetGraphicsRootSignature(PSOManager::m_gfxPSOMap["SHpbrPSO"].GetRootSignature());
+		g_CommandContext.GetCommandList()->SetPipelineState(PSOManager::m_gfxPSOMap["SHpbrPSO"].GetPSO());
+
+		m_shaderMap["SHpbr"].SetParameter("objCBuffer", objCBufferRef);
+		m_shaderMap["SHpbr"].SetParameter("matCBuffer", matCBufferRef);
+		m_shaderMap["SHpbr"].SetParameter("passCBuffer", passCBufferRef);
+
+		// IBL SRV
+		m_shaderMap["SHpbr"].SetParameter("IrradianceMap", IBLIrradianceMap->GetSRV());
+		std::vector<D3D12_CPU_DESCRIPTOR_HANDLE> SRVHandleList;
+		for (UINT i = 0; i < IBLPrefilterMaps.size(); ++i)
+		{
+			SRVHandleList.push_back(IBLPrefilterMaps[i]->GetSRV());
+		}
+		m_shaderMap["SHpbr"].SetParameter("PrefilterMap", SRVHandleList);
+		m_shaderMap["SHpbr"].SetParameter("BrdfLUT2D", IBLBrdfLUT2D->GetSRV());
+
+		m_shaderMap["SHpbr"].SetParameter("SH_Coefficients", SHBasisRef->GetSRV()); //
+
+		m_shaderMap["SHpbr"].BindParameters();
 		ModelManager::m_MeshMaps["sphere"].DrawMesh(g_CommandContext);
 	}
 
@@ -474,7 +548,10 @@ void TRender::IBLRenderPass()
 		else
 			m_shaderMap["skyboxShader"].SetParameter("CubeMap", TextureManager::m_SrvMaps["skybox"]);
 
-		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", m_Render->GetIBLIrradianceMap()->GetSRV());
+		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", IBLIrradianceMap->GetSRV());
+		//m_shaderMap["skyboxShader"].SetParameter("CubeMap", IBLIrradianceMap->GetSRV());
+		//m_shaderMap["skyboxShader"].SetParameter("SH_Coefficients", SHBasisRef->GetSRV()); //
+
 		m_shaderMap["skyboxShader"].BindParameters();
 		ModelManager::m_MeshMaps["box"].DrawMesh(g_CommandContext);
 	}
@@ -1898,6 +1975,12 @@ void TRender::CreateFXAAResource()
 	FXAAPso.SetRenderTargetFormat(FXAATexture->GetFormat(), DXGI_FORMAT_UNKNOWN); // SSAO format
 	FXAAPso.Finalize();
 	m_gfxPSOMap["FXAA"] = FXAAPso;
+}
+
+void TRender::CreateSHResource()
+{
+	
+	SHBasisRef = TD3D12RHI::CreateRWStructuredBuffer(sizeof(XMFLOAT3), 9);
 }
 
 std::vector<float> TRender::CalcGaussianWeights(float sigma)
