@@ -55,9 +55,8 @@ PSInput VSMain(VSInput vin)
     vout.tex = vin.tex;
     
     // uniform scale
-    float3x3 NormalMatrix = (float3x3)gModelMat;
-    vout.normal = mul(vin.normal, (float3x3) gModelMat);
-    //vout.normal = vin.normal;
+    float3x3 NormalMatrix = (float3x3) gInvTranModelMat;
+    vout.normal = mul(vin.normal, NormalMatrix);
     
     return vout;
 }
@@ -97,44 +96,61 @@ float4 PSMain(PSInput pin) : SV_Target
     uint TileCountX = ceil(ScreenDimensions.x / BLOCK_SIZE);
     uint TileIndex = TileY * TileCountX + TileX;
     
-    TileLightInfo lightInfo = LightInfoList[TileIndex];
     
     float3 albedo = diffuseMap.Sample(LinearWrapSampler, pin.tex).rgb;
     float metallic = metallicMap.Sample(LinearWrapSampler, pin.tex).r;
-    if (metallic == 0.0)
-        metallic = 0.1;
+    
     float3 N = normalize(pin.normal);
     float3 V = normalize(gEyePosW - pin.positionW);
+    
+    TileLightInfo LightInfo = LightInfoList[TileIndex];
     
     // lighting
     float3 totalDiffuse = float3(0.0, 0.0, 0.0);
     float3 totalSpecular= float3(0.0, 0.0, 0.0);
-    for (int i = 0; i < lightInfo.LightCount; i++)
+
+    for (int i = 0; i < LightInfo.LightCount; i++)
     {
-        int lihgtIndex = lightInfo.LightIndices[i];
-        
-        Light light = Lights[lihgtIndex];
+        uint LightIndex = LightInfo.LightIndices[i];
+        Light light = Lights[LightIndex];
     
-        float3 L = light.PositionW.xyz - pin.positionW;
-        float distance = length(L);
-        L = L / distance;
-        float attenuation = 1.0 / (distance * distance);
+        if (light.Type == 1) // directional light
+        {
+            float3 L = normalize(-light.DirectionW);
         
-        float kd = saturate(dot(N, L));
-        float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
+            float kd = saturate(dot(N, L));
+            float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
         
-        float3 H = normalize(V + L);
-        float ks = pow(saturate(dot(N, H)), 32);
-        float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
+            float3 H = normalize(V + L);
+            float ks = pow(saturate(dot(N, H)), 32);
+            float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
         
-        totalDiffuse  += lightDiffuse  * attenuation;
-        totalSpecular += lightSpecular * attenuation;
+            totalDiffuse += lightDiffuse;
+            totalSpecular += lightSpecular;
+        }
+        else if (light.Type == 2) // point light
+        {
+            float3 L = light.PositionW.xyz - pin.positionW;
+            float distance = length(L);
+            L = L / distance;
+            float attenuation = 1.0 / (distance * distance);
+        
+            float kd = saturate(dot(N, L));
+            float3 lightDiffuse = light.Color.rgb * light.Intensity * kd;
+        
+            float3 H = normalize(V + L);
+            float ks = pow(saturate(dot(N, H)), 32);
+            float3 lightSpecular = light.Color.rgb * light.Intensity * ks;
+        
+            totalDiffuse += lightDiffuse * attenuation;
+            totalSpecular += lightSpecular * attenuation;
+        }
+       
     }
-    
     float3 diffuse = totalDiffuse * albedo;
     float3 specular = totalSpecular * metallic;
     
-    float3 ambient = albedo * 0.5;
+    float3 ambient = albedo * 0.05;
     
     float3 color = diffuse + specular + ambient;
     

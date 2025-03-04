@@ -133,5 +133,5 @@ float4 PSMain(PSInput pin) : SV_Target
     
     float3 color = diffuse + specular + ambient;
     
-    return float4(lerp(color, CascadedArea.xyz, 0.1f), 1.0);
+    return float4(lerp(color, CascadedArea.xyz, 0.0f), 1.0);
 }

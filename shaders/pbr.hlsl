@@ -6,47 +6,33 @@ TextureCube PrefilterMap[IBL_PREFILTER_ENVMAP_MIP_LEVEL];
 Texture2D   BrdfLUT2D;
 StructuredBuffer<float3> SH_Coefficients;
 
-static const float SHBasis[9] =
+float GetSHBasis(int i, float3 N)
 {
-    0.28209479f,
-    0.48860251f,
-    0.48860251f,
-    0.48860251f,
-    1.09254843f,
-    1.09254843f,
-    0.31539157f,
-    1.09254843f,
-    0.54627421f,
-};
-
-float3 GetSHBasis(int i, float3 N)
-{
-    
-    
     switch (i)
     {
         case 0:
-            return SHBasis[0];
+            return 0.28209479f;
         case 1:
-            return SHBasis[1] * N.y;
+            return 0.48860251f * N.y;
         case 2:
-            return SHBasis[2] * N.z;
+            return 0.48860251f * N.z;
         case 3:
-            return SHBasis[3] * N.x;
+            return 0.48860251f * N.x;
         case 4:
-            return SHBasis[4] * N.x * N.y;
+            return 1.09254843f * N.x * N.y;
         case 5:
-            return SHBasis[5] * N.y * N.z;
+            return 1.09254843f * N.y * N.z;
         case 6:
-            return SHBasis[6] * (-N.x * N.x - N.y * N.y + 2 * N.z * N.z);
+            return 0.31539157f * (-N.x * N.x - N.y * N.y + 2 * N.z * N.z);
         case 7:
-            return SHBasis[7] * (N.z * N.x);
+            return 1.09254843f * (N.z * N.x);
         case 8:
-            return SHBasis[8] * (N.x * N.x - N.y * N.y);
+            return 0.54627421f * (N.x * N.x - N.y * N.y);
         default:
             return 0.0f;
     }
 }
+
 struct VSInput
 {
     float4 position : POSITION;
@@ -117,11 +103,12 @@ float4 PSMain(PSInput pin) : SV_Target
     
     // IBL ambient light
     float3 ambient = 0.0;
+    float3 kD = 0.0;
     {
         float3 F0 = lerp(F0_DIELECTRIC.rrr, gDiffuseAlbedo.rgb, gMetallic);
         float3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, Roughness);
         float3 kS = F;
-        float3 kD = 1.0 - kS;
+        kD = 1.0 - kS;
         kD *= 1.0 - gMetallic;
         
         float3 irradiance = IrradianceMap.Sample(LinearWrapSampler, N).rgb;
@@ -146,5 +133,5 @@ float4 PSMain(PSInput pin) : SV_Target
 
     float3 irradiance = IrradianceMap.Sample(LinearWrapSampler, N).rgb;
     
-    return float4(irradiance, 1.0);
+    return float4(irradiance * (1.0 - gMetallic) * gDiffuseAlbedo.rgb, 1.0);
 }

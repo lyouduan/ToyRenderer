@@ -47,7 +47,7 @@ void CalSH(float3 dir, uint groupIndex)
     float3 irradiance = IrradianceMap.SampleLevel(LinearClampSampler, dir, 0.0).rgb;
     uint N = SAMPLE_NUM.x * SAMPLE_NUM.y;
     float A = 4 * PI / N;
-    uint groupOffset = groupIndex * SH_DEGREE; //此处shcCount是9
+    uint groupOffset = groupIndex * SH_DEGREE;
     SH_CoeffSum[groupOffset + 0] = irradiance * GetSHBasis(0, dir) * A;
     SH_CoeffSum[groupOffset + 1] = irradiance * GetSHBasis(1, dir) * A;
     SH_CoeffSum[groupOffset + 2] = irradiance * GetSHBasis(2, dir) * A;

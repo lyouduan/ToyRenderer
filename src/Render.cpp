@@ -727,7 +727,7 @@ void TRender::GbuffersDebug()
 		texSRV = NullDescriptor;
 		break;
 	}
-	texSRV = HBAOTexture->GetSRV();
+	texSRV = SSAOTexture->GetSRV();
 	shader.SetParameter("tex", texSRV);
 	
 	shader.BindParameters();
