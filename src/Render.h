@@ -199,6 +199,8 @@ private:
 	// TAA 
 	std::unique_ptr<D3D12ColorBuffer> CacheColorTexture;
 	std::unique_ptr<D3D12ColorBuffer> PreColorTexture;
+	std::unique_ptr<D3D12DepthBuffer> PreDepthTexture;
+	TD3D12ConstantBufferRef TAASettingsCBRef;
 
 	// forward plus
 	std::unique_ptr<D3D12ColorBuffer> DebugMap;

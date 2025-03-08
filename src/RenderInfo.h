@@ -136,6 +136,12 @@ struct SSAOCBuffer
     float    SurfaceEpsilon;
 };
 
+__declspec(align(16))
+struct TAASettings
+{
+    XMFLOAT2 Jitter;
+};
+
 // ===============No-Constant Buffer===============
 
 struct LightInfo

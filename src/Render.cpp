@@ -918,6 +918,8 @@ void TRender::TAAPass()
 		shader.SetParameter("PrevColorTexture", PreColorTexture->GetSRV());
 		shader.SetParameter("GBufferVelocity", GBufferVelocity->GetSRV());
 		shader.SetParameter("GbufferDepth", GBufferDepth->GetSRV());
+		shader.SetParameter("PrevGbufferDepth", PreDepthTexture->GetSRV());
+		shader.SetParameter("TAASettings", TAASettingsCBRef);
 		shader.BindParameters();
 
 		ModelManager::m_MeshMaps["FullQuad"].DrawMesh(g_CommandContext);
@@ -929,6 +931,13 @@ void TRender::TAAPass()
 	gfxCmdList->CopyResource(PreColorTexture->GetResource(), m_renderTragetrs[g_frameIndex].GetResource());
 	g_CommandContext.Transition(PreColorTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 	g_CommandContext.Transition(m_renderTragetrs[g_frameIndex].GetD3D12Resource(), D3D12_RESOURCE_STATE_RENDER_TARGET);
+
+	// copy the last depthBuffer
+	g_CommandContext.Transition(GBufferDepth->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_SOURCE);
+	g_CommandContext.Transition(PreDepthTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_COPY_DEST);
+	gfxCmdList->CopyResource(PreDepthTexture->GetResource(), GBufferDepth->GetResource());
+	g_CommandContext.Transition(GBufferDepth->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
+	g_CommandContext.Transition(PreDepthTexture->GetD3D12Resource(), D3D12_RESOURCE_STATE_GENERIC_READ);
 }
 
 void TRender::PrePassDepthBuffer()
@@ -1611,6 +1620,9 @@ TD3D12ConstantBufferRef TRender::UpdatePassCbuffer()
 	XMMATRIX view = g_Camera.GetViewMat();
 	XMMATRIX proj = g_Camera.GetProjMat();
 
+	TAASettings taaCB;
+
+
 	if (bEnableTAA)
 	{
 		UINT SampleIdx = m_RenderFrameCount % TAA_SAMPLE_COUNT;
@@ -1619,7 +1631,12 @@ TD3D12ConstantBufferRef TRender::UpdatePassCbuffer()
 		
 		proj.r[2][0] += (float)JitterX;
 		proj.r[2][1] += (float)JitterY;
+
+		taaCB.Jitter.x = (float)JitterX;
+		taaCB.Jitter.y = (float)JitterY;
 	}
+	
+	TAASettingsCBRef = TD3D12RHI::CreateConstantBuffer(&taaCB, sizeof(TAASettings));
 
 	//XMMATRIX ViewProj = view * proj;
 	XMVECTOR det;
@@ -1865,6 +1882,9 @@ void TRender::CreateTAAResoure()
 	PreColorTexture = std::make_unique<D3D12ColorBuffer>();
 	PreColorTexture->Create(L"PreColorTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_R8G8B8A8_UNORM);
 
+	PreDepthTexture = std::make_unique<D3D12DepthBuffer>();
+	PreDepthTexture->Create(L"PreDepthTexture", g_DisplayWidth, g_DisplayHeight, 1, DXGI_FORMAT_D32_FLOAT);
+		 
 	GraphicsPSO TAAPso(L"TAA PSO");
 	TAAPso.SetShader(&m_shaderMap["TAA"]);
 	TAAPso.SetInputLayout(DefaultInputLayout.size(), DefaultInputLayout.data());
