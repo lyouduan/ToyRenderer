@@ -54,6 +54,18 @@ float DoAttenuation(float range, float d)
     return 1.0f - smoothstep(range * 0.75f, range, d);
 }
 
+float ComputeShadowBias(float3 normal, float3 lightDir, float3 viewDir)
+{
+    float NdotL = max(dot(normal, lightDir), 0.0);
+    float NdotV = max(dot(normal, viewDir), 0.0);
+    
+    // 计算 Slope-Scale Bias
+    float bias = 0.01 * tan(acos(NdotL)) * max(0.05, 1.0 - NdotV);
+    
+    // 限制最大偏移，防止阴影断裂
+    return clamp(bias, 0.01, 0.05);
+}
+
 float4 PSMain(PSInput pin) : SV_Target
 {
     float3 albedo = diffuseMap.Sample(LinearWrapSampler, pin.tex).rgb;
@@ -86,8 +98,9 @@ float4 PSMain(PSInput pin) : SV_Target
         
         float ShadowFactor = 1.0;
         
+        float bias = ComputeShadowBias(N, L, V);
 #if SHADOW_MAPPING       
-        ShadowFactor = CalcVisibility(ShadowPos);
+        ShadowFactor = CalcVisibility(ShadowPos, bias);
 #elif USE_CSM
         int cascadeIdx = -1;
          for (int i = 0; i < CSM_MAX_COUNT; ++i)

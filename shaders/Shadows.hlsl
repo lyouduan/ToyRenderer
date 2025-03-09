@@ -4,10 +4,12 @@
 #include "Common.hlsl"
 #include "sample.hlsl"
 
-#define PCF_SAMPLER_COUNT 30
+#define LIGHT_SIZE 30
+
+#define PCF_SAMPLER_COUNT 16
 #define PCF_SAMPLER_PIXLE_RADIUS 3
 
-#define BLOCKER_SEARCH_SAMPLE_COUNT    10
+#define BLOCKER_SEARCH_SAMPLE_COUNT    32
 #define BLOCKER_SEARCH_PIXEL_RADIUS    5.0f 
 
 #define VSSM_MAX_MIP_LEVEL 5
@@ -35,26 +37,68 @@ static const float2 offsets[9] =
     float2(-1, 1), float2(0, 1), float2(1,-1),
 };
 
-float PCF(float3 ShadowPos, float radius, float bias)
+float TentFilter(float2 uv)
 {
+    return max(0.0, (1.0 - abs(uv.x)) * (1.0 - abs(uv.y)));
+}
+float2 ComputeReceiverPlaneDepthBias(float3 position)
+{
+    float3 duvz_dx = ddx(position);
+    float3 duvz_dy = ddy(position);
+
+    float2x2 matScreentoShadow = float2x2(duvz_dx.xy, duvz_dy.xy);
+    float fDeterminant = determinant(matScreentoShadow);
+    
+    if (abs(fDeterminant) < 1e-6)
+    {
+        return float2(0, 0);
+    }
+    float fInvDeterminant = 1.0f / fDeterminant;
+    
+    float2x2 matShadowToScreen = float2x2(
+        matScreentoShadow._22 * fInvDeterminant, matScreentoShadow._12 * -fInvDeterminant,
+        matScreentoShadow._21 * -fInvDeterminant, matScreentoShadow._11 * fInvDeterminant);
+    
+    // 计算 dz/du 和 dz/dv
+    float2 dz_duv = mul(float2(duvz_dx.z, duvz_dy.z), matShadowToScreen);
+
+    return dz_duv;
+}
+
+
+float PCF(float3 ShadowPos, float radius)
+{
+    // receiver plane depth bias
+    float2 dz_duv = ComputeReceiverPlaneDepthBias(ShadowPos);
+    
     float curDepth = ShadowPos.z;
     
     uint width, height, numMips;
     ShadowMap.GetDimensions(0, width, height, numMips);
-    float2 tileSize = 1.0f / float2(width, height);
+    float2 texSize = 1.0f / float2(width, height);
+    
+    // calculate the rotation matrix for the poisson disk
+    float2x2 R = getRandomRotationMatrix(ShadowPos.xy);
     
     float percentLit = 0.0f;
+    float2 filtterRadius = radius * texSize;
     for (int i = 0; i < PCF_SAMPLER_COUNT; ++i)
     {
-        //float SampleUV = ShadowPos.xy + offsets[i] * tileSize;
-        float2 SampleUV = ShadowPos.xy + (Hammersley(i, PCF_SAMPLER_COUNT) * 2.0f - 1.0f) * radius * tileSize;
-        
+        // rotate the poisson disk randomly
+        float2 Offset = mul(PoissonDisk(i) * filtterRadius, R);
+        //float SampleUV = ShadowPos.xy + offsets[i] * texSize;
+        float2 SampleUV = ShadowPos.xy + Offset;
         float depth = ShadowMap.Sample(LinearClampSampler, SampleUV).r;
-        if(depth + bias > curDepth)
+        
+        float z_bias = dz_duv.x * Offset.x + dz_duv.y * Offset.y;
+        
+        if (depth + z_bias + 0.01 > curDepth)
+        {
             percentLit += 1;
+        }
     }
-  
-    return percentLit / PCF_SAMPLER_COUNT;
+    
+    return saturate(percentLit / float(PCF_SAMPLER_COUNT));
 }
 
 
@@ -64,13 +108,15 @@ float BlockerSearch(float3 ShadowPos, float dx)
     int BlockerCount = 0;
     
     const float SearchWidth = BLOCKER_SEARCH_SAMPLE_COUNT * dx;
-    
     float ReceiverDepth = ShadowPos.z;
+    
+    // calculate the rotation matrix for the poisson disk
+    float2x2 R = getRandomRotationMatrix(ShadowPos.xy);
     
     for (int i = 0; i < BLOCKER_SEARCH_SAMPLE_COUNT; ++i)
     {
-        float2 SampleUV = ShadowPos.xy + (Hammersley(i, BLOCKER_SEARCH_SAMPLE_COUNT) * 2.0f - 1.0f) * SearchWidth;
-        
+        float2 Offset = mul(PoissonDisk(i) * SearchWidth, R);
+        float2 SampleUV = ShadowPos.xy + Offset;
         float BlockerDepth = ShadowMap.Sample(LinearClampSampler, SampleUV).r;
         
         if (BlockerDepth < ReceiverDepth)
@@ -79,7 +125,7 @@ float BlockerSearch(float3 ShadowPos, float dx)
             BlockerCount++;
         }
     }
-    
+  
     if (BlockerCount > 0)
     {
         AverageBlockerDepth /= BlockerCount;
@@ -106,13 +152,13 @@ float PCSS(float3 ShadowPos)
     if (blockerDepth < 0.0f)
         return 1.0f;
     
+    float lightSize = float(LIGHT_SIZE);
+    
     // 2. Calculate the Penumbra radius
-    float lightSize = 20.0;
     float radius = (lightSize * (ReceiverDepth - blockerDepth)) / blockerDepth;
     
     // 3. PFC using Radius
-    float bias = 0.001f;
-    return PCF(ShadowPos, radius, bias);
+    return PCF(ShadowPos, radius);
 }
 
 float Chebyshev(float2 moment, float t)
@@ -193,7 +239,7 @@ float VSSM(float3 ShadowPos)
     float Zocc = (Zavg - p * Zunocc) / (1 - p);
     
     // 2. Calculate the Penumbra radius
-    float lightSize = 20.0;
+    float lightSize = float(LIGHT_SIZE);
     float radius = (lightSize * (ReceiverDepth - Zocc)) / Zocc;
     float maxRadius = 5.0;
     radius = saturate(radius / maxRadius);
@@ -206,6 +252,40 @@ float VSSM(float3 ShadowPos)
     return Result;
 }
 
+float PCF(float3 ShadowPos, float radius, int cascadeIdx)
+{
+    // receiver plane depth bias
+    float2 dz_duv = ComputeReceiverPlaneDepthBias(ShadowPos);
+    
+    float curDepth = ShadowPos.z;
+    
+    uint width, height, numMips;
+    CSMTextures[cascadeIdx].GetDimensions(0, width, height, numMips);
+    float2 texSize = 1.0f / float2(width, height);
+    
+    // calculate the rotation matrix for the poisson disk
+    float2x2 R = getRandomRotationMatrix(ShadowPos.xy);
+    
+    float percentLit = 0.0f;
+    float2 filtterRadius = radius * texSize;
+    for (int i = 0; i < PCF_SAMPLER_COUNT; ++i)
+    {
+        // rotate the poisson disk randomly
+        float2 Offset = mul(PoissonDisk(i) * filtterRadius, R);
+        //float SampleUV = ShadowPos.xy + offsets[i] * texSize;
+        float2 SampleUV = ShadowPos.xy + Offset;
+        float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, SampleUV).r;
+        
+        float z_bias = dz_duv.x * Offset.x + dz_duv.y * Offset.y;
+        
+        if (depth + z_bias + 0.01 > curDepth)
+        {
+            percentLit += 1;
+        }
+    }
+    
+    return saturate(percentLit / float(PCF_SAMPLER_COUNT));
+}
 
 float CSM(float4 ShadowPosH, int cascadeIdx)
 {
@@ -219,33 +299,10 @@ float CSM(float4 ShadowPosH, int cascadeIdx)
         return 0.0f;
     }
     
-    float curDepth = ShadowPosH.z;
-    
-    uint width, height, numMips;
-    CSMTextures[cascadeIdx].GetDimensions(0, width, height, numMips);
-    float2 tileSize = 1.0f / float2(width, height);
-    
-    float percentLit = 0.0f;
-    
-    
-    //if (depth + 0.005 > curDepth)
-    //    percentLit = 1.0;
-    
-    for (int i = 0; i < PCF_SAMPLER_COUNT; ++i)
-    {
-        //float SampleUV = ShadowPos.xy + offsets[i] * tileSize;
-        float2 SampleUV = ShadowPosH.xy + (Hammersley(i, PCF_SAMPLER_COUNT) * 2.0f - 1.0f) * PCF_SAMPLER_PIXLE_RADIUS * tileSize;
-        float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, SampleUV).r;
-        if (depth + 0.01 > curDepth)
-            percentLit += 1;
-    }
-    
-    return percentLit / PCF_SAMPLER_COUNT;
-    
-    //return percentLit;
+    return PCF(ReceiverPos, PCF_SAMPLER_PIXLE_RADIUS, cascadeIdx);
 }
 
-float CalcVisibility(float4 ShadowPosH)
+float CalcVisibility(float4 ShadowPosH, float bias)
 {
     // Complete projection by doing division by w.
     ShadowPosH.xyz /= ShadowPosH.w;
@@ -270,8 +327,7 @@ float CalcVisibility(float4 ShadowPosH)
     ShadowFactor = EVSM(ReceiverPos);
 
 #else
-    float bias = 0.005;
-    ShadowFactor = PCF(ReceiverPos, PCF_SAMPLER_PIXLE_RADIUS, bias);
+    ShadowFactor = PCF(ReceiverPos, PCF_SAMPLER_PIXLE_RADIUS);
 #endif 
     return ShadowFactor;
 }

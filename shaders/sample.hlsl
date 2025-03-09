@@ -124,4 +124,62 @@ float3 UniformOnSphere(float2 Xi)
 
     return float3(x, y, z);
 }
+
+static const float2 poissonDisk[16] =
+{ 
+    float2(-0.942, -0.399), float2(0.945, -0.768),
+    float2(-0.094, -0.929), float2(0.344, 0.293),
+    float2(-0.915, 0.457), float2(-0.815, -0.879),
+    float2(-0.382, 0.276), float2(0.974, 0.756),
+    float2(0.443, -0.975), float2(0.537, -0.473),
+    float2(-0.264, -0.418), float2(0.791, 0.190),
+    float2(-0.241, 0.997), float2(-0.814, 0.914),
+    float2(0.199, 0.786), float2(0.143, 0.141)
+};
+
+float2 PoissonDisk(uint i)
+{
+    return poissonDisk[i % 16];
+}
+//------------------------------------------------------------------------------
+// Random
+//------------------------------------------------------------------------------
+
+/*
+ * Random number between 0 and 1, using interleaved gradient noise.
+ * w must not be normalized (e.g. window coordinates)
+ */
+
+float nrand(in float2 uv)
+{
+    float2 noise =
+      (frac(sin(dot(uv, float2(12.9898, 78.233) * 2.0)) * 43758.5453));
+    return abs(noise.x + noise.y) * 0.5;
+}
+// rotate the poisson disk randomly
+float2x2 getRandomRotationMatrix(float2 uv) {
+    // 条状阴影
+    //float randomAngle = interleavedGradientNoise(uv) * 2.0 * PI;
+    float randomAngle = nrand(uv) * 2.0 * PI;
+    float sinAngle, cosAngle;
+    sincos(randomAngle, sinAngle, cosAngle);
+    float2x2 R = float2x2(cosAngle, sinAngle, -sinAngle, cosAngle);
+    return R;
+}
+
+static const float2 BlueNoiseSamples[16] =
+{
+    float2(-0.6, -0.2), float2(0.8, -0.5), float2(-0.3, -0.9),
+    float2(0.6, 0.3), float2(-0.9, 0.7), float2(-0.4, -0.8),
+    float2(-0.1, 0.4), float2(0.7, 0.2), float2(0.3, -0.9),
+    float2(0.2, -0.4), float2(-0.7, 0.6), float2(-0.9, 0.2),
+    float2(0.4, 0.9), float2(-0.6, -0.5), float2(0.1, 0.3),
+    float2(0.5, -0.7)
+};
+
+float2 GetBlueNoiseSample(int i)
+{
+    return BlueNoiseSamples[i % 16];
+}
+
 #endif // !MATH_SAMPLE_H
