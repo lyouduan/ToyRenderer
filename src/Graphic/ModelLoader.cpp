@@ -2,18 +2,19 @@
 #include "WICTextureLoader.h"
 #include <wchar.h>
 #include "Shader.h"
+#include "Mesh.h"
 
-ModelLoader::ModelLoader()
+TModelLoader::TModelLoader()
 	: m_meshes()
 {
 }
 
-ModelLoader::~ModelLoader()
+TModelLoader::~TModelLoader()
 {
 
 }
 
-bool ModelLoader::Load(std::string fileName)
+bool TModelLoader::Load(std::string fileName)
 {
 	Assimp::Importer importer;
 
@@ -30,7 +31,7 @@ bool ModelLoader::Load(std::string fileName)
 	return true;
 }
 
-void ModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef)
+void TModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef)
 {
 	for (auto& mesh : m_meshes)
 	{
@@ -46,7 +47,7 @@ void ModelLoader::Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12
 	}
 }
 
-void ModelLoader::Close()
+void TModelLoader::Close()
 {
 	for (auto& mesh : m_meshes)
 	{
@@ -54,17 +55,17 @@ void ModelLoader::Close()
 	}
 }
 
-void ModelLoader::SetMesh(Mesh& mesh)
+void TModelLoader::SetMesh(Mesh& mesh)
 {
 	m_meshes.push_back(mesh);
 }
 
-void ModelLoader::SetMeshes(std::vector<Mesh>& meshes)
+void TModelLoader::SetMeshes(std::vector<Mesh>& meshes)
 {
 	m_meshes.assign(meshes.begin(), meshes.end());
 }
 
-void ModelLoader::processNode(aiNode* node, const aiScene* scene)
+void TModelLoader::processNode(aiNode* node, const aiScene* scene)
 {
 	for (UINT i = 0; i < node->mNumMeshes; i++) {
 		aiMesh* mesh = scene->mMeshes[node->mMeshes[i]];
@@ -76,7 +77,7 @@ void ModelLoader::processNode(aiNode* node, const aiScene* scene)
 	}
 }
 
-Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
+Mesh TModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 {
 	std::vector<Vertex> vertices;
 	std::vector<int16_t> indices;
@@ -156,7 +157,7 @@ Mesh ModelLoader::processMesh(aiMesh* mesh, const aiScene* scene)
 	return Mesh(vertices, indices, textures);
 }
 
-std::vector<TD3D12Texture> ModelLoader::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, const aiScene* scene)
+std::vector<TD3D12Texture> TModelLoader::loadMaterialTextures(aiMaterial* mat, aiTextureType type, std::string typeName, const aiScene* scene)
 {
 	std::vector<TD3D12Texture> textures;
 

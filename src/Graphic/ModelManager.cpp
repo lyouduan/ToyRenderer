@@ -1,9 +1,10 @@
 #include "ModelManager.h"
 #include "RenderInfo.h"
+#include "Mesh.h"
 
 namespace ModelManager
 {
-	std::unordered_map<std::string, ModelLoader> m_ModelMaps;
+	std::unordered_map<std::string, TModelLoader> m_ModelMaps;
 	std::unordered_map<std::string, Mesh> m_MeshMaps;
 
 	void LoadMesh()
@@ -13,7 +14,7 @@ namespace ModelManager
 		m_MeshMaps["box"] = box;
 
 
-		ModelLoader boxModel;
+		TModelLoader boxModel;
 		boxModel.SetMesh(m_MeshMaps["box"]);
 		m_ModelMaps["box"] = std::move(boxModel);
 
@@ -25,7 +26,7 @@ namespace ModelManager
 		pointLight.CreateSphere(1, 20, 20);
 		m_MeshMaps["SpotLight"] = pointLight;
 
-		ModelLoader sphereModel;
+		TModelLoader sphereModel;
 		sphereModel.SetMesh(m_MeshMaps["sphere"]);
 		m_ModelMaps["sphere"] = std::move(sphereModel);
 
@@ -33,7 +34,7 @@ namespace ModelManager
 		Fullquad.CreateQuad(-1, 1, 2, 2, 0);
 		m_MeshMaps["FullQuad"] = Fullquad;
 
-		ModelLoader FullquadModel;
+		TModelLoader FullquadModel;
 		FullquadModel.SetMesh(m_MeshMaps["FullQuad"]);
 		m_ModelMaps["FullQuad"] = std::move(FullquadModel);
 
@@ -41,7 +42,7 @@ namespace ModelManager
 		DebugQuad.CreateQuad(0.5, -0.5, 0.5, 0.5, 0);
 		m_MeshMaps["DebugQuad"] = DebugQuad;
 
-		ModelLoader DebugQuadquadModel;
+		TModelLoader DebugQuadquadModel;
 		DebugQuadquadModel.SetMesh(m_MeshMaps["DebugQuad"]);
 		m_ModelMaps["DebugQuad"] = std::move(DebugQuadquadModel);
 
@@ -53,7 +54,7 @@ namespace ModelManager
 		//Cylinder.CreateCylinder(1, 1, 5, 10, 10);
 		//m_MeshMaps["Cylinder"] = Cylinder;
 		//
-		//ModelLoader CylinderModel;
+		//TModelLoader CylinderModel;
 		//CylinderModel.SetMesh(m_MeshMaps["Cylinder"]);
 		//m_ModelMaps["Cylinder"] = std::move(CylinderModel);
 	}
@@ -62,12 +63,12 @@ namespace ModelManager
 	{
 		LoadMesh();
 
-		ModelLoader nanosuit;
+		TModelLoader nanosuit;
 		if (!nanosuit.Load("./models/nanosuit/nanosuit.obj"))
 			assert(false);
 		m_ModelMaps["nanosuit"] = nanosuit;
 
-		ModelLoader wall;
+		TModelLoader wall;
 		if (!wall.Load("./models/brick_wall/brick_wall.obj"))
 			assert(false);
 
@@ -95,7 +96,7 @@ namespace ModelManager
 			CylinderMesh.SetTexture(bricks.GetSRV());
 		else
 			assert(false);
-		ModelLoader Cylinder;
+		TModelLoader Cylinder;
 		Cylinder.SetMesh(CylinderMesh);
 		m_ModelMaps["Cylinder"] = Cylinder;
 
@@ -108,11 +109,11 @@ namespace ModelManager
 			gridMesh.SetTexture(tex.GetSRV());
 		else
 			assert(false);
-		ModelLoader floor;
+		TModelLoader floor;
 		floor.SetMesh(gridMesh);
 		m_ModelMaps["floor"] = floor;
 
-		ModelLoader Cerberus_LP;
+		TModelLoader Cerberus_LP;
 		if (!Cerberus_LP.Load("./models/Cerberus_by_Andrew_Maximov/Cerberus_LP.FBX"))
 			assert(false);
 

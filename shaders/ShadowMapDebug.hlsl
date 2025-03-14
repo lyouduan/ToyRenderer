@@ -43,7 +43,7 @@ float GetActualDepth(float depth, float zNear, float zFar)
 
 float4 PSMain(PSInput pin) : SV_Target
 {
-    float depth = tex.Sample(PointClampSampler, pin.tex).r;
+    float depth = tex.Sample(PointClampSampler,pin.tex).r;
     //float3 color = GetActualDepth(depth, 0.1, 1000);
     
     return float4(depth, depth, depth, 1.0);

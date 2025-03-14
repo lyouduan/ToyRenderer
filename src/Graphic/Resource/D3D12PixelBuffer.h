@@ -134,8 +134,13 @@ public:
 	
 	void Create(const std::wstring& name, uint32_t Width, uint32_t Height, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
+	
 	void Create(const std::wstring& Name, uint32_t Width, uint32_t Height, uint32_t NumSamples, DXGI_FORMAT Format,
 		D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
+
+	void CreateArray(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t DepthOrArraySize, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
+
+	void CreateArray(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t DepthOrArraySize, uint32_t NumSamples, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr = D3D12_GPU_VIRTUAL_ADDRESS_UNKNOWN);
 
 	const D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() const { return m_DSVHandle; }
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV() { return m_DSVHandle; }
@@ -150,7 +155,7 @@ private:
 
 	DXGI_FORMAT GetDSVFormat(DXGI_FORMAT Format);
 
-	void CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format);
+	void CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, uint32_t ArraySize = 1);
 
 	float m_ClearDepth;
 	uint8_t m_ClearStencil;

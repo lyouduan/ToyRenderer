@@ -4,13 +4,13 @@
 #include "Common.hlsl"
 #include "sample.hlsl"
 
-#define LIGHT_SIZE 30
+#define LIGHT_SIZE 10
 
 #define PCF_SAMPLER_COUNT 16
 #define PCF_SAMPLER_PIXLE_RADIUS 3
 
 #define BLOCKER_SEARCH_SAMPLE_COUNT    32
-#define BLOCKER_SEARCH_PIXEL_RADIUS    5.0f 
+#define BLOCKER_SEARCH_PIXEL_RADIUS    3.0f 
 
 #define VSSM_MAX_MIP_LEVEL 5
 
@@ -28,6 +28,7 @@ cbuffer CSMCBuffer
 };
 
 Texture2D CSMTextures[CSM_MAX_COUNT];
+Texture2DArray CSMTextureArray;
 
 
 static const float2 offsets[9] =
@@ -260,7 +261,11 @@ float PCF(float3 ShadowPos, float radius, int cascadeIdx)
     float curDepth = ShadowPos.z;
     
     uint width, height, numMips;
+#if USE_CSMINST
+    CSMTextureArray.GetDimensions(width, height, numMips);
+#else
     CSMTextures[cascadeIdx].GetDimensions(0, width, height, numMips);
+#endif
     float2 texSize = 1.0f / float2(width, height);
     
     // calculate the rotation matrix for the poisson disk
@@ -274,11 +279,15 @@ float PCF(float3 ShadowPos, float radius, int cascadeIdx)
         float2 Offset = mul(PoissonDisk(i) * filtterRadius, R);
         //float SampleUV = ShadowPos.xy + offsets[i] * texSize;
         float2 SampleUV = ShadowPos.xy + Offset;
+    #if USE_CSMINST
+        float depth = CSMTextureArray.Sample(LinearClampSampler, float3(SampleUV, cascadeIdx)).r;
+    #else
         float depth = CSMTextures[cascadeIdx].Sample(LinearClampSampler, SampleUV).r;
-        
+    #endif
+        float bias = 0.01;
         float z_bias = dz_duv.x * Offset.x + dz_duv.y * Offset.y;
         
-        if (depth + z_bias + 0.01 > curDepth)
+        if (depth + z_bias + bias > curDepth)
         {
             percentLit += 1;
         }

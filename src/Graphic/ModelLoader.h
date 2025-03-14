@@ -1,9 +1,8 @@
 #pragma once
 #include "stdafx.h"
-#include "Mesh.h"
 #include "Shader.h"
 #include "RenderInfo.h"
-
+#include "D3D12Texture.h"
 #include "D3D12CommandContext.h"
 #include <unordered_map>
 
@@ -13,11 +12,11 @@
 
 class Mesh;
 
-class ModelLoader
+class TModelLoader
 {
 public:
-	ModelLoader();
-	~ModelLoader();
+	TModelLoader();
+	~TModelLoader();
 
 	bool Load(std::string fileName);
 	void Draw(TD3D12CommandContext& gfxContext, TShader* shader, TD3D12ConstantBufferRef& ConstantBufferRef);

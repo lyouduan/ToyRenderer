@@ -84,12 +84,12 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 		for (int i = 0; i < frustumCorners.size(); i++)
 		{
 			frustumCorners[i] = XMVector4Transform(frustumCorners[i], LightView);
-			minX = min(minX, frustumCorners[i][0]);
-			maxX = max(maxX, frustumCorners[i][0]);
-			minY = min(minY, frustumCorners[i][1]);
-			maxY = max(maxY, frustumCorners[i][1]);
-			minZ = min(minZ, frustumCorners[i][2]);
-			maxZ = max(maxZ, frustumCorners[i][2]);
+			minX = fmin(minX, frustumCorners[i][0]);
+			maxX = fmax(maxX, frustumCorners[i][0]);
+			minY = fmin(minY, frustumCorners[i][1]);
+			maxY = fmax(maxY, frustumCorners[i][1]);
+			minZ = fmin(minZ, frustumCorners[i][2]);
+			maxZ = fmax(maxZ, frustumCorners[i][2]);
 		}
 
 		XMVECTOR vLightCameraOrthographicMax = XMVectorSet(maxX, maxY, maxZ, 1.0f);
@@ -132,6 +132,8 @@ void CascadedShadowMap::DivideFrustum(DirectX::XMFLOAT3 lightDir, float zNear, f
 		m_LightProj[i] = lightOrthProj;
 		m_ShadowTransform[i] = LightView * lightOrthProj * T;
 	}
+
+	CreateInstanceBufferRef();
 }
 
 void CascadedShadowMap::CreateShadowMaps(const std::wstring& name)
@@ -142,6 +144,9 @@ void CascadedShadowMap::CreateShadowMaps(const std::wstring& name)
 		shadowMap.Create(name + std::to_wstring(i), m_Width, m_Height, DXGI_FORMAT_D32_FLOAT);
 		m_ShadowMaps.push_back(shadowMap);
 	}
+
+	m_ShadowMapArray = std::make_shared<D3D12DepthBuffer>();
+	m_ShadowMapArray->CreateArray(name, m_Width, m_Height, m_CascadeCount, DXGI_FORMAT_D32_FLOAT);
 }
 
 void CascadedShadowMap::SetViewportAndScissorRect()
@@ -156,6 +161,28 @@ void CascadedShadowMap::SetViewportAndScissorRect()
 	m_SccisorRect.top = 0;
 	m_SccisorRect.right = static_cast<LONG>(m_Width);
 	m_SccisorRect.bottom = static_cast<LONG>(m_Height);
+}
+
+void CascadedShadowMap::CreateInstanceBufferRef()
+{
+	std::vector<PassCBuffer> instanceData;
+	for (int i = 0; i < m_CascadeCount; i++)
+	{
+		PassCBuffer passCB;
+		passCB.EyePosition = TD3D12RHI::g_Camera.GetPosition3f();
+		passCB.lightPos = ImGuiManager::lightPos;
+
+		XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_LightView[i]));
+		XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_LightProj[i]));
+		XMVECTOR det;
+		XMMATRIX invProj = XMMatrixInverse(&det, m_LightProj[i]);
+		XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(invProj));
+		auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+
+		instanceData.push_back(passCB);
+	}
+
+	InstanceBufferRef = TD3D12RHI::CreateStructuredBuffer(instanceData.data(), sizeof(PassCBuffer), instanceData.size());
 }
 
 std::vector<XMVECTOR> CascadedShadowMap::GetFrustumCorners(DirectX::XMMATRIX camera_view, DirectX::XMMATRIX camera_proj)

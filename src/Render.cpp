@@ -9,7 +9,7 @@
 #include "RenderInfo.h"
 #include "Sampler.h"
 #include "D3D12Texture.h"
-
+#include "Mesh.h"
 #include <sstream>
 #include <random>
 
@@ -56,7 +56,25 @@ void TRender::SetDescriptorHeaps()
 	g_CommandContext.GetCommandList()->SetDescriptorHeaps(_countof(ppHeaps), ppHeaps);
 }
 
-void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
+void TRender::DrawDepth(TD3D12CommandContext& gfxContext, TModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef, UINT instCount)
+{
+	auto obj = model.GetObjCBuffer();
+	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
+
+	auto meshes = model.GetMeshes();
+	auto instPassCBufferRef = m_CascadedShadowMap->GetInstanceBufferRef();
+
+	for (UINT i = 0; i < meshes.size(); ++i)
+	{
+		shader.SetParameter("objCBuffer", objCBufferRef);
+		shader.SetParameter("passCBuffer", passRef);
+		shader.SetParameter("InstancePassCB", instPassCBufferRef->GetSRV());
+		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
+		meshes[i].DrawMesh(gfxContext, instCount);
+	}
+}
+
+void TRender::DrawMesh(TD3D12CommandContext& gfxContext, TModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef, UINT instCount)
 {
 	auto obj = model.GetObjCBuffer();
 	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
@@ -111,15 +129,21 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			shader.SetParameter("VSSMTextures", SRVHandleList);
 			
 			// CSM
-			SRVHandleList.clear();
-			LightInfo info = LightManager::DirectionalLight.GetLightInfo()[0];
-			for (UINT i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
+			
+			if (bEnableCSMInst)
 			{
-				SRVHandleList.push_back(m_CascadedShadowMap->GetSRV(i));
-				XMStoreFloat4x4(&info.CSMTransform[i], XMMatrixTranspose(m_CascadedShadowMap->GetShadowTransform(i)));
+				shader.SetParameter("CSMTextureArray", m_CascadedShadowMap->GetShadowArraySRV());
 			}
-			shader.SetParameter("CSMTextures", SRVHandleList);
-
+			else
+			{
+				SRVHandleList.clear();
+				for (UINT i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
+				{
+					SRVHandleList.push_back(m_CascadedShadowMap->GetSRV(i));
+				}
+				shader.SetParameter("CSMTextures", SRVHandleList);
+			}
+			
 			CSMCBuffer csm;
 			auto frustumVSFarZ = m_CascadedShadowMap->GetFrustumVSFarZ();
 			for (int i = 0; i < frustumVSFarZ.size(); ++i)
@@ -129,6 +153,9 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 			auto CSMCBRef = TD3D12RHI::CreateConstantBuffer(&csm, sizeof(CSMCBuffer));
 			shader.SetParameter("CSMCBuffer", CSMCBRef);
 
+			LightInfo info = LightManager::DirectionalLight.GetLightInfo()[0];
+			for (UINT i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
+				XMStoreFloat4x4(&info.CSMTransform[i], XMMatrixTranspose(m_CascadedShadowMap->GetShadowTransform(i)));
 			LightManager::DirectionalLight.SetLightInfo(info);
 			LightManager::DirectionalLight.CreateStructuredBufferRef();
 			shader.SetParameter("Lights", LightManager::DirectionalLight.GetStructuredBuffer()->GetSRV());
@@ -136,11 +163,11 @@ void TRender::DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TSh
 		}
 
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
-		meshes[i].DrawMesh(gfxContext);
+		meshes[i].DrawMesh(gfxContext, instCount);
 	}
 }
 
-void TRender::DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
+void TRender::DrawMeshIBL(TD3D12CommandContext& gfxContext, TModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef)
 {
 	auto obj = model.GetObjCBuffer();
 	auto objCBufferRef = TD3D12RHI::CreateConstantBuffer(&obj, sizeof(ObjCBuffer));
@@ -167,8 +194,6 @@ void TRender::DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, 
 		}
 		else
 		{
-			
-
 			shader.SetParameter("diffuseMap", NullDescriptor);
 			shader.SetParameter("metallicMap", NullDescriptor);
 		}
@@ -193,7 +218,6 @@ void TRender::DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, 
 			shader.SetParameter("PrefilterMap", SRVHandleList);
 			shader.SetParameter("BrdfLUT2D", IBLBrdfLUT2D->GetSRV());
 		}
-
 
 		shader.BindParameters(); // after binding Parameter, it will clear all Parameter
 		meshes[i].DrawMesh(gfxContext);
@@ -1158,13 +1182,13 @@ void TRender::ShadowMapDebug()
 
 	gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
 	gfxCmdList->SetPipelineState(pso.GetPSO());
-
 	auto texSRV = m_ShadowMap->GetSRV();
-	if(ImGuiManager::ShadowType == (int)ShadowType::CSM)
-		texSRV = m_CascadedShadowMap->GetSRV(0);
+	if (ImGuiManager::ShadowType == (int)ShadowType::CSM)
+	{
+		texSRV = bEnableCSMInst ? m_CascadedShadowMap->GetShadowArraySRV(): m_CascadedShadowMap->GetSRV(0);
+	}
 
 	shader.SetParameter("tex", texSRV);
-
 	shader.BindParameters();
 	ModelManager::m_MeshMaps["DebugQuad"].DrawMesh(g_CommandContext);
 }
@@ -1200,8 +1224,17 @@ void TRender::ScenePass()
 		pso = PSOManager::m_gfxPSOMap["ShadowMapEVSM"];
 		break;
 	case ShadowType::CSM:
-		shader = PSOManager::m_shaderMap["CSM"];
-		pso = PSOManager::m_gfxPSOMap["CSM"];
+
+		if (bEnableCSMInst)
+		{
+			shader = PSOManager::m_shaderMap["CSMInst"];
+			pso = PSOManager::m_gfxPSOMap["CSMInst"];
+		}
+		else
+		{
+			shader = PSOManager::m_shaderMap["CSM"];
+			pso = PSOManager::m_gfxPSOMap["CSM"];
+		}
 		break;
 	default: // PCF
 		shader = PSOManager::m_shaderMap["ShadowMap"];
@@ -1297,40 +1330,33 @@ void TRender::CascadedShadowMapPass()
 	XMFLOAT3 lightDir = XMFLOAT3{ 10.0f, -10.0f, 10.0f};
 	m_CascadedShadowMap->DivideFrustum(lightDir, g_Camera.GetNearZ(), g_Camera.GetFarZ());
 
-	auto shader = PSOManager::m_shaderMap["preDepthPass"];
-	auto pso = PSOManager::m_gfxPSOMap["preDepthPassPSO"];
+	
 	auto gfxCmdList = g_CommandContext.GetCommandList();
 
-	for (int i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
-	{
-		// set viewport and scissorRect
-		gfxCmdList->RSSetViewports(1, m_CascadedShadowMap->GetViewport());
-		gfxCmdList->RSSetScissorRects(1, m_CascadedShadowMap->GetScissorRect());
+	// set viewport and scissorRect
+	gfxCmdList->RSSetViewports(1, m_CascadedShadowMap->GetViewport());
+	gfxCmdList->RSSetScissorRects(1, m_CascadedShadowMap->GetScissorRect());
 
+	if (bEnableCSMInst)
+	{
+		auto shader = PSOManager::m_shaderMap["CSMDepth"];
+		auto pso = PSOManager::m_gfxPSOMap["CSMDepthPSO"];
 		// transition buffer state
-		g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12Resource(i), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+		g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12ResourceArray(), D3D12_RESOURCE_STATE_DEPTH_WRITE);
 		// set render target
-		gfxCmdList->ClearDepthStencilView(m_CascadedShadowMap->GetDSV(i), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
-		gfxCmdList->OMSetRenderTargets(0, nullptr, false, &m_CascadedShadowMap->GetDSV(i));
+		gfxCmdList->ClearDepthStencilView(m_CascadedShadowMap->GetShadowArrayDSV(), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+		gfxCmdList->OMSetRenderTargets(0, nullptr, false, &m_CascadedShadowMap->GetShadowArrayDSV());
 
 		// set PSO and RootSignature
 		gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
 		gfxCmdList->SetPipelineState(pso.GetPSO());
 
+		// draw all mesh
 		// UpdateShadowCB
 		PassCBuffer passCB;
-		passCB.EyePosition = g_Camera.GetPosition3f();
-		passCB.lightPos = ImGuiManager::lightPos;
-
-		XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_CascadedShadowMap->GetLightView(i)));
-		XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_CascadedShadowMap->GetLightProj(i)));
-		XMVECTOR det;
-		XMMATRIX invProj = XMMatrixInverse(&det, m_CascadedShadowMap->GetLightProj(i));
-		XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(invProj));
-
+		
 		auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
 
-		// draw all mesh
 		for (int i = 0; i < 5; i++)
 		{
 			for (int j = 0; j < 5; j++)
@@ -1339,14 +1365,64 @@ void TRender::CascadedShadowMapPass()
 				XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
 				XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
 				ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
-				DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
+				DrawDepth(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef, m_CascadedShadowMap->GetCascadeCount());
 			}
 		}
-		DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+		DrawDepth(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef, m_CascadedShadowMap->GetCascadeCount());
 
-		g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12Resource(i), D3D12_RESOURCE_STATE_DEPTH_READ);
+		g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12ResourceArray(), D3D12_RESOURCE_STATE_DEPTH_READ);
+
 	}
+	else
+	{
+		auto shader = PSOManager::m_shaderMap["preDepthPass"];
+		auto pso = PSOManager::m_gfxPSOMap["preDepthPassPSO"];
+		
+		for (int i = 0; i < m_CascadedShadowMap->GetCascadeCount(); ++i)
+		{
+			// set viewport and scissorRect
+			gfxCmdList->RSSetViewports(1, m_CascadedShadowMap->GetViewport());
+			gfxCmdList->RSSetScissorRects(1, m_CascadedShadowMap->GetScissorRect());
 
+			// transition buffer state
+			g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12Resource(i), D3D12_RESOURCE_STATE_DEPTH_WRITE);
+			// set render target
+			gfxCmdList->ClearDepthStencilView(m_CascadedShadowMap->GetDSV(i), D3D12_CLEAR_FLAG_DEPTH | D3D12_CLEAR_FLAG_STENCIL, 1.0, 0, 0, nullptr);
+			gfxCmdList->OMSetRenderTargets(0, nullptr, false, &m_CascadedShadowMap->GetDSV(i));
+
+			// set PSO and RootSignature
+			gfxCmdList->SetGraphicsRootSignature(pso.GetRootSignature());
+			gfxCmdList->SetPipelineState(pso.GetPSO());
+
+			// UpdateShadowCB
+			PassCBuffer passCB;
+			passCB.EyePosition = g_Camera.GetPosition3f();
+			passCB.lightPos = ImGuiManager::lightPos;
+
+			XMStoreFloat4x4(&passCB.ViewMat, XMMatrixTranspose(m_CascadedShadowMap->GetLightView(i)));
+			XMStoreFloat4x4(&passCB.ProjMat, XMMatrixTranspose(m_CascadedShadowMap->GetLightProj(i)));
+			XMVECTOR det;
+			XMMATRIX invProj = XMMatrixInverse(&det, m_CascadedShadowMap->GetLightProj(i));
+			XMStoreFloat4x4(&passCB.invProjMat, XMMatrixTranspose(invProj));
+
+			auto passCBufferRef = TD3D12RHI::CreateConstantBuffer(&passCB, sizeof(PassCBuffer));
+			// draw all mesh
+			for (int i = 0; i < 5; i++)
+			{
+				for (int j = 0; j < 5; j++)
+				{
+					ObjCBuffer obj;
+					XMMATRIX translationMatrix = XMMatrixTranslation(-42.5 + i * 20, 5, -42.5 + j * 20);
+					XMStoreFloat4x4(&obj.ModelMat, XMMatrixTranspose(translationMatrix));
+					ModelManager::m_ModelMaps["Cylinder"].SetObjCBuffer(obj);
+					DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["Cylinder"], shader, passCBufferRef);
+				}
+			}
+			DrawMesh(g_CommandContext, ModelManager::m_ModelMaps["floor"], shader, passCBufferRef);
+
+			g_CommandContext.Transition(m_CascadedShadowMap->GetD3D12Resource(i), D3D12_RESOURCE_STATE_DEPTH_READ);
+		}
+	}
 }
 
 void TRender::FXAAPass()
@@ -1972,7 +2048,6 @@ void TRender::CreateShadowResource()
 
 void TRender::CreateCSMResource()
 {
-	
 	m_CascadedShadowMap = std::make_unique<CascadedShadowMap>(L"Cascaded ShadowMap", CSMSize, CSMSize, DXGI_FORMAT_D32_FLOAT, CSM_MAX_COUNT);
 }
 

@@ -183,6 +183,12 @@ namespace PSOManager
 		TShader preDepthPassShader(preDepthPassInfo);
 		m_shaderMap["preDepthPass"] = preDepthPassShader;
 
+		TShaderDefines ShadowShaderDefines;
+		ShadowShaderDefines.SetDefine("USE_CSMINST", "1");
+		preDepthPassInfo.ShaderDefines = ShadowShaderDefines;
+		TShader CSMDepthShader(preDepthPassInfo);
+		m_shaderMap["CSMDepth"] = CSMDepthShader;
+
 		TShaderInfo ForwardPulsPassInfo;
 		ForwardPulsPassInfo.FileName = "shaders/ForwardPulsPass";
 		ForwardPulsPassInfo.bCreateVS = true;
@@ -235,9 +241,15 @@ namespace PSOManager
 		m_shaderMap["NoShadowMap"] = NoShadowMapShader;
 
 		ShadowShaderDefines.SetDefine("USE_CSM", "1");
+		ShadowShaderDefines.SetDefine("USE_CSMINST", "0");
 		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
 		TShader CSMShader(ShadowMapInfo);
 		m_shaderMap["CSM"] = CSMShader;
+
+		ShadowShaderDefines.SetDefine("USE_CSMINST", "1");
+		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
+		TShader CSMInstShader(ShadowMapInfo);
+		m_shaderMap["CSMInst"] = CSMInstShader;
 
 		ShadowShaderDefines.SetDefine("SHADOW_MAPPING", "1");
 		ShadowMapInfo.ShaderDefines = ShadowShaderDefines;
@@ -610,6 +622,9 @@ namespace PSOManager
 		preDepthPass.Finalize();
 		m_gfxPSOMap["preDepthPassPSO"] = preDepthPass;
 
+		preDepthPass.SetShader(&m_shaderMap["CSMDepth"]);
+		preDepthPass.Finalize();
+		m_gfxPSOMap["CSMDepthPSO"] = preDepthPass;
 
 		GraphicsPSO ForwardPulsPso(L"ForwardPuls PSO");
 		ForwardPulsPso.SetShader(&m_shaderMap["ForwardPulsPass"]);
@@ -654,6 +669,10 @@ namespace PSOManager
 		ShadowMapPso.SetShader(&m_shaderMap["CSM"]);
 		ShadowMapPso.Finalize();
 		m_gfxPSOMap["CSM"] = ShadowMapPso;
+
+		ShadowMapPso.SetShader(&m_shaderMap["CSMInst"]);
+		ShadowMapPso.Finalize();
+		m_gfxPSOMap["CSMInst"] = ShadowMapPso;
 
 		ShadowMapPso.SetShader(&m_shaderMap["ShadowMap"]);
 		ShadowMapPso.Finalize();

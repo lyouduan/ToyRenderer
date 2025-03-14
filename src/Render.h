@@ -1,5 +1,4 @@
 #pragma once
-
 #include <memory>
 #include <vector>
 #include "SceneCaptureCube.h"
@@ -12,6 +11,7 @@
 #define TAA_SAMPLE_COUNT 8
 
 class SceneCaptureCube;
+class TModelLoader;
 
 class TRender
 {
@@ -23,8 +23,10 @@ public:
 
 	void SetDescriptorHeaps();
 
-	void DrawMesh(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef);
-	void DrawMeshIBL(TD3D12CommandContext& gfxContext, ModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef);
+	void DrawDepth(TD3D12CommandContext& gfxContext, TModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef, UINT instCount = 1);
+
+	void DrawMesh(TD3D12CommandContext& gfxContext, TModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef, UINT instCount = 1);
+	void DrawMeshIBL(TD3D12CommandContext& gfxContext, TModelLoader& model, TShader& shader, TD3D12ConstantBufferRef& passRef);
 
 	void CreateIBLEnvironmentMap();
 	void CreateIBLIrradianceMap();
@@ -117,6 +119,9 @@ public:
 	bool GetbEnableFXAA() { return bEnableFXAA; }
 	void SetbEnableFXAA(bool b) { bEnableFXAA = b; }
 
+	bool GetbEnableCSMInst() { return bEnableCSMInst; }
+	void SetbEnableCSMInst(bool b) { bEnableCSMInst = b; }
+
 private:
 
 	TD3D12ConstantBufferRef UpdatePassCbuffer();
@@ -161,6 +166,7 @@ private:
 	bool bEnableForwardPuls = false;
 	bool bEnableTAA = false;
 	bool bEnableFXAA = false;
+	bool bEnableCSMInst = false;
 
 	bool bEnableShadowMap = false;
 	

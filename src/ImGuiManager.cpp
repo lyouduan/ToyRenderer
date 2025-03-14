@@ -18,6 +18,7 @@ namespace ImGuiManager
 	bool bEnableShadowMap = false;
 	bool bEnableTAA = false;
 	bool bEnableFXAA = false;
+	bool bEnableCSMInst = false;
 	bool bDebugGBuffers = false;
 	int  GbufferType = 0;
 	int  ShadowType = (int)ShadowType::Count;
@@ -188,8 +189,8 @@ namespace ImGuiManager
 			}
 			ImGui::EndCombo();
 		}
-		if(ShadowType== (int)ShadowType::CSM)
-			ImGui::SliderFloat("CSM TransitionScale", (float*)&cascadeBlendColor, 0, 1); 
+
+
 	}
 
 	void DestroyImGui()

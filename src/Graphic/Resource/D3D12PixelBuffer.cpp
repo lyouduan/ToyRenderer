@@ -287,6 +287,25 @@ void D3D12DepthBuffer::Create(const std::wstring& Name, uint32_t Width, uint32_t
     CreateDerivedViews(g_Device, Format);
 }
 
+void D3D12DepthBuffer::CreateArray(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t DepthOrArraySize, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+{
+    CreateArray(name, Width, Height, DepthOrArraySize, 1, Format, VidMemPtr);
+}
+
+void D3D12DepthBuffer::CreateArray(const std::wstring& name, uint32_t Width, uint32_t Height, uint32_t DepthOrArraySize, uint32_t NumSamples, DXGI_FORMAT Format, D3D12_GPU_VIRTUAL_ADDRESS VidMemPtr)
+{
+    D3D12_RESOURCE_DESC ResourceDesc = DescribeTex2D(Width, Height, DepthOrArraySize, 1, Format, D3D12_RESOURCE_FLAG_ALLOW_DEPTH_STENCIL);
+    ResourceDesc.SampleDesc.Count = NumSamples;
+
+    D3D12_CLEAR_VALUE ClearValue = {};
+    ClearValue.Format = Format;
+    ClearValue.DepthStencil.Depth = m_ClearDepth;
+    ClearValue.DepthStencil.Stencil = m_ClearStencil;
+
+    CreateTextureResource(D3D12_RESOURCE_STATE_COMMON, ResourceDesc, ClearValue, VidMemPtr);
+    CreateDerivedViews(g_Device, Format, DepthOrArraySize);
+}
+
 DXGI_FORMAT D3D12DepthBuffer::GetDSVFormat(DXGI_FORMAT Format)
 {
     switch (Format)
@@ -322,15 +341,21 @@ DXGI_FORMAT D3D12DepthBuffer::GetDSVFormat(DXGI_FORMAT Format)
     }
 }
 
-void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format)
+void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Format, uint32_t ArraySize)
 {
     ID3D12Resource* Resource = ResourceLocation.UnderlyingResource->D3DResource.Get();
 
     D3D12_DEPTH_STENCIL_VIEW_DESC DSVDesc;
 
     DSVDesc.Format = GetDSVFormat(Format);
-
-    if (Resource->GetDesc().SampleDesc.Count == 1)
+    if (ArraySize > 1)
+    {
+        DSVDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2DARRAY;
+        DSVDesc.Texture2DArray.MipSlice = 0;
+        DSVDesc.Texture2DArray.FirstArraySlice = 0;
+        DSVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
+    }
+    else if (Resource->GetDesc().SampleDesc.Count == 1)
     {
         DSVDesc.ViewDimension = D3D12_DSV_DIMENSION_TEXTURE2D;
         DSVDesc.Texture2D.MipSlice = 0;
@@ -358,7 +383,15 @@ void D3D12DepthBuffer::CreateDerivedViews(ID3D12Device* Device, DXGI_FORMAT Form
 
     D3D12_SHADER_RESOURCE_VIEW_DESC SRVDesc = {};
     SRVDesc.Format = GetDepthFormat(Format);
-    if(DSVDesc.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2D)
+    if (DSVDesc.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2DARRAY)
+    {
+        SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2DARRAY;
+        SRVDesc.Texture2DArray.MipLevels = -1;
+        SRVDesc.Texture2DArray.MostDetailedMip = 0;
+        SRVDesc.Texture2DArray.FirstArraySlice = 0;
+        SRVDesc.Texture2DArray.ArraySize = (UINT)ArraySize;
+    }
+    else if(DSVDesc.ViewDimension == D3D12_DSV_DIMENSION_TEXTURE2D)
     {
         SRVDesc.ViewDimension = D3D12_SRV_DIMENSION_TEXTURE2D;
         SRVDesc.Texture2D.MipLevels = 1;

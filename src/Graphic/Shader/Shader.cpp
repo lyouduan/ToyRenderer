@@ -432,7 +432,7 @@ void TShader::CreateRootSignature()
 			SRVTable.Init(D3D12_DESCRIPTOR_RANGE_TYPE_SRV, SRVCount, 0, 0);
 
 			CD3DX12_ROOT_PARAMETER RootParam;
-			D3D12_SHADER_VISIBILITY ShaderVisibility = ShaderInfo.bCreateCS ? D3D12_SHADER_VISIBILITY_ALL : D3D12_SHADER_VISIBILITY_PIXEL;
+			D3D12_SHADER_VISIBILITY ShaderVisibility = D3D12_SHADER_VISIBILITY_ALL;
 			RootParam.InitAsDescriptorTable(1, &SRVTable, ShaderVisibility);
 			SlotRootParameter.push_back(RootParam);
 		}

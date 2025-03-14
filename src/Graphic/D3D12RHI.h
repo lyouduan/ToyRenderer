@@ -1,5 +1,4 @@
 #pragma once
-
 #include "D3D12Resource.h"
 #include "D3D12MemoryAllocator.h"
 #include "D3D12Buffer.h"
@@ -8,7 +7,7 @@
 #include "D3D12CommandContext.h"
 #include "D3D12PixelBuffer.h"
 #include "Shader.h"
-
+#include "Render.h"
 #include <memory>
 #define FrameCount 2
 

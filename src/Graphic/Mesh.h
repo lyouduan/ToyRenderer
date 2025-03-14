@@ -1,8 +1,8 @@
 #pragma once
 #include "stdafx.h"
 #include "D3D12Buffer.h"
-#include "D3D12RHI.h"
 #include "D3D12Texture.h"
+#include "D3D12CommandContext.h"
 
 using namespace DirectX;
 
@@ -24,12 +24,12 @@ public:
 		this->setupMesh();
 	}
 
-	void DrawMesh(TD3D12CommandContext& gfxContext)
+	void DrawMesh(TD3D12CommandContext& gfxContext, UINT instCount = 1)
 	{
 		gfxContext.GetCommandList()->IASetPrimitiveTopology(D3D10_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 		gfxContext.GetCommandList()->IASetVertexBuffers(0, 1, &m_vertexBufferRef->GetVBV());
 		gfxContext.GetCommandList()->IASetIndexBuffer(&m_indexBufferRef->GetIBV());
-		gfxContext.GetCommandList()->DrawIndexedInstanced(m_indices16.size(), 1, 0, 0, 0);
+		gfxContext.GetCommandList()->DrawIndexedInstanced(m_indices16.size(), instCount, 0, 0, 0);
 	}
 
 	void Close()
@@ -74,16 +74,7 @@ public:
 
 private:
 	// initialize buffer
-	void setupMesh()
-	{
-		m_vertexBufferRef = TD3D12RHI::CreateVertexBuffer(m_vertices.data(), m_vertices.size() * sizeof(Vertex), sizeof(Vertex));
-		m_indexBufferRef = TD3D12RHI::CreateIndexBuffer(m_indices16.data(), m_indices16.size() * sizeof(int16_t), DXGI_FORMAT_R16_UINT);
-
-		for (auto& tex : m_textures)
-		{
-			m_SRV.push_back(tex.GetSRV());
-		}
-	}
+	void setupMesh();
 
 	std::vector<Vertex>	m_vertices;
 	std::vector<uint32_t> m_indices32;
@@ -99,4 +90,3 @@ private:
 	TD3D12VertexBufferRef m_vertexBufferRef;
 	TD3D12IndexBufferRef  m_indexBufferRef;
 };
-

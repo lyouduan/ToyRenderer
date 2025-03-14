@@ -4,6 +4,7 @@
 #include <tchar.h>
 #include <strsafe.h>
 
+#include <sstream>
 #include "Win32Application.h"
 #include "GameCore.h"
 

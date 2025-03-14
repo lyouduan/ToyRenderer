@@ -1,6 +1,7 @@
 #pragma once
 #include "D3D12PixelBuffer.h"
 #include <DirectXCollision.h>
+#include "D3D12Buffer.h"
 
 class CascadedShadowMap
 {
@@ -20,6 +21,13 @@ public:
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetDSV(int i) { return m_ShadowMaps[i].GetDSV(); }
 	D3D12_CPU_DESCRIPTOR_HANDLE& GetSRV(int i) { return m_ShadowMaps[i].GetSRV(); }
 
+	// array
+	std::shared_ptr<D3D12DepthBuffer>& GetShadowMapArray() { return m_ShadowMapArray; }
+	TD3D12Resource* GetD3D12ResourceArray() { return m_ShadowMapArray->GetD3D12Resource(); }
+
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetShadowArrayDSV() { return m_ShadowMapArray->GetDSV(); }
+	D3D12_CPU_DESCRIPTOR_HANDLE& GetShadowArraySRV() { return m_ShadowMapArray->GetSRV(); }
+
 	DirectX::XMMATRIX GetLightView(int i) const { return m_LightView[i]; }
 	DirectX::XMMATRIX GetLightProj(int i) const { return m_LightProj[i]; }
 	DirectX::XMMATRIX GetShadowTransform(int i) const { return m_ShadowTransform[i]; }
@@ -31,11 +39,16 @@ public:
 	uint32_t GetCascadeCount(void) const { return m_CascadeCount; }
 	const DXGI_FORMAT& GetFormat(void) const { return m_Format; }
 
+	TD3D12StructuredBufferRef& GetInstanceBufferRef() { return InstanceBufferRef; }
+
 private:
 
+	
 	void CreateShadowMaps(const std::wstring& name);
 
 	void SetViewportAndScissorRect();
+
+	void CreateInstanceBufferRef();
 
 	std::vector<XMVECTOR> GetFrustumCorners(DirectX::XMMATRIX camera_view, DirectX::XMMATRIX camera_proj);
 
@@ -50,11 +63,16 @@ private:
 	uint32_t m_CascadeCount;
 	std::vector<D3D12DepthBuffer> m_ShadowMaps;
 
+	std::shared_ptr<D3D12DepthBuffer> m_ShadowMapArray;
+
 	std::vector<XMFLOAT2> m_FrustumVSFarZ;
 
 	// Light Space from directional light
 	std::vector<DirectX::XMMATRIX> m_LightView;
 	std::vector<DirectX::XMMATRIX> m_LightProj;
 	std::vector<DirectX::XMMATRIX> m_ShadowTransform;
+
+	// reduce draw call
+	TD3D12StructuredBufferRef InstanceBufferRef;
 };
 

@@ -183,7 +183,20 @@ void GameCore::UpdateImGui()
 		}
 
 		if (ImGuiManager::bEnableShadowMap)
+		{
 			ImGuiManager::ShadowTypeCombo();
+
+			if (ImGuiManager::ShadowType ==(int)ShadowType::CSM)
+			{
+				if (ImGui::Checkbox("Enable CSM Instance", &ImGuiManager::bEnableCSMInst))
+				{
+					if (ImGuiManager::bEnableCSMInst)
+						m_Render->SetbEnableCSMInst(true);
+					else
+						m_Render->SetbEnableCSMInst(false);
+				}
+			}
+		}
 
 
 		// Post processing FXAA

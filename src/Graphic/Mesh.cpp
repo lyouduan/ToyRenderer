@@ -1,5 +1,7 @@
 #include "Mesh.h"
 #include "GeometryGenerator.h"
+#include "D3D12RHI.h"
+using namespace TD3D12RHI;
 
 void Mesh::CreateBox(float width, float height, float depth, uint32_t numSubdivisions)
 {
@@ -105,4 +107,15 @@ void Mesh::CreateQuad(float x, float y, float w, float h, float depth)
 	m_indices32.assign(geo.Indices32.begin(), geo.Indices32.end());
 
 	this->setupMesh();
+}
+
+void Mesh::setupMesh()
+{
+	m_vertexBufferRef = CreateVertexBuffer(m_vertices.data(), m_vertices.size() * sizeof(Vertex), sizeof(Vertex));
+	m_indexBufferRef = CreateIndexBuffer(m_indices16.data(), m_indices16.size() * sizeof(int16_t), DXGI_FORMAT_R16_UINT);
+
+	for (auto& tex : m_textures)
+	{
+		m_SRV.push_back(tex.GetSRV());
+	}
 }
